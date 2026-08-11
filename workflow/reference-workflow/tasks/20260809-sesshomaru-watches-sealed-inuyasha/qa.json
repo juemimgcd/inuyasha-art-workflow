@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "杀生丸为清醒的成年妖怪旁观者；犬夜叉为半妖形态的封印沉睡者，身份与状态没有互换。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "杀生丸的浅色长发、月牙额纹、双颊妖纹、尖侧耳、大肩毛与层叠衣甲清楚；犬夜叉的浅色长发、犬耳、念珠与火鼠裘清楚。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "两人的耳朵类型区分明确；杀生丸佩刀在前景可见，犬夜叉刀鞘留在腰侧，封印箭矢清楚且无血腥特写。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "全图为纯黑白漫画插图，没有彩色、摄影质感、柔光或数码赛璐璐渲染泄漏。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "人物轮廓有明确粗细层级，皮肤与浅色头发保持留白，树皮、藤蔓和林影使用受控网点与墨块。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "3:4 竖幅中杀生丸右前景侧脸为第一焦点，视线自然引向左中景被箭封印的犬夜叉；两人剪影清楚。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "高密度纹理集中在御神木、藤蔓和左侧林地，杀生丸脸部与肩毛保留大面积白色负空间。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "未见文字、音效字、气泡、分格、签名、logo 或水印。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "成图为 1086×1448 PNG，宽高比严格为 3:4，符合单幅竖版插图要求。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "pass",
+      "note": "只沿用线条层级、黑白关系与克制网点；没有复制风格图的文字、裁切、姿势或剧情。"
+    },
+    {
+      "category": "process",
+      "check": "selected-output 只控制已认可的连续性和完成度，没有覆盖官方身份或目标媒介画法",
+      "status": "n/a",
+      "note": "连续性层判定 INSUFFICIENT，未使用 selected-output。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "实际生成严格使用 manifest 中按顺序列出的 5 张参考图：1 张漫画画法、2 张官方身份、2 张用户构图参考。"
+    }
+  ]
+}

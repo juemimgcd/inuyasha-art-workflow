@@ -1,0 +1,43 @@
+{
+  "schema_version": 5,
+  "task_id": "20260810-child-inuyasha-derived-model-sheet-20260810",
+  "created_at": "2026-08-10T13:32:52+08:00",
+  "request": "根据用户新增的幼年犬夜叉 TV 截图，先生成非官方衍生角色设定表第一页：同一幼年形态的全身正面、三分之四侧面、纯侧面与背面四视图，作为后续表情细节页和生成任务的稳定母版。",
+  "intent": "new",
+  "parent_task_id": null,
+  "change_category": null,
+  "change_request": "",
+  "medium": "tv",
+  "deliverable": "character-sheet",
+  "period_mode": null,
+  "style_strategy": "two-layer-tv-fast",
+  "style_references": [
+    "tv-curated:file:07dd46c60a75b5f64fc2"
+  ],
+  "content_need": {},
+  "content_references": [],
+  "characters": [
+    "犬夜叉"
+  ],
+  "identity_forms": {
+    "犬夜叉": "child-form"
+  },
+  "forms_and_costumes": [
+    "犬夜叉: child-form"
+  ],
+  "scene": "暖白色纯净制作设定纸面；同一名幼年犬夜叉以等高的全身正面、三分之四侧面、纯侧面与全身背面四视图横向排列，共用一条地面基线，无故事场景和环境背景。",
+  "aspect_ratio": "3:2",
+  "invariants": [
+    "所有视图都是同一名幼年犬夜叉，年龄、头身比例、脸型、耳朵、发量、服装尺寸和颜色必须完全一致。",
+    "固定为约四到五头身的幼童比例：大而圆润的头部、窄肩、短小四肢、小手小脚，不得生成少年或成年体型。",
+    "固定银白长发、额前分束刘海、头顶一对三角犬耳、金色大眼；不得出现杀生丸的月牙、脸纹、侧耳或肩部毛皮。",
+    "固定红色宽袖交领外衣、深色内层、宽松袴与赤足，衣服按幼童尺度自然偏大；无言灵念珠、无铁碎牙、无刀鞘。",
+    "第一页只表现四个等高全身转面及服装结构；不得保留球、伤痕、血迹、奔跑姿势、府邸背景或剧情动作。",
+    "使用干净 TV 动画制作设定风格：稳定轮廓、平涂固有色、极少阴影、暖白背景；无字幕、标签、对话、logo、水印或黑边。"
+  ],
+  "form_references": [
+    "tv-curated:file:8034784ef370ec436271",
+    "tv-curated:file:353d923b159df60ff9e7",
+    "tv-curated:file:c2a5fed65f9629a55ac4"
+  ]
+}

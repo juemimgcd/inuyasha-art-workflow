@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "medium",
+      "check": "仅修改指定的 medium 问题，修改结果符合请求",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "preservation",
+      "check": "目标区域以外的人物、构图、画法和背景保持不变",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "identity",
+      "check": "局部编辑没有造成角色身份、形态或服装漂移",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与目标图保持一致",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pending",
+      "note": ""
+    }
+  ]
+}

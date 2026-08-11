@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "style",
+      "item_id": "manga-curated:file:d47d8442e4f7fd7c3875",
+      "source_id": "manga-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "d47d8442e4f7fd7c38753e8cd494d13aa3a133f29d05c54a312db2e066b5bb6d",
+      "folder_path": "犬夜叉",
+      "content_label": "犬夜叉",
+      "folder_tags": [
+        "犬夜叉"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-wind-sakura/references/style-manga-curated-file-d47d8442e4f7fd7c3875.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos/犬夜叉/犬夜叉人类形态03.png",
+      "pdf_page": null,
+      "instructions": "Control only black-and-white manga mark-making: line hierarchy, black-white massing, halftone economy, facial simplification, and effect construction. Do not copy visible characters, dialogue, balloons, panel borders, layout, or story content."
+    },
+    {
+      "order": 2,
+      "role": "identity",
+      "item_id": "official:file:efe7eafd42e0ab48e48f",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "efe7eafd42e0ab48e48f377f45329a5d3e8575a0c68f7505ba589f6d76e3110d",
+      "folder_path": "犬夜叉设定集",
+      "content_label": "犬夜叉设定集",
+      "folder_tags": [
+        "犬夜叉设定集"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-wind-sakura/references/identity-official-file-efe7eafd42e0ab48e48f.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/犬夜叉设定集/犬夜叉人类形态图01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, costume, weapon, prop, and scale only. Do not control rendering style or composition."
+    },
+    {
+      "order": 3,
+      "role": "identity",
+      "item_id": "official:file:b69a31a9412dc8a2a06b",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "b69a31a9412dc8a2a06b7b2b0fe9a983a6151ec80ff4aaba2a3e6029ca6f1a21",
+      "folder_path": "犬夜叉设定集",
+      "content_label": "犬夜叉设定集",
+      "folder_tags": [
+        "犬夜叉设定集"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-wind-sakura/references/identity-official-file-b69a31a9412dc8a2a06b.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/犬夜叉设定集/犬夜叉全身图带铁碎牙01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, costume, weapon, prop, and scale only. Do not control rendering style or composition."
+    }
+  ]
+}

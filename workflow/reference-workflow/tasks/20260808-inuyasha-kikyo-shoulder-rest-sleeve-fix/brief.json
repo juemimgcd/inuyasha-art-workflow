@@ -1,0 +1,40 @@
+{
+  "schema_version": 5,
+  "task_id": "20260808-inuyasha-kikyo-shoulder-rest-sleeve-fix",
+  "created_at": "2026-08-08T12:46:10+08:00",
+  "request": "以用户提供的现图为目标，重画桔梗抚摸犬夜叉束发的抬起手臂与宽袖结构：肩、上臂、肘部、袖管、袖口、前臂、手腕和手必须连续，抬起的宽袖随重力垂落；另一只袖子留在膝前。保持犬夜叉半妖形态、双犬耳、发绳、靠肩姿势、人物表情、黑白漫画画风和其余构图不变。",
+  "medium": "manga",
+  "deliverable": "illustration",
+  "period_mode": "classic-balanced",
+  "style_strategy": "dynamic-curated",
+  "style_references": [
+    "manga-curated:file:17fbec650f5e9c032d81"
+  ],
+  "characters": [
+    "犬夜叉",
+    "桔梗"
+  ],
+  "identity_forms": {
+    "犬夜叉": "half-demon-form",
+    "桔梗": "default-form"
+  },
+  "forms_and_costumes": [
+    "犬夜叉: half-demon-form",
+    "桔梗: default-form"
+  ],
+  "scene": "延续用户目标图的草地靠肩近景，只重新建立桔梗抚摸犬夜叉束发那条抬起手臂的肩、上臂、肘、前臂、袖管、袖口、手腕与手的连续结构。",
+  "aspect_ratio": "4:5",
+  "invariants": [
+    "用户目标图控制人物位置、4:5裁切、靠肩动作、表情、发绳、草地与整体黑白关系",
+    "只修正桔梗抬起手臂及其宽袖：手必须能沿手腕和前臂明确连接回靠犬夜叉一侧的肩膀，不能像悬空的第三只手",
+    "抬起手臂的宽袖应从肩部和肘部形成可信的布料路径，并因重力向下悬垂在犬夜叉后方或两人之间；不能与膝前另一只袖子并排对称铺开",
+    "桔梗未抬起的另一条手臂自然放在腿上，仅这一只袖子保留在正前方",
+    "犬夜叉保持半妖形态、银白束发、两只头顶犬耳、念珠与火鼠裘，不得改变脸、闭眼表情或靠肩接触",
+    "桔梗保持披散黑发、年轻巫女面容、白小袖与长袴，不得改变脸、视线或身体位置",
+    "无文字、气泡、分格、签名、logo或水印"
+  ],
+  "intent": "new",
+  "parent_task_id": null,
+  "change_category": null,
+  "change_request": ""
+}

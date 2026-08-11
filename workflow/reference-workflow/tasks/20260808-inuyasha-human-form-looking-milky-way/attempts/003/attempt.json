@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "attempt": 3,
+  "recorded_at": "2026-08-08T22:18:12+08:00",
+  "status": "rejected",
+  "generator": "user-review",
+  "duration_seconds": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-looking-milky-way/outputs/inuyasha-human-form-looking-milky-way-final.png",
+  "output_sha256": "8f1ea1d4ee9b4d15982f55b989f464b83d518a6f5e7b9841ff5fa5d05b182992",
+  "reference_item_ids": [
+    "manga-curated:file:4979f0e5da216eff0102",
+    "official:file:efe7eafd42e0ab48e48f"
+  ],
+  "failures": [
+    {
+      "category": "expression",
+      "note": "上眼睑压得过重，忧伤被读成困倦，不符合犬夜叉清醒而倔强的气质"
+    }
+  ],
+  "user_feedback": "用户明确反馈：另外一张图更像困了一样",
+  "preference_tags": []
+}

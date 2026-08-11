@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "attempt": 4,
+  "recorded_at": "2026-08-11T15:54:29+08:00",
+  "status": "rejected",
+  "generator": "built-in-imagegen",
+  "duration_seconds": 166.0,
+  "generation_seconds": 166.0,
+  "response_started_at": "2026-08-11T15:44:38+08:00",
+  "response_seconds": 591.0,
+  "pre_generation_seconds": 44.0,
+  "pre_generation_target_seconds": 90,
+  "pre_generation_target_met": true,
+  "post_generation_seconds": 381.0,
+  "post_generation_target_seconds": 30,
+  "post_generation_target_met": false,
+  "workflow_overhead_seconds": 425.0,
+  "response_slo_seconds": null,
+  "response_slo_met": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-izayoi-child-inuyasha-combing-hair-mirror-20260811/outputs/十六夜与幼年犬夜叉__蒔绘铜镜倒影梳头__候选02.png",
+  "output_sha256": "c1a40361dd43a95e4fafc1e8171cad97575c0cd4bdc8a0f842fe0dc049c41fb0",
+  "reference_item_ids": [
+    "manga-curated:file:876af11c5aa2fd24a707",
+    "official:file:f4819e9df3546a3ed095",
+    "official:file:6285125444be8011e070",
+    "official:file:c72310b3df3a4455f6eb"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "composition",
+      "note": "镜头距离过远，为容纳两人全身导致脸部、梳子和梳头动作不够突出"
+    }
+  ],
+  "user_feedback": "距离镜子太远了，不用把两个人全身都装进镜子的画面里面",
+  "preference_tags": []
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:52f4f3793582c3add9ab",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "52f4f3793582c3add9abed7196c2eb4d8798e0dc7bf966032f96e36c16033d20",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-izayoi-child-inuyasha-hand-toss/references/target-user-supplied-file-52f4f3793582c3add9ab-transport.jpg",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-izayoi-child-inuyasha-kemari-play/outputs/十六夜与幼年犬夜叉__庭院传踢蹴鞠__漫画__候选01.png",
+      "pdf_page": null,
+      "instructions": "Preserve this image exactly except for the user's explicitly requested local edit.",
+      "crop_box": null,
+      "focus": "",
+      "transport": {
+        "kind": "downscaled-jpeg",
+        "max_edge": 960,
+        "quality": 90,
+        "source_dimensions": [
+          1122,
+          1402
+        ],
+        "rendered_dimensions": [
+          768,
+          960
+        ],
+        "rendered_content_hash": "1ee1b6b9dcf42254b13816c774edaaa3b4ac0c628ccbbfb2be055b6d36786a60"
+      }
+    }
+  ]
+}

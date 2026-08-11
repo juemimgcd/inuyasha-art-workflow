@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:6abea187c73033679cd4",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "6abea187c73033679cd49de62bf969c2bb9be695f8b779d4b64b72232daf3284",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-child-inuyasha-turnaround-production-lineart/references/target-user-supplied-file-6abea187c73033679cd4.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-child-inuyasha-turnaround-color-fix/outputs/犬夜叉__幼年形态__衍生角色设定表__四视图__v3-配色修正.png",
+      "pdf_page": null,
+      "instructions": "Preserve this image exactly except for the user's explicitly requested local edit.",
+      "crop_box": null,
+      "focus": ""
+    }
+  ]
+}

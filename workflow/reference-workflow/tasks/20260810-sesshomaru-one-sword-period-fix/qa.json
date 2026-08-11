@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "construction",
+      "check": "仅修改指定的 construction 问题，修改结果符合请求",
+      "status": "pass",
+      "note": "远景腰间由两把重叠佩刀改为正好一把；多余刀柄、护手和刀鞘已移除。"
+    },
+    {
+      "category": "preservation",
+      "check": "目标区域以外的人物、构图、画法和背景保持不变",
+      "status": "pass",
+      "note": "local-edit sidecar confirms outside_edit_box_preserved=true；编辑框 [260,790,190,200] 外逐像素不变。"
+    },
+    {
+      "category": "identity",
+      "check": "局部编辑没有造成角色身份、形态或服装漂移",
+      "status": "pass",
+      "note": "近景杀生丸完全未改，远景头脸、长发、毛皮、铠甲、袖纹与体型均保持。"
+    },
+    {
+      "category": "construction",
+      "check": "修改区域的连接、遮挡、透视和接地关系连续，没有悬浮或穿模",
+      "status": "pass",
+      "note": "保留的一把刀由腰带连接至护手和刀鞘，轴线连续；没有第二套交叉线。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "检查全图与局部编辑框，未新增文字或标记。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与目标图保持一致",
+      "status": "pass",
+      "note": "输出与目标同为 1083x1452 PNG。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "仅使用清单中的目标局部裁图和杀生丸全身图02单刀腰间挂载裁图。"
+    }
+  ]
+}

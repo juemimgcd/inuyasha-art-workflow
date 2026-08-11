@@ -1,0 +1,31 @@
+{
+  "schema_version": 4,
+  "task_id": "20260808-inuyasha-human-form-wind-sakura",
+  "created_at": "2026-08-08T08:18:45+08:00",
+  "request": "犬夜叉人类形态，收刀伫立于草坪，头发随风飘扬，身旁樱花花瓣随风飘落，竖版黑白漫画插图",
+  "medium": "manga",
+  "deliverable": "illustration",
+  "period_mode": "classic-balanced",
+  "style_strategy": "dynamic-curated",
+  "style_references": [
+    "manga-curated:file:d47d8442e4f7fd7c3875"
+  ],
+  "characters": [
+    "犬夜叉"
+  ],
+  "identity_forms": {
+    "犬夜叉": "human-form"
+  },
+  "forms_and_costumes": [
+    "人类形态：无犬耳、长黑发、火鼠袍与袴、念珠、赤足、铁碎牙完整入鞘"
+  ],
+  "scene": "微风中的草坪，犬夜叉收刀后安静伫立，长发、袖摆和樱花花瓣沿同一风向飘动",
+  "aspect_ratio": "2:3 portrait",
+  "invariants": [
+    "只有犬夜叉一人",
+    "明确为人类形态：黑发且没有犬耳、獠牙或利爪",
+    "铁碎牙完整入鞘并佩于腰侧",
+    "全身可见，赤足站在草地上",
+    "黑白漫画印刷画法，无文字、对话框、分镜边框、签名或水印"
+  ]
+}

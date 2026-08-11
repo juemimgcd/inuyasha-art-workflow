@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "杀生丸保持成年妖怪完整背影；犬夜叉保持封印时期半妖形态，身份、状态和前后景位置未互换。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "杀生丸长发、大肩毛、背面衣甲清楚；犬夜叉浅色长发、头顶犬耳、火鼠裘与赤足清楚，颈部无念珠。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "杀生丸仅一把天生牙；宽承重带从左腰连续延伸到鞘口固定环，鞘口贴近髋部，上段与外袍形成自然遮挡，下段沿单一刚性轴垂落，未见悬空、断接、穿模或第二把刀。双脚仍为包覆鞋面和脚踝绑带。犬夜叉腰侧、衣襟和邻近树根均无刀、鞘、柄或佩带。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "成图为纯黑白内页漫画式绘制，没有彩色、赛璐璐阴影、摄影连续灰阶或柔光渲染。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "人物以外重内轻的有机线条、干净留白和单层衣物网点表达；树叶归并为黑色簇群，御神木与根系承担主要密集纹理。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "保持原目标3:4镜头：杀生丸右前景背影朝向左中景犬夜叉，二人剪影、封印箭与御神木均可读且互不遮挡。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "白色天空与杀生丸大面积浅色轮廓提供负空间；密集纹理主要集中在御神木、根系及左侧植被，没有淹没人物关键形状。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "未见文字、气泡、音效字、分格、签名、logo 或水印。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "候选图为1086×1448 PNG，宽高比严格3:4，符合竖版单幅编辑交付。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "n/a",
+      "note": "本轮纯局部佩刀修正未新增漫画风格参考；目标图锁定现有线条与网点。"
+    },
+    {
+      "category": "process",
+      "check": "selected-output 只控制已认可的连续性和完成度，没有覆盖官方身份或目标媒介画法",
+      "status": "n/a",
+      "note": "本次没有使用selected-output；用户目标图本身是唯一构图和连续性依据。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "实际生成输入与manifest一致且顺序正确：候选02目标图、杀生丸背面全身官方设定、天生牙官方结构设定，共3张。"
+    }
+  ]
+}

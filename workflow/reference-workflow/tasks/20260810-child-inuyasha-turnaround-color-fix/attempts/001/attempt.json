@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-10T14:52:39+08:00",
+  "status": "accepted",
+  "generator": "built-in-imagegen",
+  "duration_seconds": 77.0,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-child-inuyasha-turnaround-color-fix/outputs/犬夜叉__幼年形态__衍生角色设定表__四视图__v3-配色修正.png",
+  "output_sha256": "6abea187c73033679cd49de62bf969c2bb9be695f8b779d4b64b72232daf3284",
+  "reference_item_ids": [
+    "user-supplied:file:e7e2307dc00882f1993d",
+    "tv-curated:file:402c3966ffc2420a1427"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [],
+  "user_feedback": "用户继续以此版本作为人物线稿转换目标。",
+  "preference_tags": []
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "attempt": 4,
+  "recorded_at": "2026-08-11T08:41:57+08:00",
+  "status": "rejected",
+  "generator": "builtin-imagegen",
+  "duration_seconds": 114.3,
+  "generation_seconds": 114.3,
+  "response_started_at": "2026-08-11T08:13:29+08:00",
+  "response_seconds": 1708.0,
+  "pre_generation_seconds": 1359.0,
+  "pre_generation_target_seconds": 30,
+  "pre_generation_target_met": false,
+  "post_generation_seconds": 234.7,
+  "post_generation_target_seconds": 30,
+  "post_generation_target_met": false,
+  "workflow_overhead_seconds": 1593.7,
+  "response_slo_seconds": null,
+  "response_slo_met": null,
+  "output": "/Users/jquery/Documents/inuyahsa-official/output/犬夜叉墓前忧伤微调__候选v4.png",
+  "output_sha256": "c8eba5929878dfe20bdb07b497f8c6a3a7aed4a9067b3650eac03cf8fd5e1674",
+  "reference_item_ids": [
+    "user-supplied:file:9cf5c0214e6f47a3c2ce"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "composition",
+      "note": "误将用户要求理解为调整整个头部俯角，导致头部和姿态发生不应有的变化"
+    }
+  ],
+  "user_feedback": "用户澄清：只需把已经确认正确的眼睛微调同步到新提供的原姿态图片上",
+  "preference_tags": [
+    "scope:eye-only-transfer"
+  ]
+}

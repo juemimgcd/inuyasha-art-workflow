@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:c8f281e09e2e8f3799e0",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "c8f281e09e2e8f3799e036885672a804e0aefe5c4fd1a7d2e30b2faa472801e1",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-inuyasha-grave-sorrow-eye-revision/references/target-user-supplied-file-c8f281e09e2e8f3799e0.png",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/output/犬夜叉墓前忧伤微调__候选v1.png",
+      "pdf_page": null,
+      "instructions": "Preserve this image exactly except for the user's explicitly requested local edit.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 2,
+      "role": "composition",
+      "item_id": "user-supplied:file:c06a89b49f9b8a365333",
+      "source_id": "user-supplied",
+      "source_authority": "requested-composition",
+      "content_hash": "c06a89b49f9b8a3653335b342c75e6104d6033ef6bc27b74f9bc1905d3006c00",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-inuyasha-grave-sorrow-eye-revision/references/composition-user-supplied-file-c06a89b49f9b8a365333.png",
+      "original_path": "/private/var/folders/9h/drdqs3qn2fl87zdxt1gy56h00000gn/T/codex-clipboard-62bbf2e3-6227-437e-9bfd-3e1cf8c132a7.png",
+      "pdf_page": null,
+      "instructions": "Control only framing, crop, gaze direction, and broad silhouette. Do not control character identity, form, costume, color, or rendering style."
+    }
+  ]
+}

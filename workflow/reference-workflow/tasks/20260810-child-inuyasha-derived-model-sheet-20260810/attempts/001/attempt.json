@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-10T13:37:05+08:00",
+  "status": "error",
+  "generator": "built-in imagegen",
+  "duration_seconds": 0.0,
+  "output": null,
+  "output_sha256": null,
+  "reference_item_ids": [
+    "tv-curated:file:07dd46c60a75b5f64fc2",
+    "tv-curated:file:8034784ef370ec436271",
+    "tv-curated:file:353d923b159df60ff9e7",
+    "tv-curated:file:9735d99198378d61a28f",
+    "tv-curated:file:c2a5fed65f9629a55ac4",
+    "tv-curated:file:647cbeca552efd67d4ad"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "technical",
+      "note": "imagegen built-in referenced_image_paths maximum is 5; manifest contained 6 inspected references"
+    }
+  ],
+  "user_feedback": "",
+  "preference_tags": []
+}

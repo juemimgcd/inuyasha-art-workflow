@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "attempt": 7,
+  "recorded_at": "2026-08-11T09:29:48+08:00",
+  "status": "rejected",
+  "generator": "builtin-imagegen+crop-composite",
+  "duration_seconds": 47.7,
+  "generation_seconds": 47.7,
+  "response_started_at": "2026-08-11T08:13:29+08:00",
+  "response_seconds": 4579.0,
+  "pre_generation_seconds": 3810.0,
+  "pre_generation_target_seconds": 30,
+  "pre_generation_target_met": false,
+  "post_generation_seconds": 721.3,
+  "post_generation_target_seconds": 30,
+  "post_generation_target_met": false,
+  "workflow_overhead_seconds": 4531.3,
+  "response_slo_seconds": null,
+  "response_slo_met": null,
+  "output": "/Users/jquery/Documents/inuyahsa-official/output/犬夜叉墓前忧伤右袖藏手微调__候选v7.png",
+  "output_sha256": "915e61aa9d52f388d87bb22f0b124e338c94178cd186456ff97e72fc06a5a6f2",
+  "reference_item_ids": [
+    "user-supplied:file:1485015e4b9a2489ed1b",
+    "user-supplied:file:5d4523785af067266ca2"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "anatomy",
+      "note": "候选按上一轮要求只保留右袖内手，但用户本轮改为也需要画出左袖内的手"
+    }
+  ],
+  "user_feedback": "用户明确追加：在右袖藏手版本基础上，把画面左边的手也画出来",
+  "preference_tags": [
+    "hand-scope:both-inside-sleeves"
+  ]
+}

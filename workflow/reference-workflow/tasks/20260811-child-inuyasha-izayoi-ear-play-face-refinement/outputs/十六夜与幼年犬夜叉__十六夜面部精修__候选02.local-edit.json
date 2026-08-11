@@ -1,0 +1,23 @@
+{
+  "target": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-child-inuyasha-izayoi-ear-play-warm/outputs/十六夜与幼年犬夜叉__怀中把玩双耳__温馨漫画__候选01.png",
+  "candidate": "/Users/jquery/.codex/generated_images/019fef4b-9517-7062-a6f8-6cfec6017208/exec-9bb05118-d393-46f1-a84a-4b905988c9ff.png",
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-child-inuyasha-izayoi-ear-play-face-refinement/outputs/十六夜与幼年犬夜叉__十六夜面部精修__候选02.png",
+  "target_sha256": "9d588e2bd2b264d0aad4ff614d6633cda83dc97f4b7df8db5bbeb140a948eaa3",
+  "candidate_sha256": "b032be9cabdfe1dfd8655a84d8116cb09055dc47e9cf026e3e9bda4f7b960480",
+  "output_sha256": "7ff9401b96ce1b0953673320a715f8b2dceef4ea47f0165e9edd401aafb96005",
+  "context_box": [
+    0,
+    0,
+    1122,
+    1402
+  ],
+  "edit_box": [
+    435,
+    270,
+    325,
+    255
+  ],
+  "feather_pixels": 12,
+  "candidate_resized_to_context": false,
+  "outside_edit_box_preserved": true
+}

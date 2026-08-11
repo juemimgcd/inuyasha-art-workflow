@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "task": "20260809-inuyasha-human-form-seated-crying-milky-way",
+  "gate": "Run one layer, inspect candidates, record HIT/MISS/INSUFFICIENT, then advance.",
+  "layers": [
+    {
+      "layer": 1,
+      "source": "official",
+      "primary_commands": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "human-form",
+          "--shot",
+          "full-body"
+        ]
+      ],
+      "fallback_without_shot": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "human-form"
+        ]
+      ]
+    },
+    {
+      "layer": 2,
+      "source": "manga-curated",
+      "primary_commands": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+          "--source",
+          "manga-curated",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "human-form",
+          "--shot",
+          "full-body"
+        ]
+      ],
+      "fallback_without_shot": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+          "--source",
+          "manga-curated",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "human-form"
+        ]
+      ]
+    },
+    {
+      "layer": 3,
+      "source": "selected-output",
+      "primary_commands": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+          "--source",
+          "selected-output",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "human-form",
+          "--shot",
+          "full-body"
+        ]
+      ],
+      "fallback_without_shot": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+          "--source",
+          "selected-output",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "human-form"
+        ]
+      ]
+    }
+  ]
+}

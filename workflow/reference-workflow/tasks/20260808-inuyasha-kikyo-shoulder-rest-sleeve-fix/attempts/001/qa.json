@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "犬夜叉保持银白束发与头顶双犬耳的半妖形态；桔梗保持年轻巫女身份。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "人物脸、发型、火鼠裘、念珠、白小袖和长袴延续目标图；未发生戈薇或杀生丸特征混淆。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "桔梗恰有两条手臂与两只手；抬起手臂的宽袖从靠犬夜叉一侧的肩部向下垂在两人之间，另一只袖子留在膝前，不再出现两袖都铺在正面而手悬空的问题。犬夜叉两只头顶犬耳轮廓可辨。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "目标媒介为黑白漫画，未出现彩色动画、赛璐璐光影或其他媒介泄漏。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "墨线粗细分级、黑发实色块、银发留白和克制网点保持一致；修正袖子以白纸和少量折线表现。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "靠肩接触、发绳、闭眼表情与抚发动作仍为明确焦点，双人剪影清楚。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "背景仍为稀疏草叶、淡网点和大片留白，没有与人物或衣袖结构竞争。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "全尺寸检查未见文字、对话框、分格、签名、logo或水印。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "PNG为1122x1402，宽高比约0.8003，符合4:5竖幅单幅插图。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "pass",
+      "note": "风格截图仅用于漫画画法；用户目标图控制构图连续性；最终未复制风格截图的文字、气泡或分格。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "实际生成按reference-manifest.json顺序使用1张漫画风格图、2张官方身份图和1张用户构图目标图。"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:9cf5c0214e6f47a3c2ce",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "9cf5c0214e6f47a3c2ce28199b0cd8d0b4629d0afdf87fab2b82bd90e3879080",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-inuyasha-grave-sorrow-eye-revision/references/target-user-supplied-file-9cf5c0214e6f47a3c2ce.png",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/output/犬夜叉墓前忧伤微调__候选v3.png",
+      "pdf_page": null,
+      "instructions": "Preserve this image exactly except for the user's explicitly requested local edit.",
+      "crop_box": null,
+      "focus": ""
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": 5,
+  "task_id": "20260808-inuyasha-kikyo-shoulder-rest-sleeve-microfix",
+  "created_at": "2026-08-08T13:05:07+08:00",
+  "request": "以袖子修正版为目标，只微调桔梗靠犬夜叉一侧抬起手臂的白小袖。参考第四话-小憩-fengm.png中抬臂袖子的结构：袖子上缘顺着上臂与前臂，宽袖从肘下展开成短而宽的钟形/梯形垂坠面，外角停在腰部附近，不得形成垂到画面底部的狭长布柱。其余人物、动作、表情、发绳、双犬耳、构图与画风全部不变。",
+  "medium": "manga",
+  "deliverable": "illustration",
+  "period_mode": "classic-balanced",
+  "style_strategy": "dynamic-curated",
+  "style_references": [
+    "manga-curated:file:17fbec650f5e9c032d81"
+  ],
+  "characters": [
+    "犬夜叉",
+    "桔梗"
+  ],
+  "identity_forms": {
+    "犬夜叉": "half-demon-form",
+    "桔梗": "default-form"
+  },
+  "forms_and_costumes": [
+    "犬夜叉: half-demon-form",
+    "桔梗: default-form"
+  ],
+  "scene": "延续上一版草地靠肩近景，只把桔梗靠犬夜叉一侧抬起手臂的袖子，从错误的狭长垂直布柱改成参考图所示的短而宽、沿抬臂上缘展开并从肘下垂坠的白小袖。",
+  "aspect_ratio": "4:5",
+  "invariants": [
+    "上一版袖子修正版是唯一整体目标，人物、脸、动作、裁切、发绳、犬耳、草地、线条与网点不得改变",
+    "第四话-小憩-fengm.png只控制抬臂袖子的结构与重力垂坠，不控制人物身份、表情、姿势、背景、发型、道具或整体构图",
+    "桔梗靠犬夜叉一侧的袖子上缘要顺着肩膀、上臂和前臂朝抚发的手延伸",
+    "袖身从肘部与前臂下方展开成短而宽的钟形或倒梯形垂坠面，外侧下角停在桔梗腰带附近，不得形成一直垂到画面底部的狭长布柱",
+    "袖口、手腕和五指手必须连续，手仍放在犬夜叉束发与发绳附近，不得出现悬空手、第三只手或额外袖子",
+    "另一只手臂与膝前袖子完全保持上一版状态",
+    "犬夜叉保持半妖形态、银白束发、两只头顶犬耳、念珠、火鼠裘、闭眼靠肩与释然表情",
+    "无文字、气泡、分格、签名、logo或水印"
+  ],
+  "intent": "new",
+  "parent_task_id": null,
+  "change_category": null,
+  "change_request": ""
+}

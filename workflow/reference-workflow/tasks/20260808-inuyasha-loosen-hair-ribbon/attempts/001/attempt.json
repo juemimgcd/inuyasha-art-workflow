@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-08T15:38:00+08:00",
+  "status": "accepted",
+  "generator": "built-in image_gen",
+  "duration_seconds": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-loosen-hair-ribbon/outputs/inuyasha-hair-ribbon-looser-v1.png",
+  "output_sha256": "022f5aa88b0c7a1c66adbed7a43a46ed559fd64f89bfb6920a63252978bac5b2",
+  "reference_item_ids": [
+    "user-supplied:file:b5ebfac8a46895585113",
+    "manga-curated:file:b244478bd62b0efcf1f2",
+    "official:file:149a0334451c6119c480",
+    "selected-output:file:b60b6b7356a3d50613de"
+  ],
+  "failures": [],
+  "user_feedback": "",
+  "preference_tags": [],
+  "legacy_import": true
+}

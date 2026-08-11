@@ -1,0 +1,23 @@
+{
+  "target": "/Users/jquery/Documents/inuyahsa-official/output/hand-mouth-microfix-work/v8-both-hands-patch-target.png",
+  "candidate": "/Users/jquery/.codex/generated_images/019fec06-ee39-7f90-b878-9fa0eeee14db/exec-547cf9af-c390-4a06-971c-6ec97ef561f2.png",
+  "output": "/Users/jquery/Documents/inuyahsa-official/output/hand-mouth-microfix-work/双袖藏手局部稿__候选v8.png",
+  "target_sha256": "f620ea1263fd083a76cd8f78ea13a58bf1578938872b1f3750f83ba0a120511d",
+  "candidate_sha256": "4972b874c74779bbda433e47a613bcdd33d15f00f25343d79acfea84b5aa0820",
+  "output_sha256": "10439a1cadf2060789428aca3c90f43822c28d17d25b1a461c4e02fe74161ab2",
+  "context_box": [
+    0,
+    650,
+    600,
+    600
+  ],
+  "edit_box": [
+    80,
+    850,
+    400,
+    330
+  ],
+  "feather_pixels": 4,
+  "candidate_resized_to_context": true,
+  "outside_edit_box_preserved": true
+}

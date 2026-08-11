@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-08T12:40:59+08:00",
+  "status": "accepted",
+  "generator": "built-in image_gen",
+  "duration_seconds": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-kikyo-gentle-shoulder-rest/outputs/inuyasha-kikyo-gentle-shoulder-rest.png",
+  "output_sha256": "21cfc50c7a34f75a15ef03845f809cdb654589f1f0db5b86e4b3feccb2e2bd51",
+  "reference_item_ids": [
+    "manga-curated:file:17fbec650f5e9c032d81",
+    "manga-curated:file:268ff4975082984a2a8d",
+    "official:file:149a0334451c6119c480",
+    "official:file:1f892bd91be108443dad"
+  ],
+  "failures": [],
+  "user_feedback": "",
+  "preference_tags": [],
+  "legacy_import": true
+}

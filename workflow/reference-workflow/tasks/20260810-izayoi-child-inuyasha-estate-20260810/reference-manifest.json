@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "style",
+      "item_id": "manga-curated:file:cb67f4934e8e0825eda6",
+      "source_id": "manga-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "cb67f4934e8e0825eda6ac628fee066de26c02abb4a3ea2df50d1bd4ac0321d6",
+      "folder_path": "十六夜",
+      "content_label": "十六夜",
+      "folder_tags": [
+        "十六夜"
+      ],
+      "subjects": [
+        "十六夜"
+      ],
+      "forms": [
+        "default-form"
+      ],
+      "subject_forms": {
+        "十六夜": [
+          "default-form"
+        ]
+      },
+      "shot_types": [
+        "full-body"
+      ],
+      "filename_terms": [
+        "01",
+        "人物参考",
+        "全身",
+        "十六夜",
+        "默认形态"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-izayoi-child-inuyasha-estate-20260810/references/style-manga-curated-file-cb67f4934e8e0825eda6.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos/十六夜/十六夜__默认形态__全身__人物参考__01.png",
+      "pdf_page": null,
+      "instructions": "Control only black-and-white manga mark-making: line hierarchy, black-white massing, halftone economy, facial simplification, and effect construction. Do not copy visible characters, dialogue, balloons, panel borders, layout, or story content.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 2,
+      "role": "style",
+      "item_id": "manga-curated:file:076e2e49b919c98f2d06",
+      "source_id": "manga-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "076e2e49b919c98f2d066fb1651a3986d95a53ce3a95083af7ab6ff300af12f8",
+      "folder_path": "场景",
+      "content_label": "场景",
+      "folder_tags": [
+        "场景"
+      ],
+      "subjects": [
+        "场景"
+      ],
+      "forms": [
+        "not-applicable"
+      ],
+      "subject_forms": {
+        "场景": [
+          "not-applicable"
+        ]
+      },
+      "shot_types": [
+        "wide-shot"
+      ],
+      "filename_terms": [
+        "01",
+        "不适用",
+        "场景",
+        "府邸大门",
+        "远景"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-izayoi-child-inuyasha-estate-20260810/references/style-manga-curated-file-076e2e49b919c98f2d06.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos/场景/场景__不适用__远景__府邸大门__01.png",
+      "pdf_page": null,
+      "instructions": "Control only black-and-white manga mark-making: line hierarchy, black-white massing, halftone economy, facial simplification, and effect construction. Do not copy visible characters, dialogue, balloons, panel borders, layout, or story content.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 3,
+      "role": "identity",
+      "item_id": "official:file:6285125444be8011e070",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "6285125444be8011e070be64cdbef76a01590e38d3abffce6c36206575cf5fa2",
+      "folder_path": "十六夜设定集",
+      "content_label": "十六夜设定集",
+      "folder_tags": [
+        "十六夜设定集"
+      ],
+      "subjects": [
+        "十六夜"
+      ],
+      "forms": [
+        "default-form"
+      ],
+      "subject_forms": {
+        "十六夜": [
+          "default-form"
+        ]
+      },
+      "shot_types": [
+        "full-body"
+      ],
+      "filename_terms": [
+        "十六夜和服全身图01"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-izayoi-child-inuyasha-estate-20260810/references/identity-official-file-6285125444be8011e070.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/十六夜设定集/十六夜和服全身图01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, anatomy, costume, weapon or prop construction, attachment, and scale only. Do not control rendering style or scene composition.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 4,
+      "role": "form",
+      "item_id": "manga-curated:file:cd73f043f0439d0ba73d",
+      "source_id": "manga-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "cd73f043f0439d0ba73d4f440bc8e9d2bd9192c81716db2962f8fd62dd4869aa",
+      "folder_path": "犬夜叉",
+      "content_label": "犬夜叉",
+      "folder_tags": [
+        "犬夜叉"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "child-form"
+      ],
+      "subject_forms": {
+        "犬夜叉": [
+          "child-form"
+        ]
+      },
+      "shot_types": [
+        "close-up"
+      ],
+      "filename_terms": [
+        "01",
+        "幼年参考",
+        "幼年形态",
+        "犬夜叉",
+        "近景"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-izayoi-child-inuyasha-estate-20260810/references/form-manga-curated-file-cd73f043f0439d0ba73d.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos/犬夜叉/犬夜叉__幼年形态__近景__幼年参考__01.png",
+      "pdf_page": null,
+      "instructions": "Control only the exact requested form or age state visible in this selected-medium original: age-specific proportions, silhouette, face construction, hair-to-ear relationship, and form-specific garment scale. Do not control general character identity beyond visible form evidence, rendering style, palette, scene composition, or story content.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 5,
+      "role": "content",
+      "item_id": "tv-curated:file:8034784ef370ec436271",
+      "source_id": "tv-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "8034784ef370ec436271d8396516cb20c7c3f1b6d3ab3e70dce0235124a92869",
+      "folder_path": "犬夜叉",
+      "content_label": "犬夜叉",
+      "folder_tags": [
+        "犬夜叉"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "child-form"
+      ],
+      "subject_forms": {
+        "犬夜叉": [
+          "child-form"
+        ]
+      },
+      "shot_types": [
+        "upper-body"
+      ],
+      "filename_terms": [
+        "01",
+        "上身",
+        "幼年形态",
+        "庭院抱球",
+        "犬夜叉"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-izayoi-child-inuyasha-estate-20260810/references/content-tv-curated-file-8034784ef370ec436271.jpeg",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/TV-photos/犬夜叉/犬夜叉__幼年形态__上身__庭院抱球__01.jpeg",
+      "pdf_page": null,
+      "instructions": "Control only the exact visible content named by Exact focus: the requested action state, object or creature configuration, effect phase, or necessary spatial relationship. Do not control named-character identity, form, costume, palette, rendering style, camera framing, background treatment, or story staging. This is cross-medium tv-to-manga content evidence. Ignore all tv palette, contour, shading, texture, and background grammar; translate only the named content into the manga rendering established by the style reference. Exact focus: 只参考画面中贵族府邸庭院的土路、修剪松、花丛和石灯笼的可见空间关系；不复制抱球动作、镜头、色彩、动画轮廓或背景上色。",
+      "crop_box": null,
+      "focus": "只参考画面中贵族府邸庭院的土路、修剪松、花丛和石灯笼的可见空间关系；不复制抱球动作、镜头、色彩、动画轮廓或背景上色。",
+      "evidence_medium": "tv",
+      "cross_medium": true,
+      "conversion": "tv-to-manga-content",
+      "provenance": "observed-content"
+    }
+  ]
+}

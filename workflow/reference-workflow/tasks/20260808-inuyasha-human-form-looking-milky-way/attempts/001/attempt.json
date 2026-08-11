@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-08T21:54:30+08:00",
+  "status": "rejected",
+  "generator": "gpt-image",
+  "duration_seconds": 38.0,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-looking-milky-way/outputs/attempt-01.png",
+  "output_sha256": "39135d867f4b52b8f9ebe14b1c7f8042949ac9118ed468511774b44531231a36",
+  "reference_item_ids": [
+    "manga-curated:file:4979f0e5da216eff0102",
+    "official:file:efe7eafd42e0ab48e48f"
+  ],
+  "failures": [
+    {
+      "category": "emotion",
+      "note": "表情偏安静仰望，忧伤与疲惫感不足；其他身份、媒介、构图和技术项保持"
+    }
+  ],
+  "user_feedback": "",
+  "preference_tags": []
+}

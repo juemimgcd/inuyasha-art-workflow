@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "attempt": 8,
+  "recorded_at": "2026-08-09T11:01:21+08:00",
+  "status": "error",
+  "generator": "built-in-image_gen",
+  "duration_seconds": null,
+  "output": null,
+  "output_sha256": null,
+  "reference_item_ids": [
+    "user-supplied:file:edacbdc7fe5ff543f8ab",
+    "official:file:cc54643e82bb244a2c95",
+    "official:file:d1e77d9ad13576657d98"
+  ],
+  "failures": [
+    {
+      "category": "technical",
+      "note": "built-in image edit again failed with a network error before producing output; no files were changed"
+    }
+  ],
+  "user_feedback": "用户要求生成微调图；内置编辑不可用，需用户明确同意后才能切换CLI备用路径",
+  "preference_tags": []
+}

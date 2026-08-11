@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:de00727030a262e0e145",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "de00727030a262e0e1458b401799aa265f17c2e14bad630c0d2a8940f538238e",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-adult-inuyasha-grave-left-lake-right-forest-sad/references/target-user-supplied-file-de00727030a262e0e145.png",
+      "original_path": "/private/var/folders/9h/drdqs3qn2fl87zdxt1gy56h00000gn/T/codex-clipboard-21cc6d9c-007f-434a-99b8-0eda85c1248b.png",
+      "pdf_page": null,
+      "instructions": "Preserve this image exactly except for the user's explicitly requested local edit.",
+      "crop_box": null,
+      "focus": ""
+    }
+  ]
+}

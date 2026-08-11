@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "十六夜为成年贵族女性；犬夜叉为清晰的约四到五头身幼童半妖形态。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "十六夜长黑发、齐刘海与分层宫廷和服正确；幼年犬夜叉长浅发、头顶犬耳、幼童衣袴和相对身高正确。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "犬耳、双手与赤足清楚；未出现念珠、铁碎牙或借用杀生丸标志。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "黑白漫画印刷处理占主导，无动画上色或灰度厚涂泄漏。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "人物轮廓、黑发黑块、白发留白与和服网点清楚，焦点皮肤保持干净。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "fail",
+      "note": "用户澄清“面对面”是十六夜由左朝右、幼年犬夜叉由右朝左并互相注视；候选01误画成两人共同面向观者。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "府邸木柱、障子、缘侧和庭院建立场景；人物的黑白剪影仍明显强于背景。"
+    },
+    {
+      "category": "construction",
+      "check": "人物、道具与背景使用一致的前后层级、透视方向和相对尺度",
+      "status": "pass",
+      "note": "两人共用同一地面与视平线，府邸透视、人物尺度和前后关系一致。"
+    },
+    {
+      "category": "construction",
+      "check": "身体接触、地面接触、衣物遮挡和道具承重连接连续且无悬浮穿模",
+      "status": "pass",
+      "note": "犬夜叉双足着地、十六夜衣摆落地；袖、发、手足无融合、穿模或悬浮。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "无文字、对白框、签名、logo 或水印。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "PNG 为 1536×1024，精确 3:2 横向插图。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "pass",
+      "note": "只吸收原著截图的线条、黑白块面和网点经济性，未复制其文字、面板或原构图。"
+    },
+    {
+      "category": "process",
+      "check": "selected-output 只控制已认可的连续性和完成度，没有覆盖官方身份或目标媒介画法",
+      "status": "n/a",
+      "note": "本任务未请求也未使用 selected-output 连续性参考。"
+    },
+    {
+      "category": "process",
+      "check": "跨媒介 content 只控制清单中点名的可见内容，未泄漏来源媒介的配色、线条、阴影、背景或角色画法",
+      "status": "n/a",
+      "note": "本任务未使用跨媒介 content 参考。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "生成调用按 manifest 顺序使用 1 张漫画 style 与 2 张 identity 图。"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "20260807-inuyasha-kikyo-rain-shrine-reunion",
+  "created_at": "2026-08-07T15:38:17+08:00",
+  "request": "漫画风格犬夜叉和桔梗在雨夜神社重逢的竖版无文字插图",
+  "medium": "manga",
+  "deliverable": "illustration",
+  "period_mode": "classic-balanced",
+  "characters": [
+    "犬夜叉",
+    "桔梗"
+  ],
+  "forms_and_costumes": [
+    "犬夜叉：半妖形态、火鼠袍、念珠、犬耳、铁碎牙收在腰侧",
+    "桔梗：年轻巫女形态、白色小袖与长绯袴、直长黑发与齐刘海"
+  ],
+  "scene": "深夜降雨的旧神社石阶与屋檐前，两人多年后突然重逢，保持克制的距离与未说出口的情绪。",
+  "aspect_ratio": "2:3 portrait",
+  "invariants": [
+    "只出现犬夜叉和桔梗两名角色",
+    "犬夜叉保持半妖形态并保留犬耳、念珠、火鼠袍",
+    "桔梗保持年轻巫女身份，不得混入戈薇的校服或现代元素",
+    "黑白印刷漫画，不得呈现彩色动画转灰度或柔和数字绘画",
+    "无文字、无对话框、无拟声字、无水印"
+  ]
+}

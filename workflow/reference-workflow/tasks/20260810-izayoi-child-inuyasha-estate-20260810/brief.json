@@ -1,0 +1,52 @@
+{
+  "schema_version": 5,
+  "task_id": "20260810-izayoi-child-inuyasha-estate-20260810",
+  "created_at": "2026-08-10T13:12:34+08:00",
+  "request": "生成一张漫画风格的十六夜与幼年形态犬夜叉双人插图；十六夜在左，幼年犬夜叉在右；场景为战国时代日本贵族府邸庭院。",
+  "intent": "new",
+  "parent_task_id": null,
+  "change_category": null,
+  "change_request": "",
+  "medium": "manga",
+  "deliverable": "illustration",
+  "period_mode": "classic-balanced",
+  "style_strategy": "manga-style-cross-medium-content",
+  "style_references": [
+    "manga-curated:file:cb67f4934e8e0825eda6",
+    "manga-curated:file:076e2e49b919c98f2d06"
+  ],
+  "content_need": {
+    "query": "庭院抱球",
+    "focus": "只参考画面中贵族府邸庭院的土路、修剪松、花丛和石灯笼的可见空间关系；不复制抱球动作、镜头、色彩、动画轮廓或背景上色。",
+    "selected_medium_source": "manga-curated",
+    "fallback_source": "tv-curated",
+    "provenance": "observed-content"
+  },
+  "content_references": [
+    "tv-curated:file:8034784ef370ec436271"
+  ],
+  "characters": [
+    "十六夜",
+    "犬夜叉"
+  ],
+  "identity_forms": {
+    "十六夜": "default-form",
+    "犬夜叉": "child-form"
+  },
+  "forms_and_costumes": [
+    "十六夜: default-form",
+    "犬夜叉: child-form"
+  ],
+  "scene": "战国时代日本贵族府邸的安静庭院：木构回廊与屋舍位于后景，土路、修剪松、花丛和石灯笼形成空间层次；十六夜在左，幼年犬夜叉在右，两人自然相伴。",
+  "aspect_ratio": "3:2",
+  "invariants": [
+    "画面只有十六夜与幼年犬夜叉两名焦点角色；十六夜固定在左，幼年犬夜叉固定在右。",
+    "犬夜叉必须明确是幼年形态：孩童身高和头身比例、圆润幼年脸型、犬耳、长发与宽大童装尺度，不得成年化。",
+    "十六夜保持官方长直发、齐刘海和贵族女性和服层次，气质温柔克制。",
+    "成图必须是黑白原著漫画语言：清晰蘸水笔线条、克制网点、黑白块面；不得出现 TV 动画配色、赛璐璐阴影或彩色。",
+    "不得出现对白、文字、气泡、分镜边框、水印、台标或第三人物。"
+  ],
+  "form_references": [
+    "manga-curated:file:cd73f043f0439d0ba73d"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-09T09:01:55+08:00",
+  "status": "accepted",
+  "generator": "built-in image_gen",
+  "duration_seconds": 64.0,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-watches-sealed-inuyasha/output/sesshomaru-watches-sealed-inuyasha.png",
+  "output_sha256": "8a846750c4162b34e24495d09108d91f6c21b698245099661affeee52d5bed10",
+  "reference_item_ids": [
+    "manga-curated:file:1a5ee70d0760b3256408",
+    "official:file:149102d0222789e096e6",
+    "official:file:798eaba650545b06b4a7",
+    "user-supplied:file:aa6d8888137ecd6ac741",
+    "user-supplied:file:6d73f80f15a589797fd9"
+  ],
+  "failures": [],
+  "user_feedback": "",
+  "preference_tags": []
+}

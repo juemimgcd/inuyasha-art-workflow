@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "task_id": "20260808-inuyasha-human-form-wind-sakura",
+  "archived_at": "2026-08-09T20:34:29+08:00",
+  "reason": "历史接受结果使用了半妖形态官方参考处理人类形态，且保留 reference_audit_warning；保留成图与记录，仅停止复用。",
+  "previous_result_status": "accepted",
+  "previous_output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-wind-sakura/outputs/inuyasha-human-form-wind-sakura.png",
+  "reversible": true
+}

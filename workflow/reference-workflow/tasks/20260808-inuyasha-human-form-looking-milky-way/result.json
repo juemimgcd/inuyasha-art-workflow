@@ -1,0 +1,48 @@
+{
+  "schema_version": 3,
+  "status": "accepted",
+  "generated_at": "2026-08-08T22:18:12+08:00",
+  "generator": "user-selected",
+  "accepted_attempt": 4,
+  "revision_required": true,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-looking-milky-way/outputs/inuyasha-human-form-looking-milky-way-user-selected.png",
+  "medium": "manga",
+  "intent": "new",
+  "revisions": [
+    {
+      "attempt": 1,
+      "status": "rejected",
+      "failures": [
+        {
+          "category": "emotion",
+          "note": "表情偏安静仰望，忧伤与疲惫感不足；其他身份、媒介、构图和技术项保持"
+        }
+      ],
+      "user_feedback": ""
+    },
+    {
+      "attempt": 2,
+      "status": "accepted",
+      "failures": [],
+      "user_feedback": "内部QA通过：人类形态、双眼同向上望、忧伤氛围、黑白漫画与4:5上身构图均符合 brief"
+    },
+    {
+      "attempt": 3,
+      "status": "rejected",
+      "failures": [
+        {
+          "category": "expression",
+          "note": "上眼睑压得过重，忧伤被读成困倦，不符合犬夜叉清醒而倔强的气质"
+        }
+      ],
+      "user_feedback": "用户明确反馈：另外一张图更像困了一样"
+    },
+    {
+      "attempt": 4,
+      "status": "accepted",
+      "failures": [],
+      "user_feedback": "用户明确选择首轮图：这张图更符合犬夜叉的气质；忧伤应保持清醒、克制和倔强，不能用沉重下垂的上眼睑表现成困倦"
+    }
+  ],
+  "qa": "pass"
+}

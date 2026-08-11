@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-10T16:02:01+08:00",
+  "status": "rejected",
+  "generator": "built-in-imagegen",
+  "duration_seconds": 68.9,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-izayoi-child-inuyasha-noble-residence-front-facing/outputs/十六夜与幼年犬夜叉__贵族府邸__正面双人图__候选01.png",
+  "output_sha256": "a88b44bcccdbd9f0366d7b79bd96045e308e6f88575e7d0d58e774127a0764ec",
+  "reference_item_ids": [
+    "manga-curated:file:cb67f4934e8e0825eda6",
+    "official:file:6285125444be8011e070",
+    "official:file:4158557fab085f93df87"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "composition",
+      "note": "错误理解“面对面”：两人都面向观者；应改为十六夜在左朝右、幼年犬夜叉在右朝左，两人互相注视。"
+    }
+  ],
+  "user_feedback": "用户提供桔梗(右)和十六夜(左).png，明确要求参考其中的面对面侧向关系，而不是共同面对镜头。",
+  "preference_tags": []
+}

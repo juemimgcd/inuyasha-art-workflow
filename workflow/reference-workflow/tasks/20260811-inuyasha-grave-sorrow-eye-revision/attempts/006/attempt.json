@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "attempt": 6,
+  "recorded_at": "2026-08-11T09:23:27+08:00",
+  "status": "error",
+  "generator": "builtin-imagegen",
+  "duration_seconds": 242.0,
+  "generation_seconds": 242.0,
+  "response_started_at": "2026-08-11T08:13:29+08:00",
+  "response_seconds": 4198.0,
+  "pre_generation_seconds": 3810.0,
+  "pre_generation_target_seconds": 30,
+  "pre_generation_target_met": false,
+  "post_generation_seconds": 146.0,
+  "post_generation_target_seconds": 30,
+  "post_generation_target_met": false,
+  "workflow_overhead_seconds": 3956.0,
+  "response_slo_seconds": null,
+  "response_slo_met": null,
+  "output": null,
+  "output_sha256": null,
+  "reference_item_ids": [
+    "user-supplied:file:1485015e4b9a2489ed1b",
+    "user-supplied:file:5d4523785af067266ca2"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "technical",
+      "note": "内置图像编辑请求在等待约242秒后发生网络发送错误，无图像输出"
+    }
+  ],
+  "user_feedback": "第一次右袖局部生成发生网络错误；缩小上下文范围后仅重试一次",
+  "preference_tags": []
+}

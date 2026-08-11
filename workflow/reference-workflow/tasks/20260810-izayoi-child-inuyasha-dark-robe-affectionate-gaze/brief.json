@@ -1,0 +1,41 @@
+{
+  "schema_version": 5,
+  "task_id": "20260810-izayoi-child-inuyasha-dark-robe-affectionate-gaze",
+  "created_at": "2026-08-10T16:50:53+08:00",
+  "request": "重新生成现有十六夜与幼年犬夜叉面对面图：修正幼年犬夜叉火鼠裘的漫画深色网点，并让十六夜看向犬夜叉的眼神更温柔宠溺；其余构图、身份、背景和漫画画法保持不变。",
+  "intent": "edit",
+  "parent_task_id": null,
+  "change_category": "identity",
+  "change_request": "只修正幼年犬夜叉火鼠裘的深色漫画色调，以及十六夜眼神与嘴角的宠溺感；保持面对面站位、全身比例、贵族府邸背景和其余画面不变。",
+  "medium": "manga",
+  "deliverable": "edit",
+  "period_mode": "classic-balanced",
+  "style_strategy": "two-layer-manga-fast",
+  "style_references": [],
+  "content_need": {},
+  "content_references": [],
+  "characters": [
+    "十六夜",
+    "犬夜叉"
+  ],
+  "identity_forms": {
+    "十六夜": "default-form",
+    "犬夜叉": "child-form"
+  },
+  "forms_and_costumes": [
+    "十六夜: default-form",
+    "犬夜叉: child-form"
+  ],
+  "scene": "保持目标图中的白昼战国贵族府邸、木质缘侧与庭院背景；十六夜在左侧朝右低头看向幼年犬夜叉，幼年犬夜叉在右侧朝左抬头看向十六夜。",
+  "aspect_ratio": "3:2",
+  "invariants": [
+    "目标图控制构图、人物位置、相对尺度、府邸背景、全身轮廓与所有未点名区域",
+    "幼年犬夜叉的交领上衣、宽袖和宽松袴必须使用一致的中深色漫画网点，腰带更深；白发、皮肤、白色内襟和赤足保持白色",
+    "十六夜必须继续低头看向犬夜叉，眼神柔和宠溺：上眼睑放松、瞳孔明确落在孩子脸上、眉形温柔、嘴角有克制的浅笑，不得看向观者",
+    "保持十六夜在左朝右、幼年犬夜叉在右朝左，两人面对面并互相注视",
+    "不改变幼年犬夜叉四到五头身比例、犬耳、长白发、无念珠、无铁碎牙",
+    "不改变十六夜长黑发、贵族和服、衣摆和成年比例",
+    "不得增加文字、气泡、边框、签名、水印、人物、物件或特效"
+  ],
+  "form_references": []
+}

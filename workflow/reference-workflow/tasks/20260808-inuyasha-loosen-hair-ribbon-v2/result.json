@@ -1,0 +1,21 @@
+{
+  "schema_version": 3,
+  "status": "accepted",
+  "generated_at": "2026-08-08T15:47:35+08:00",
+  "generator": "built-in image_gen",
+  "accepted_attempt": 1,
+  "revision_required": true,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-loosen-hair-ribbon-v2/outputs/inuyasha-hair-ribbon-looser-v2.png",
+  "medium": "manga",
+  "intent": "edit",
+  "revisions": [
+    {
+      "attempt": 1,
+      "status": "accepted",
+      "failures": [],
+      "user_feedback": "legacy import; detailed rejected attempts unavailable"
+    }
+  ],
+  "qa": "pass",
+  "legacy_import": true
+}

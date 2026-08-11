@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-10T18:00:46+08:00",
+  "status": "rejected",
+  "generator": "imagegen",
+  "duration_seconds": 112.2,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-adult-inuyasha-facing-izayoi-grave-lake/outputs/成年半妖犬夜叉与十六夜墓碑__湖岸漫画__候选01.png",
+  "output_sha256": "f1fe581ffb27c27242a531fb2d5626985ec43c1f9f90c689dd38b74fb6cf0502",
+  "reference_item_ids": [
+    "manga-curated:file:b244478bd62b0efcf1f2",
+    "official:file:b69a31a9412dc8a2a06b",
+    "user-supplied:file:56744d86bf6a0b6db0ae",
+    "user-supplied:file:cfd3dfa9ce7a7a0c3c2d"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "composition",
+      "note": "湖面错误地紧贴墓碑后方；犬夜叉画面高度偏矮；墓碑前缺少几束鲜花"
+    }
+  ],
+  "user_feedback": "用户要求湖在墓碑正对面且距离较远，犬夜叉更高，墓碑前增加几束鲜花",
+  "preference_tags": []
+}

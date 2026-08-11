@@ -1,0 +1,35 @@
+{
+  "schema_version": 5,
+  "task_id": "20260808-inuyasha-human-form-sad-sakura-bust",
+  "created_at": "2026-08-08T09:16:53+08:00",
+  "request": "参考用户提供图片的右侧脸上身构图，生成犬夜叉人类形态伫立在草坪上的黑白漫画插图；神情带淡淡忧伤，黑色长发随风飘起，身旁樱花花瓣随风飘落",
+  "medium": "manga",
+  "deliverable": "illustration",
+  "period_mode": "classic-balanced",
+  "style_strategy": "dynamic-curated",
+  "style_references": [
+    "manga-curated:file:8e60715e27e853faa798"
+  ],
+  "characters": [
+    "犬夜叉"
+  ],
+  "identity_forms": {
+    "犬夜叉": "human-form"
+  },
+  "forms_and_costumes": [
+    "犬夜叉人类形态：长黑发、无犬耳、火鼠袍交领与宽袖、言灵念珠；上身构图中不出现铁碎牙"
+  ],
+  "scene": "春日草坪，犬夜叉安静伫立并望向画面右下方；微风将黑色长发、衣领边缘、草尖和樱花花瓣吹向画面左侧",
+  "aspect_ratio": "4:5 portrait",
+  "invariants": [
+    "只有犬夜叉一人，明确为人类形态：黑发、无犬耳、无獠牙、无利爪",
+    "右侧脸上身近景，保留头部、肩部、胸口念珠与部分宽袖",
+    "忧伤必须克制：眼帘略垂、视线低落、嘴角平静，不流泪也不夸张痛苦",
+    "黑发、衣角、草尖与樱花花瓣遵循同一风向",
+    "黑白漫画印刷画法，无文字、对白框、分镜边框、签名、logo 或水印"
+  ],
+  "intent": "new",
+  "parent_task_id": null,
+  "change_category": null,
+  "change_request": ""
+}

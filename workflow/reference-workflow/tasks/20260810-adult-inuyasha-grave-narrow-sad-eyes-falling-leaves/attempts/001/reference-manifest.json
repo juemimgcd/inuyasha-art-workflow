@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:e991a27c7f9a75e05fd3",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "e991a27c7f9a75e05fd3682bd65c8430e2fbc644760576e6da99ec08d83c1fcd",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-adult-inuyasha-grave-narrow-sad-eyes-falling-leaves/references/target-user-supplied-file-e991a27c7f9a75e05fd3-transport.jpg",
+      "original_path": "/private/var/folders/9h/drdqs3qn2fl87zdxt1gy56h00000gn/T/codex-clipboard-27534806-6cd6-4618-b6e7-89e5abb61cf3.png",
+      "pdf_page": null,
+      "instructions": "Preserve this image exactly except for the user's explicitly requested local edit.",
+      "crop_box": null,
+      "focus": "",
+      "transport": {
+        "kind": "downscaled-jpeg",
+        "max_edge": 960,
+        "quality": 88,
+        "source_dimensions": [
+          1537,
+          1023
+        ],
+        "rendered_dimensions": [
+          960,
+          639
+        ],
+        "rendered_content_hash": "11e8e3c4f3a57b23237b233d030ec6d2e09a872ec00f9fae1ae6f836bc243a67"
+      }
+    }
+  ]
+}

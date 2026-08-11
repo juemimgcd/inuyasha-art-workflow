@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "attempt": 3,
+  "recorded_at": "2026-08-11T08:32:38+08:00",
+  "status": "rejected",
+  "generator": "builtin-imagegen",
+  "duration_seconds": 60.1,
+  "generation_seconds": 60.1,
+  "response_started_at": "2026-08-11T08:13:29+08:00",
+  "response_seconds": 1149.0,
+  "pre_generation_seconds": 741.0,
+  "pre_generation_target_seconds": 30,
+  "pre_generation_target_met": false,
+  "post_generation_seconds": 347.9,
+  "post_generation_target_seconds": 30,
+  "post_generation_target_met": false,
+  "workflow_overhead_seconds": 1088.9,
+  "response_slo_seconds": null,
+  "response_slo_met": null,
+  "output": "/Users/jquery/Documents/inuyahsa-official/output/犬夜叉墓前忧伤微调__候选v3.png",
+  "output_sha256": "9cf5c0214e6f47a3c2ce28199b0cd8d0b4629d0afdf87fab2b82bd90e3879080",
+  "reference_item_ids": [
+    "user-supplied:file:5c55323571c0baaed347",
+    "user-supplied:file:c06a89b49f9b8a365333"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "composition",
+      "note": "眼睛已达到要求，但整个头颅相对颈部的俯角与上一版差异不足"
+    }
+  ],
+  "user_feedback": "用户明确反馈：这个眼睛对了，但是头还是和上一张图一样吧，再微调一下",
+  "preference_tags": [
+    "eye-expression:accepted-narrow-sorrow",
+    "pose:stronger-head-bow"
+  ]
+}

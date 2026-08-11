@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:1f367518508b9ccd521c",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "1f367518508b9ccd521c34f1f6798e529ad7f82d91d314721404f9f9ef945ba1",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-izayoi-child-inuyasha-dark-robe-affectionate-gaze/references/target-user-supplied-file-1f367518508b9ccd521c.png",
+      "original_path": "/private/var/folders/9h/drdqs3qn2fl87zdxt1gy56h00000gn/T/codex-clipboard-299b5d85-5c82-4088-a4c1-0126c323366e.png",
+      "pdf_page": null,
+      "instructions": "Preserve this image exactly except for the user's explicitly requested local edit.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 2,
+      "role": "identity",
+      "item_id": "official:file:c72310b3df3a4455f6eb",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "c72310b3df3a4455f6eb9cb427810c6b0874045046fe18aac8529f814cfa6869",
+      "folder_path": "犬夜叉设定集",
+      "content_label": "犬夜叉设定集",
+      "folder_tags": [
+        "犬夜叉设定集"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "child-form"
+      ],
+      "subject_forms": {
+        "犬夜叉": [
+          "child-form"
+        ]
+      },
+      "shot_types": [
+        "full-body"
+      ],
+      "filename_terms": [
+        "犬夜叉幼年形态全身图01"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-izayoi-child-inuyasha-dark-robe-affectionate-gaze/references/identity-official-file-c72310b3df3a4455f6eb.png",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/犬夜叉设定集/犬夜叉幼年形态全身图01.png",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, anatomy, costume, weapon or prop construction, attachment, and scale only. Do not control rendering style or scene composition.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 3,
+      "role": "identity",
+      "item_id": "official:file:f4819e9df3546a3ed095",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "f4819e9df3546a3ed0956ea7b5e460fc2701be45d686b52ac6d385d56471ccc6",
+      "folder_path": "十六夜设定集",
+      "content_label": "十六夜设定集",
+      "folder_tags": [
+        "十六夜设定集"
+      ],
+      "subjects": [
+        "十六夜"
+      ],
+      "forms": [
+        "default-form"
+      ],
+      "subject_forms": {
+        "十六夜": [
+          "default-form"
+        ]
+      },
+      "shot_types": [
+        "face"
+      ],
+      "filename_terms": [
+        "十六夜表情图01"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-izayoi-child-inuyasha-dark-robe-affectionate-gaze/references/identity-official-file-f4819e9df3546a3ed095.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/十六夜设定集/十六夜表情图01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, anatomy, costume, weapon or prop construction, attachment, and scale only. Do not control rendering style or scene composition.",
+      "crop_box": null,
+      "focus": ""
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "target": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-kagome-to-sesshomaru-panel-edit/outputs/kagome-to-sesshomaru-user-approved-base.png",
+  "candidate": "/Users/jquery/.codex/generated_images/019fe980-c447-76e0-b8a8-77f7505148b6/exec-0c1e61ee-28c3-4cfc-bb67-29faeaf395d9.png",
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-sesshomaru-one-sword-period-fix/outputs/sesshomaru-one-sword-period-fix.png",
+  "target_sha256": "2b493d036cfb35e0b40651850d51583eefff0912334f1c8493f6f0a711d4ce27",
+  "candidate_sha256": "e2264e296c20fce13097c52173d7ce5c149a365117a77560b1dedd2c46017a7c",
+  "output_sha256": "05c364209d92fe6adbfdcf80604cdd8028019b204ee55bdc304d66fd85dd5b90",
+  "context_box": [
+    120,
+    650,
+    470,
+    480
+  ],
+  "edit_box": [
+    260,
+    790,
+    190,
+    200
+  ],
+  "feather_pixels": 9,
+  "candidate_resized_to_context": true,
+  "outside_edit_box_preserved": true
+}

@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:8a846750c4162b34e244",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "8a846750c4162b34e24495d09108d91f6c21b698245099661affeee52d5bed10",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-sealed-inuyasha-back-view-v2/references/target-user-supplied-file-8a846750c4162b34e244.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-watches-sealed-inuyasha/output/sesshomaru-watches-sealed-inuyasha.png",
+      "pdf_page": null,
+      "instructions": "Preserve this image exactly except for the user's explicitly requested local edit."
+    },
+    {
+      "order": 2,
+      "role": "identity",
+      "item_id": "official:file:cc54643e82bb244a2c95",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "cc54643e82bb244a2c95f124796749ed69a949babda3311399b486477dd68971",
+      "folder_path": "杀生丸设定集",
+      "content_label": "杀生丸设定集",
+      "folder_tags": [
+        "杀生丸设定集"
+      ],
+      "subjects": [
+        "杀生丸"
+      ],
+      "forms": [
+        "default-form"
+      ],
+      "shot_types": [
+        "full-body"
+      ],
+      "filename_terms": [
+        "杀生丸全身图02"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-sealed-inuyasha-back-view-v2/references/identity-official-file-cc54643e82bb244a2c95.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/杀生丸设定集/杀生丸全身图02.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, costume, weapon, prop, and scale only. Do not control rendering style or composition."
+    },
+    {
+      "order": 3,
+      "role": "identity",
+      "item_id": "official:file:d1e77d9ad13576657d98",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "d1e77d9ad13576657d98f3b0eccd53fddf5f9de65e29448159f520a06ae6d71c",
+      "folder_path": "杀生丸设定集",
+      "content_label": "杀生丸设定集",
+      "folder_tags": [
+        "杀生丸设定集"
+      ],
+      "subjects": [
+        "杀生丸"
+      ],
+      "forms": [
+        "default-form"
+      ],
+      "shot_types": [],
+      "filename_terms": [
+        "杀生丸佩剑图01"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-sealed-inuyasha-back-view-v2/references/identity-official-file-d1e77d9ad13576657d98.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/杀生丸设定集/杀生丸佩剑图01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, costume, weapon, prop, and scale only. Do not control rendering style or composition."
+    },
+    {
+      "order": 4,
+      "role": "identity",
+      "item_id": "official:file:798eaba650545b06b4a7",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "798eaba650545b06b4a7ae52296946693548ee830a98896c1e82dcdf467f6158",
+      "folder_path": "犬夜叉设定集",
+      "content_label": "犬夜叉设定集",
+      "folder_tags": [
+        "犬夜叉设定集"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "half-demon-form"
+      ],
+      "shot_types": [],
+      "filename_terms": [
+        "犬夜叉半妖形态图01"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-sealed-inuyasha-back-view-v2/references/identity-official-file-798eaba650545b06b4a7.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/犬夜叉设定集/犬夜叉半妖形态图01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, costume, weapon, prop, and scale only. Do not control rendering style or composition."
+    }
+  ]
+}

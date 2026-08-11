@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "revision": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "content_hash": "bdde9114490bc65ebb240eaf858fbe3673093511131f4b591a875a9dd1b9641b",
+      "path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-sad-sakura-bust/outputs/inuyasha-human-form-sad-sakura-bust.png",
+      "authority": "preserve composition, identity instance, expression, crop and scene"
+    },
+    {
+      "order": 2,
+      "role": "style",
+      "content_hash": "40b1d7417467c1ba3db25d083b388f1e368fd63284e034043436640706aa84a0",
+      "path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-sad-sakura-bust/references/revision-style-user-supplied-darker-tone.png",
+      "authority": "control only darker garment screentone, grass density and page value balance"
+    },
+    {
+      "order": 3,
+      "role": "identity",
+      "content_hash": "efe7eafd42e0ab48e48f377f45329a5d3e8575a0c68f7505ba589f6d76e3110d",
+      "path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-sad-sakura-bust/references/identity-official-file-efe7eafd42e0ab48e48f.jpg",
+      "authority": "preserve canonical human-form identity"
+    }
+  ]
+}

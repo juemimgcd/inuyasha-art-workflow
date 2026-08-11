@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-09T20:49:09+08:00",
+  "status": "rejected",
+  "generator": "built-in image_gen",
+  "duration_seconds": 73.0,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-tenseiga-mount-construction/outputs/sesshomaru-tenseiga-mount-candidate-01.png",
+  "output_sha256": "a8c96a6b5ff1989c351024424cfe32621d28c0300eb65654368e7d06015f9550",
+  "reference_item_ids": [
+    "user-supplied:file:edacbdc7fe5ff543f8ab",
+    "official:file:feb144894cb1375186a7"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "preservation",
+      "note": "目标区外的树根、藤蔓、犬夜叉和背景被整体重绘，违反只修改杀生丸后腰佩挂区域的硬约束"
+    },
+    {
+      "category": "construction",
+      "note": "腰带与刀鞘的连接虽有所增加，但固定点仍不够清楚，且改动范围失控"
+    }
+  ],
+  "user_feedback": "",
+  "preference_tags": []
+}

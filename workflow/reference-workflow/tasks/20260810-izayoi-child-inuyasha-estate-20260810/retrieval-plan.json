@@ -1,0 +1,191 @@
+{
+  "schema_version": 3,
+  "task": "20260810-izayoi-child-inuyasha-estate-20260810",
+  "gate": "Run one layer, inspect candidates, record HIT/MISS/INSUFFICIENT, then advance.",
+  "mode": "cross-medium-content",
+  "candidate_limit": 6,
+  "continuity_requested": false,
+  "content_need": {
+    "query": "庭院抱球",
+    "focus": "幼年犬夜叉的孩童体量、头身比例、耳朵与长发关系、宽大衣袖尺度，以及府邸庭院可见元素；不得控制漫画笔触、网点或黑白层次。",
+    "provenance": "observed-content"
+  },
+  "layers": [
+    {
+      "layer": 1,
+      "source": "official",
+      "primary_commands": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "十六夜",
+          "--form",
+          "default-form",
+          "--limit",
+          "6",
+          "--shot",
+          "full-body"
+        ],
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "child-form",
+          "--limit",
+          "6",
+          "--shot",
+          "full-body"
+        ]
+      ],
+      "fallback_without_shot": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "十六夜",
+          "--form",
+          "default-form",
+          "--limit",
+          "6"
+        ],
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "child-form",
+          "--limit",
+          "6"
+        ]
+      ],
+      "selection_budget": "one identity sheet per focal character; add a focused crop only for an unresolved construction detail"
+    },
+    {
+      "layer": 2,
+      "source": "manga-curated",
+      "primary_commands": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+          "--source",
+          "manga-curated",
+          "--subject",
+          "十六夜",
+          "--form",
+          "default-form",
+          "--shot",
+          "full-body",
+          "--limit",
+          "6",
+          "--columns",
+          "3"
+        ]
+      ],
+      "fallback_without_shot": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+          "--source",
+          "manga-curated",
+          "--subject",
+          "十六夜",
+          "--form",
+          "default-form",
+          "--limit",
+          "6",
+          "--columns",
+          "3"
+        ]
+      ],
+      "selection_budget": "one style screenshot by default; two only when one cannot resolve the requested rendering grammar"
+    },
+    {
+      "layer": 3,
+      "role": "content",
+      "need": "幼年犬夜叉的孩童体量、头身比例、耳朵与长发关系、宽大衣袖尺度，以及府邸庭院可见元素；不得控制漫画笔触、网点或黑白层次。",
+      "selected_medium": {
+        "source": "manga-curated",
+        "primary_commands": [
+          [
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+            "--source",
+            "manga-curated",
+            "--exact-term",
+            "庭院抱球",
+            "--shot",
+            "full-body",
+            "--limit",
+            "6",
+            "--columns",
+            "3"
+          ]
+        ],
+        "fallback_without_shot": [
+          [
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+            "--source",
+            "manga-curated",
+            "--exact-term",
+            "庭院抱球",
+            "--limit",
+            "6",
+            "--columns",
+            "3"
+          ]
+        ]
+      },
+      "cross_medium_fallback": {
+        "source": "tv-curated",
+        "allowed_after": [
+          "MISS",
+          "INSUFFICIENT"
+        ],
+        "primary_commands": [
+          [
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+            "--source",
+            "tv-curated",
+            "--exact-term",
+            "庭院抱球",
+            "--shot",
+            "full-body",
+            "--limit",
+            "6",
+            "--columns",
+            "3"
+          ]
+        ],
+        "fallback_without_shot": [
+          [
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+            "--source",
+            "tv-curated",
+            "--exact-term",
+            "庭院抱球",
+            "--limit",
+            "6",
+            "--columns",
+            "3"
+          ]
+        ]
+      },
+      "selection_budget": "at most one exact-focus content image; a cross-medium hit is content evidence only and never style or identity evidence"
+    }
+  ]
+}

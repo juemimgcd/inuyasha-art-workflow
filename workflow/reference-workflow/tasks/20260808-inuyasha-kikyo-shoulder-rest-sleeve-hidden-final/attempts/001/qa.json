@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "status_values": ["pending", "pass", "fail", "n/a"],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "犬夜叉保持青年半妖形态，桔梗保持年轻巫女形态。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "双犬耳、银白束发、黑色长发、巫女衣襟、腰带、袴与靠肩体型关系保持。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "抚发手仍为五指，双犬耳、发绳和念珠完整；隐藏左袖后未新增手臂、手或袖子。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "输出保持纯黑白漫画表现，没有彩色动画或写实渲染泄漏。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "犬夜叉补画区域使用连续中灰网点，墨线、纯黑发块和白色皮肤与目标图一致。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "靠肩与抚发动作保持；桔梗左臂的头后路径通过遮挡关系表达，正面零可见左袖。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "草叶、点描光晕和白色留白保持从属层级。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "成图无红框、文字、气泡、分格、签名、logo或水印。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "输出为1123x1400纵向PNG，保持约4:5构图。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "pass",
+      "note": "风格参考只用于墨线、黑白关系与网点；人物和构图延续目标图。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "生成调用按manifest使用1张漫画风格图、2张官方身份图和1张用户目标图。"
+    }
+  ]
+}

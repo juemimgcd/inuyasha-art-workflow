@@ -1,0 +1,3 @@
+{"schema_version": 1, "recorded_at": "2026-08-08T21:57:28+08:00", "attempt": 2, "status": "accepted", "feedback": "内部QA通过：人类形态、双眼同向上望、忧伤氛围、黑白漫画与4:5上身构图均符合 brief", "tags": []}
+{"schema_version": 1, "recorded_at": "2026-08-08T22:18:12+08:00", "attempt": 3, "status": "rejected", "feedback": "用户明确反馈：另外一张图更像困了一样", "tags": []}
+{"schema_version": 1, "recorded_at": "2026-08-08T22:18:12+08:00", "attempt": 4, "status": "accepted", "feedback": "用户明确选择首轮图：这张图更符合犬夜叉的气质；忧伤应保持清醒、克制和倔强，不能用沉重下垂的上眼睑表现成困倦", "tags": ["character-temperament:inuyasha-alert", "eye-expression:alert-melancholy"]}

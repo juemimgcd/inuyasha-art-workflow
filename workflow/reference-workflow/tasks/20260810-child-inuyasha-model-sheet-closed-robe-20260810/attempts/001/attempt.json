@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-10T14:44:06+08:00",
+  "status": "rejected",
+  "generator": "built-in image_gen",
+  "duration_seconds": null,
+  "output": "/Users/jquery/.codex/generated_images/019fea5f-cace-74f0-834c-93ccfd7929d1/exec-011f4125-739f-4cf3-ba3d-1942b4647a35.png",
+  "output_sha256": "c77d32443e31791f6e6ead69143d7bcb0a19eccda754f8a386ee5caeda59a050",
+  "reference_item_ids": [
+    "user-supplied:file:2e2299975882eb1e8c53",
+    "tv-curated:file:647cbeca552efd67d4ad"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "continuity",
+      "note": "闭合交领、窄黑内领和小胸绳已修正，但误删了四视图红色上衣原有的浅米色上臂袖带；必须只恢复袖带，不改变已修正服装结构及其他人物特征。"
+    }
+  ],
+  "user_feedback": "",
+  "preference_tags": []
+}

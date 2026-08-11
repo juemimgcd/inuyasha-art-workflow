@@ -1,0 +1,23 @@
+{
+  "target": "/Users/jquery/Documents/inuyahsa-official/output/犬夜叉墓前忧伤手与嘴微调__候选v6.png",
+  "candidate": "/Users/jquery/Documents/inuyahsa-official/output/hand-mouth-microfix-work/character-context.png",
+  "output": "/Users/jquery/Documents/inuyahsa-official/output/hand-mouth-microfix-work/v6-left-restored.png",
+  "target_sha256": "836b0d257496d1b725837b889f846c30cafe8d7b6935d00e63781c8849370864",
+  "candidate_sha256": "5d4523785af067266ca240de2c2e7cf4c55bedc2ecd6dcae5e9162b7334dc599",
+  "output_sha256": "1485015e4b9a2489ed1bf2e290e81d3daf0539c4020f1dbe74acc40ebbea0167",
+  "context_box": [
+    100,
+    0,
+    700,
+    700
+  ],
+  "edit_box": [
+    385,
+    560,
+    120,
+    110
+  ],
+  "feather_pixels": 0,
+  "candidate_resized_to_context": false,
+  "outside_edit_box_preserved": true
+}

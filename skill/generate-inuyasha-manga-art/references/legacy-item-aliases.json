@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "aliases": [
+    {
+      "alias_id": "manga-curated:file:184f1726b5fa",
+      "item_id": "manga-curated:file:876af11c5aa2fd24a707",
+      "reason": "pre-content-id flat path"
+    },
+    {
+      "alias_id": "manga-curated:file:19cccb5634fc",
+      "item_id": "manga-curated:file:c1198c4c5cd19cfc19c8",
+      "reason": "pre-content-id flat path"
+    },
+    {
+      "alias_id": "manga-curated:file:1560a081f225",
+      "item_id": "manga-curated:file:8f7a2ef700f3ecd25058",
+      "reason": "pre-content-id flat path"
+    },
+    {
+      "alias_id": "manga-curated:file:8d0d792a0f9c",
+      "item_id": "manga-curated:file:55f64dbc2942dd2a94d9",
+      "reason": "pre-content-id flat path"
+    },
+    {
+      "alias_id": "manga-curated:file:be0e4bb23d3c",
+      "item_id": "manga-curated:file:c15b8e276680ee0585eb",
+      "reason": "pre-content-id flat path"
+    }
+  ]
+}

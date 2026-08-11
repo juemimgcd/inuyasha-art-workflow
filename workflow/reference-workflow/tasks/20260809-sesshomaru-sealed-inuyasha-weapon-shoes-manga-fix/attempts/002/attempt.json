@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "attempt": 2,
+  "recorded_at": "2026-08-09T09:52:17+08:00",
+  "status": "rejected",
+  "generator": "built-in-image_gen",
+  "duration_seconds": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-sealed-inuyasha-weapon-shoes-manga-fix/output/sesshomaru-sealed-inuyasha-weapon-shoes-manga-fix-candidate-02.png",
+  "output_sha256": "edacbdc7fe5ff543f8ab1fdceb8798fccb948a0db7ec146a9d4803053b8f8288",
+  "reference_item_ids": [
+    "user-supplied:file:bc7471748a2861ff611a",
+    "manga-curated:file:b48ac52f161f261e6dd0",
+    "official:file:cc54643e82bb244a2c95",
+    "official:file:d1e77d9ad13576657d98",
+    "user-supplied:file:097b629691582f73acec"
+  ],
+  "failures": [
+    {
+      "category": "costume",
+      "note": "犬夜叉封印姿态和大量根系已经通过，但天生牙仍没有清楚可见的腰带悬挂连接，刀柄像从肩毛下方直接出现，形成轻微悬浮和穿模感"
+    }
+  ],
+  "user_feedback": "内部复查：保留犬夜叉、树根、画风、鞋履和构图，只重做天生牙的佩带连接与遮挡层级",
+  "preference_tags": []
+}

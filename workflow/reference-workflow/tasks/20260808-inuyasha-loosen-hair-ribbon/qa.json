@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "犬夜叉保持半妖形态，桔梗保持原图角色设定；本次只调整犬夜叉后脑发绳。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "两人的脸、表情、发型主体、服装层次与相对体型均保持原图。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "桔梗抚头的手、犬耳、念珠和服装关键形状未发生可见改变。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "成图继续由黑白漫画媒介主导，没有混入彩色或 TV 赛璐璐画法。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "线条、黑白块面与网点质感延续原图；修改区域保持同一漫画线稿语言。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "人物位置、倚靠动作、抚头手势与整体剪影清楚且保持不变。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "草叶和留白仍作为低干扰背景，没有抢夺人物焦点。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "没有新增文字、对话框、签名、logo 或水印。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "输出为 1123×1401 PNG，与 brief 的竖幅比例和微调交付物一致。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "pass",
+      "note": "漫画截图仅用于确认黑白线条与网点语法，没有复制其剧情、分镜或文字。"
+    },
+    {
+      "category": "process",
+      "check": "selected-output 只控制已认可的连续性和完成度，没有覆盖官方身份或目标媒介画法",
+      "status": "pass",
+      "note": "selected-output 仅用于确认原图连续性和完成度，未覆盖官方身份或漫画画法。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "四项参考均登记在 manifest；生成请求以排序第一的本地 target 为编辑输入，其余三层参考用于检索、目视核对和约束提示词。"
+    }
+  ]
+}

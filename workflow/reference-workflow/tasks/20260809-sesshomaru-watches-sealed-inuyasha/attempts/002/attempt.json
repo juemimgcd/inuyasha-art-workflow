@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "attempt": 2,
+  "recorded_at": "2026-08-09T09:04:20+08:00",
+  "status": "rejected",
+  "generator": "user review of built-in image_gen attempt",
+  "duration_seconds": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-watches-sealed-inuyasha/output/sesshomaru-watches-sealed-inuyasha.png",
+  "output_sha256": "8a846750c4162b34e24495d09108d91f6c21b698245099661affeee52d5bed10",
+  "reference_item_ids": [
+    "manga-curated:file:1a5ee70d0760b3256408",
+    "official:file:149102d0222789e096e6",
+    "official:file:798eaba650545b06b4a7",
+    "user-supplied:file:aa6d8888137ecd6ac741",
+    "user-supplied:file:6d73f80f15a589797fd9"
+  ],
+  "failures": [
+    {
+      "category": "costume",
+      "note": "犬夜叉在这个封印时期不应佩戴言灵念珠；杀生丸腰间只应有天生牙一把刀"
+    },
+    {
+      "category": "composition",
+      "note": "杀生丸应以背影正对犬夜叉，而不是当前侧脸斜视构图；背影不得遮挡犬夜叉"
+    }
+  ],
+  "user_feedback": "这个时期的犬夜叉脖子上没有念珠；这个时期的杀生丸腰间只有天生牙；杀生丸应正对犬夜叉，最好只给背影且不要挡住犬夜叉",
+  "preference_tags": []
+}

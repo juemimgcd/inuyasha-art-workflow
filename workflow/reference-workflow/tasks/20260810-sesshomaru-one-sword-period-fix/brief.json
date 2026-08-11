@@ -1,0 +1,64 @@
+{
+  "schema_version": 5,
+  "task_id": "20260810-sesshomaru-one-sword-period-fix",
+  "created_at": "2026-08-10T10:44:26+08:00",
+  "request": "只删除远景杀生丸腰间多余的一把刀，仅保留一把佩刀，并修顺单刀从腰带到刀鞘的连接、重叠和线条；近景杀生丸、远景人物其他部位、服装、毛皮、长发、姿态、背景、构图、线稿和网点全部保持不变",
+  "intent": "microfix",
+  "parent_task_id": "20260810-kagome-to-sesshomaru-panel-edit",
+  "change_category": "construction",
+  "change_request": "只删除远景杀生丸腰间多余的一把刀，仅保留一把佩刀，并修顺单刀从腰带到刀鞘的连接、重叠和线条；近景杀生丸、远景人物其他部位、服装、毛皮、长发、姿态、背景、构图、线稿和网点全部保持不变",
+  "medium": "manga",
+  "deliverable": "edit",
+  "period_mode": "classic-balanced",
+  "style_strategy": "two-layer-manga-fast",
+  "style_references": [],
+  "characters": [
+    "杀生丸"
+  ],
+  "identity_forms": {
+    "杀生丸": "default-form"
+  },
+  "forms_and_costumes": [
+    "杀生丸: default-form"
+  ],
+  "scene": "竖幅单格漫画：林木与花草环境中，同一角色以右侧巨大近景头像和左中部远景全身侧身像同时出现。把两处戈薇都替换为同一时期、同一身份的杀生丸；近景延续原来朝左下方观看的安静视线，远景延续朝左站立的侧身姿态。",
+  "aspect_ratio": "509:683",
+  "invariants": [
+    "保留原图 509x683 竖幅构图、近景与远景的相对位置、大小和朝向",
+    "保留全部树干、树冠黑块、花草、地形、留白、网点密度和既有线稿质感",
+    "右侧近景必须是杀生丸的修长冷峻成年面型、极长浅色头发、尖侧耳、额头月牙与脸颊妖纹，并出现肩部毛皮和纹样衣领",
+    "左中部远景必须把校服轮廓替换为杀生丸的长发、肩部毛皮、分层衣甲、宽大裤装和佩刀轮廓，保持站姿与地面接触",
+    "两处人物必须明确是同一个杀生丸，禁止残留戈薇的黑发、少女圆脸、校服水手领、短裙或现代鞋袜",
+    "禁止加入犬夜叉头顶犬耳、火鼠裘、念珠或铁碎牙",
+    "不得新增文字、对白框、分格线、签名、logo 或水印"
+  ],
+  "prompt_invariants": [
+    "父任务中已经通过的角色身份、形态、构图和漫画画法保持不变",
+    "只处理 construction 类问题，不引入其他设计改动",
+    "用户对该时期的明确校正优先：腰间总数必须正好一把刀；保留靠人物身体、挂载更自然的那一把，完整移除另一把的刀柄、护手、刀鞘和重复线条",
+    "生成内容只供声明的编辑框合成，框外像素必须与父图完全一致"
+  ],
+  "local_edit": {
+    "mode": "crop-composite",
+    "target": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-kagome-to-sesshomaru-panel-edit/outputs/kagome-to-sesshomaru-user-approved-base.png",
+    "edit_box": [
+      260,
+      790,
+      190,
+      200
+    ],
+    "context_box": [
+      120,
+      650,
+      470,
+      480
+    ],
+    "edit_box_in_context": [
+      140,
+      140,
+      190,
+      200
+    ],
+    "feather_pixels": 9
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "schema_version": 5,
+  "task_id": "20260810-child-inuyasha-model-sheet-closed-robe-20260810",
+  "created_at": "2026-08-10T14:37:52+08:00",
+  "request": "修正幼年犬夜叉四视图设定表的服装结构：红色外衣必须在胸前以交领方式闭合并用细绳系住，不能像敞开的羽织一样露出大面积黑色内衣；其他已经正确的身份、比例、四视图布局和画法保持不变。",
+  "intent": "edit",
+  "parent_task_id": null,
+  "change_category": "costume",
+  "change_request": "在已经修正为闭合交领的四视图候选稿上，只恢复红色上衣原有的浅米色上臂窄袖带；不得改变闭合衣襟、小胸绳、窄黑内领、克制腰带或任何其他内容。",
+  "medium": "tv",
+  "deliverable": "edit",
+  "period_mode": null,
+  "style_strategy": "two-layer-tv-fast",
+  "style_references": [],
+  "content_need": {},
+  "content_references": [],
+  "characters": [
+    "犬夜叉"
+  ],
+  "identity_forms": {
+    "犬夜叉": "child-form"
+  },
+  "forms_and_costumes": [
+    "犬夜叉: child-form"
+  ],
+  "scene": "保持当前闭合交领候选稿的暖白背景、正面、三分之四、侧面、背面布局和共用地面基线；只恢复各角度可见的上臂浅米色窄袖带。",
+  "aspect_ratio": "3:2",
+  "invariants": [
+    "四个视图的人物位置、尺寸、头身比、脸型、表情、犬耳、刘海、发量、发长和视角完全不变。",
+    "背景、画布、共用地面基线、留白、轮廓粗细、平涂配色和阴影完全不变。",
+    "只在红色外袖上臂、肩部下方恢复一圈窄浅米色袖带；正面两臂、三分之四和侧面按透视显示，背面仅允许出现自然可见的极小侧缘。",
+    "红色外衣必须继续保持闭合式交领：穿着者左前襟覆盖右前襟，红色前襟覆盖胸腹，胸前以小红色细绳结固定。",
+    "黑色内层只允许在颈口形成窄幅交领边，不得出现从颈口延伸到腰部的大面积黑色胸腹面，不得再像敞开的羽织。",
+    "去掉不符合截图的大型腰间蝴蝶结，改为克制的腰部束带；袖长、裤量、手脚及背面轮廓不变。",
+    "不得新增念珠、铁碎牙、刀鞘、鞋、文字、标签、logo、水印或其他人物。"
+  ],
+  "form_references": [
+    "tv-curated:file:647cbeca552efd67d4ad"
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:bc5ed534e64d0ce6c0d7",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "bc5ed534e64d0ce6c0d71d48fc08f26c8d444850ae1151fa13916409fd40425b",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-izayoi-child-inuyasha-ball-pass-20260811/references/target-user-supplied-file-bc5ed534e64d0ce6c0d7-transport.jpg",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-izayoi-child-inuyasha-ball-pass-20260811/outputs/十六夜与幼年犬夜叉__双手举起请求传球__候选01.png",
+      "pdf_page": null,
+      "instructions": "Preserve this image exactly except for the user's explicitly requested local edit.",
+      "crop_box": null,
+      "focus": "",
+      "transport": {
+        "kind": "downscaled-jpeg",
+        "max_edge": 960,
+        "quality": 88,
+        "source_dimensions": [
+          1003,
+          1568
+        ],
+        "rendered_dimensions": [
+          614,
+          960
+        ],
+        "rendered_content_hash": "40773d5578dbad95ac15108892565e28804365147a3ca8278d274f1595b266c9"
+      }
+    },
+    {
+      "order": 2,
+      "role": "identity",
+      "item_id": "official:file:f4819e9df3546a3ed095",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "f4819e9df3546a3ed0956ea7b5e460fc2701be45d686b52ac6d385d56471ccc6",
+      "folder_path": "十六夜设定集",
+      "content_label": "十六夜设定集",
+      "folder_tags": [
+        "十六夜设定集"
+      ],
+      "subjects": [
+        "十六夜"
+      ],
+      "forms": [
+        "default-form"
+      ],
+      "subject_forms": {
+        "十六夜": [
+          "default-form"
+        ]
+      },
+      "shot_types": [
+        "face"
+      ],
+      "filename_terms": [
+        "十六夜表情图01"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-izayoi-child-inuyasha-ball-pass-20260811/references/identity-official-file-f4819e9df3546a3ed095.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/十六夜设定集/十六夜表情图01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, anatomy, costume, weapon or prop construction, attachment, and scale only. Do not control rendering style or scene composition.",
+      "crop_box": null,
+      "focus": ""
+    }
+  ]
+}

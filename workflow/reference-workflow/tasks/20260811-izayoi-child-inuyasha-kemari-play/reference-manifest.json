@@ -1,0 +1,208 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "style",
+      "item_id": "manga-curated:file:cb67f4934e8e0825eda6",
+      "source_id": "manga-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "cb67f4934e8e0825eda6ac628fee066de26c02abb4a3ea2df50d1bd4ac0321d6",
+      "folder_path": "十六夜",
+      "content_label": "十六夜",
+      "folder_tags": [
+        "十六夜"
+      ],
+      "subjects": [
+        "十六夜"
+      ],
+      "forms": [
+        "default-form"
+      ],
+      "subject_forms": {
+        "十六夜": [
+          "default-form"
+        ]
+      },
+      "shot_types": [
+        "full-body"
+      ],
+      "filename_terms": [
+        "01",
+        "人物参考",
+        "全身",
+        "十六夜",
+        "默认形态"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-izayoi-child-inuyasha-kemari-play/references/style-manga-curated-file-cb67f4934e8e0825eda6.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos/十六夜/十六夜__默认形态__全身__人物参考__01.png",
+      "pdf_page": null,
+      "instructions": "Control only black-and-white manga mark-making: line hierarchy, black-white massing, halftone economy, facial simplification, and effect construction. Do not copy visible characters, dialogue, balloons, panel borders, layout, or story content.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 2,
+      "role": "identity",
+      "item_id": "official:file:6285125444be8011e070",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "6285125444be8011e070be64cdbef76a01590e38d3abffce6c36206575cf5fa2",
+      "folder_path": "十六夜设定集",
+      "content_label": "十六夜设定集",
+      "folder_tags": [
+        "十六夜设定集"
+      ],
+      "subjects": [
+        "十六夜"
+      ],
+      "forms": [
+        "default-form"
+      ],
+      "subject_forms": {
+        "十六夜": [
+          "default-form"
+        ]
+      },
+      "shot_types": [
+        "full-body"
+      ],
+      "filename_terms": [
+        "十六夜和服全身图01"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-izayoi-child-inuyasha-kemari-play/references/identity-official-file-6285125444be8011e070.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/十六夜设定集/十六夜和服全身图01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, anatomy, costume, weapon or prop construction, attachment, and scale only. Do not control rendering style or scene composition.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 3,
+      "role": "identity",
+      "item_id": "official:file:f4819e9df3546a3ed095",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "f4819e9df3546a3ed0956ea7b5e460fc2701be45d686b52ac6d385d56471ccc6",
+      "folder_path": "十六夜设定集",
+      "content_label": "十六夜设定集",
+      "folder_tags": [
+        "十六夜设定集"
+      ],
+      "subjects": [
+        "十六夜"
+      ],
+      "forms": [
+        "default-form"
+      ],
+      "subject_forms": {
+        "十六夜": [
+          "default-form"
+        ]
+      },
+      "shot_types": [
+        "face"
+      ],
+      "filename_terms": [
+        "十六夜表情图01"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-izayoi-child-inuyasha-kemari-play/references/identity-official-file-f4819e9df3546a3ed095-crop-310-50-370-310.png",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/十六夜设定集/十六夜表情图01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, anatomy, costume, weapon or prop construction, attachment, and scale only. Do not control rendering style or scene composition. This prepared image is a task-local crop (310, 50, 370, 310) from the recorded source; use only construction visible inside the crop and do not infer omitted states. Exact focus: 十六夜秀气鹅蛋脸、杏眼、齐刘海、精致小鼻口与温柔向下凝视的面部比例",
+      "crop_box": [
+        310,
+        50,
+        370,
+        310
+      ],
+      "focus": "十六夜秀气鹅蛋脸、杏眼、齐刘海、精致小鼻口与温柔向下凝视的面部比例",
+      "rendered_content_hash": "b9fef31c0fdc733790844ec52ad5bd7919211f42c20a48392e9e7d5c0b371eb6",
+      "crop_source_hash": "6a9f7d3c206ee3994dd9b0a44f82421aa399c1fd528e95e9a67b5e650188418b"
+    },
+    {
+      "order": 4,
+      "role": "form",
+      "item_id": "manga-curated:file:cd73f043f0439d0ba73d",
+      "source_id": "manga-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "cd73f043f0439d0ba73d4f440bc8e9d2bd9192c81716db2962f8fd62dd4869aa",
+      "folder_path": "犬夜叉",
+      "content_label": "犬夜叉",
+      "folder_tags": [
+        "犬夜叉"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "child-form"
+      ],
+      "subject_forms": {
+        "犬夜叉": [
+          "child-form"
+        ]
+      },
+      "shot_types": [
+        "close-up"
+      ],
+      "filename_terms": [
+        "01",
+        "幼年参考",
+        "幼年形态",
+        "犬夜叉",
+        "近景"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-izayoi-child-inuyasha-kemari-play/references/form-manga-curated-file-cd73f043f0439d0ba73d.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos/犬夜叉/犬夜叉__幼年形态__近景__幼年参考__01.png",
+      "pdf_page": null,
+      "instructions": "Control only the exact requested form or age state visible in this selected-medium original: age-specific proportions, silhouette, face construction, hair-to-ear relationship, and form-specific garment scale. Do not control general character identity beyond visible form evidence, rendering style, palette, scene composition, or story content.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 5,
+      "role": "content",
+      "item_id": "tv-curated:file:07dd46c60a75b5f64fc2",
+      "source_id": "tv-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "07dd46c60a75b5f64fc289c70e4865a6251ff8d04896d1382d629dbf5cd92a8f",
+      "folder_path": "犬夜叉",
+      "content_label": "犬夜叉",
+      "folder_tags": [
+        "犬夜叉"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "child-form"
+      ],
+      "subject_forms": {
+        "犬夜叉": [
+          "child-form"
+        ]
+      },
+      "shot_types": [
+        "upper-body"
+      ],
+      "filename_terms": [
+        "02",
+        "上身",
+        "幼年形态",
+        "庭院抱球",
+        "犬夜叉"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-izayoi-child-inuyasha-kemari-play/references/content-tv-curated-file-07dd46c60a75b5f64fc2.jpeg",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/TV-photos/犬夜叉/犬夜叉__幼年形态__上身__庭院抱球__02.jpeg",
+      "pdf_page": null,
+      "instructions": "Control only the exact visible content named by Exact focus: the requested action state, object or creature configuration, effect phase, or necessary spatial relationship. Do not control named-character identity, form, costume, palette, rendering style, camera framing, background treatment, or story staging. This is cross-medium tv-to-manga content evidence. Ignore all tv palette, contour, shading, texture, and background grammar; translate only the named content into the manga rendering established by the style reference. Exact focus: 只参考幼年犬夜叉双手与球的接触关系及球相对幼童上身的尺度；不得复制动画画面中的庭院、姿势、镜头、色彩、轮廓或服装表现。",
+      "crop_box": null,
+      "focus": "只参考幼年犬夜叉双手与球的接触关系及球相对幼童上身的尺度；不得复制动画画面中的庭院、姿势、镜头、色彩、轮廓或服装表现。",
+      "evidence_medium": "tv",
+      "cross_medium": true,
+      "conversion": "tv-to-manga-content",
+      "provenance": "observed-content"
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "schema_version": 3,
+  "task": "20260811-inuyasha-grave-sorrow-eye-revision",
+  "gate": "Run one layer, inspect candidates, record HIT/MISS/INSUFFICIENT, then advance.",
+  "mode": "fast-default",
+  "candidate_limit": 3,
+  "timing_policy": {
+    "pre_generation_target_seconds": 90,
+    "post_generation_target_seconds": 30,
+    "generation_latency": "observe-only"
+  },
+  "execution_boundaries": [
+    "one serial candidate inspection",
+    "one batched prepare-compile-validate step",
+    "one image-generation call",
+    "one blocking check and preview handoff"
+  ],
+  "continuity_requested": false,
+  "content_need": null,
+  "layers": [
+    {
+      "layer": 1,
+      "source": "official",
+      "primary_commands": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "half-demon-form",
+          "--limit",
+          "3",
+          "--shot",
+          "wide-shot"
+        ]
+      ],
+      "fallback_without_shot": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "half-demon-form",
+          "--limit",
+          "3"
+        ]
+      ],
+      "selection_budget": "one identity sheet per focal character; add a focused crop only for an unresolved construction detail"
+    },
+    {
+      "layer": 2,
+      "source": "manga-curated",
+      "primary_commands": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+          "--source",
+          "manga-curated",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "half-demon-form",
+          "--shot",
+          "wide-shot",
+          "--limit",
+          "3",
+          "--columns",
+          "3"
+        ]
+      ],
+      "fallback_without_shot": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+          "--source",
+          "manga-curated",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "half-demon-form",
+          "--limit",
+          "3",
+          "--columns",
+          "3"
+        ]
+      ],
+      "selection_budget": "one style screenshot by default; two only when one cannot resolve the requested rendering grammar"
+    }
+  ]
+}

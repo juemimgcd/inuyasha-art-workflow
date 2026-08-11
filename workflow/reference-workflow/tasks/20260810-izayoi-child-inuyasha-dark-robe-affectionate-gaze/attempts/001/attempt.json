@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-10T17:16:14+08:00",
+  "status": "error",
+  "generator": "built-in-imagegen",
+  "duration_seconds": 121.0,
+  "output": null,
+  "output_sha256": null,
+  "reference_item_ids": [
+    "user-supplied:file:1f367518508b9ccd521c",
+    "official:file:c72310b3df3a4455f6eb",
+    "official:file:f4819e9df3546a3ed095"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "technical",
+      "note": "built-in imagegen 在 edits 请求阶段发生网络发送错误，未返回图像。"
+    }
+  ],
+  "user_feedback": "",
+  "preference_tags": []
+}

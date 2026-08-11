@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "style",
+      "item_id": "manga-curated:file:b244478bd62b0efcf1f2",
+      "source_id": "manga-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "b244478bd62b0efcf1f28652e9067af65a57d7d346e340e907fbba5687110c72",
+      "folder_path": "桔梗",
+      "content_label": "桔梗",
+      "folder_tags": [
+        "桔梗",
+        "犬夜叉"
+      ],
+      "subjects": [
+        "桔梗",
+        "犬夜叉"
+      ],
+      "forms": [
+        "default-form",
+        "half-demon-form"
+      ],
+      "subject_forms": {
+        "桔梗": [
+          "default-form"
+        ],
+        "犬夜叉": [
+          "default-form",
+          "half-demon-form"
+        ]
+      },
+      "shot_types": [
+        "two-shot"
+      ],
+      "filename_terms": [
+        "01",
+        "双人",
+        "同框",
+        "犬夜叉-桔梗",
+        "默认形态"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-adult-inuyasha-facing-izayoi-grave-lake/references/style-manga-curated-file-b244478bd62b0efcf1f2.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos/桔梗/犬夜叉-桔梗__默认形态__双人__同框__01.png",
+      "pdf_page": null,
+      "instructions": "Control only black-and-white manga mark-making: line hierarchy, black-white massing, halftone economy, facial simplification, and effect construction. Do not copy visible characters, dialogue, balloons, panel borders, layout, or story content.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 2,
+      "role": "identity",
+      "item_id": "official:file:b69a31a9412dc8a2a06b",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "b69a31a9412dc8a2a06b7b2b0fe9a983a6151ec80ff4aaba2a3e6029ca6f1a21",
+      "folder_path": "犬夜叉设定集",
+      "content_label": "犬夜叉设定集",
+      "folder_tags": [
+        "犬夜叉设定集"
+      ],
+      "subjects": [
+        "犬夜叉",
+        "铁碎牙"
+      ],
+      "forms": [
+        "half-demon-form"
+      ],
+      "subject_forms": {
+        "犬夜叉": [
+          "half-demon-form"
+        ],
+        "铁碎牙": [
+          "half-demon-form"
+        ]
+      },
+      "shot_types": [
+        "full-body"
+      ],
+      "filename_terms": [
+        "犬夜叉全身图带铁碎牙01"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-adult-inuyasha-facing-izayoi-grave-lake/references/identity-official-file-b69a31a9412dc8a2a06b.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/犬夜叉设定集/犬夜叉全身图带铁碎牙01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, anatomy, costume, weapon or prop construction, attachment, and scale only. Do not control rendering style or scene composition.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 3,
+      "role": "composition",
+      "item_id": "user-supplied:file:56744d86bf6a0b6db0ae",
+      "source_id": "user-supplied",
+      "source_authority": "requested-composition",
+      "content_hash": "56744d86bf6a0b6db0ae66a9cb8607326b620cecd142c41cc60c22e42a0b6d67",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-adult-inuyasha-facing-izayoi-grave-lake/references/composition-user-supplied-file-56744d86bf6a0b6db0ae.png",
+      "original_path": "/Users/jquery/Library/Containers/com.tencent.qq/Data/tmp/51373c70-de23-4a3f-95cc-6d54b2cee518.png",
+      "pdf_page": null,
+      "instructions": "Control only the left-right relationship, eye-line, empty space between subjects, and the left adult figure's exact on-canvas height: replace the left woman with adult half-demon Inuyasha at the same head-to-sole height, and replace the right child with the grave. Do not copy Izayoi, child Inuyasha, the residence, garden, costume, identity, or rendering."
+    },
+    {
+      "order": 4,
+      "role": "composition",
+      "item_id": "user-supplied:file:cfd3dfa9ce7a7a0c3c2d",
+      "source_id": "user-supplied",
+      "source_authority": "requested-composition",
+      "content_hash": "cfd3dfa9ce7a7a0c3c2d892d03002595edeb9910a7aba864191c7b82ff9f2c3c",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-adult-inuyasha-facing-izayoi-grave-lake/references/composition-user-supplied-file-cfd3dfa9ce7a7a0c3c2d.png",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/十六夜设定集/十六夜墓碑图.png",
+      "pdf_page": null,
+      "instructions": "Control only Izayoi's grave construction and scale hierarchy: one tall rounded thick main stele, one medium stone attached low, and one smaller rear-side stone, with weathered shallow illegible vertical marks. Use the rear/side thickness when the grave faces the lake. Do not copy this sheet's blank layout or multiple-view arrangement."
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "target": "/Users/jquery/Documents/inuyahsa-official/output/hand-mouth-microfix-work/v6-left-restored.png",
+  "candidate": "/Users/jquery/.codex/generated_images/019fec06-ee39-7f90-b878-9fa0eeee14db/exec-bb36ed8c-c141-441f-9793-f2687f7aca9b.png",
+  "output": "/Users/jquery/Documents/inuyahsa-official/output/犬夜叉墓前忧伤右袖藏手微调__候选v7.png",
+  "target_sha256": "1485015e4b9a2489ed1bf2e290e81d3daf0539c4020f1dbe74acc40ebbea0167",
+  "candidate_sha256": "de153d5c781ea540bcb427661c4de00ccceba22e0c18978bf945c7d455cbeb32",
+  "output_sha256": "915e61aa9d52f388d87bb22f0b124e338c94178cd186456ff97e72fc06a5a6f2",
+  "context_box": [
+    350,
+    280,
+    400,
+    400
+  ],
+  "edit_box": [
+    550,
+    340,
+    120,
+    330
+  ],
+  "feather_pixels": 4,
+  "candidate_resized_to_context": true,
+  "outside_edit_box_preserved": true
+}

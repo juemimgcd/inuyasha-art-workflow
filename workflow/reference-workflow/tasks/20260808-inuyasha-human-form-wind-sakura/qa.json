@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "人类形态明确：长黑发、无犬耳、无獠牙或利爪，少年全身比例可读。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "黑发轮廓、念珠、交领火鼠袍、宽袖、腰带、宽松袴和赤足均与官方设定一致。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "双手和双脚结构完整；无犬耳；念珠清楚；铁碎牙刀柄、护手与长刀鞘连接合理且刀身完全入鞘。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "黑白印刷漫画画法占主导，没有彩色动画、赛璐璐或写实渲染泄漏。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "黑发纯黑块、可变粗细墨线、单层衣料网点、白色皮肤和疏密分明的草叶符合 classic-balanced 模式。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "人物全身为唯一焦点；头发、袖摆、花瓣与草尖形成一致的横向风势。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "草地密度集中在画面下部，面部与上半身周围保持大面积白色留白，背景未压过主体。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "画面无文字、对话框、拟声字、分镜边框、logo、签名或水印。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "pass",
+      "note": "风格截图只用于黑发、线条、网点和脸部简化；输出没有复制其对白、相邻人物、姿势或面板裁切。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "生成调用按 manifest 顺序使用了 1 张 manga-curated 风格图和 2 张 official 身份/武器设定图。"
+    }
+  ]
+}

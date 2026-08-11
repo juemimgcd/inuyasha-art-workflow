@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "attempt": 2,
+  "recorded_at": "2026-08-10T19:55:55+08:00",
+  "status": "rejected",
+  "generator": "imagegen",
+  "duration_seconds": 212.8,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-adult-inuyasha-grave-left-lake-right-forest-sad-retry/outputs/成年半妖犬夜叉与十六夜墓碑__左湖右林忧伤表情__候选03.png",
+  "output_sha256": "57c248d0512c5fa50364bac95db750f176032294d368bb6bcb951d7e616e7249",
+  "reference_item_ids": [
+    "user-supplied:file:15c91e93f85dbea353ab"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "composition",
+      "note": "墓碑与犬夜叉之间距离仍偏近，需要将墓碑和墓前花束整体向右移动并增加负空间"
+    },
+    {
+      "category": "tone",
+      "note": "犬夜叉眼神的悲伤不够可见，需要加强内眉、眼睑、瞳孔方向和嘴角的克制忧伤"
+    }
+  ],
+  "user_feedback": "用户要求墓碑再向右，犬夜叉眼神悲伤更明显但仍为微调",
+  "preference_tags": []
+}

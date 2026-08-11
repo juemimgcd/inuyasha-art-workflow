@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "attempt": 3,
+  "recorded_at": "2026-08-10T14:03:09+08:00",
+  "status": "rejected",
+  "generator": "built-in imagegen",
+  "duration_seconds": 187.0,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-child-inuyasha-derived-model-sheet-20260810/outputs/犬夜叉__幼年形态__衍生角色设定表__四视图__v1.png",
+  "output_sha256": "2e2299975882eb1e8c53939caf818cdcf0fa29a52313a20780e4b2e8e1f8986d",
+  "reference_item_ids": [
+    "tv-curated:file:07dd46c60a75b5f64fc2",
+    "tv-curated:file:8034784ef370ec436271",
+    "tv-curated:file:353d923b159df60ff9e7",
+    "tv-curated:file:c2a5fed65f9629a55ac4"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "costume",
+      "note": "外袍错误地敞开并露出大面积深色内衣，腰间出现不应有的大蝴蝶结；应改为参考截图中的红色闭合交领衣身、胸前细绳结、深色领口与腰部束带"
+    }
+  ],
+  "user_feedback": "用户指出衣服不对，并提供幼年犬夜叉奔跑截图作为服装依据",
+  "preference_tags": []
+}

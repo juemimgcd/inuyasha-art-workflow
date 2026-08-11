@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "style",
+      "item_id": "manga-curated:file:17fbec650f5e9c032d81",
+      "source_id": "manga-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "17fbec650f5e9c032d81c8bce19e301436447356da7712a5012eb9a78f0dfae8",
+      "folder_path": "桔梗",
+      "content_label": "桔梗",
+      "folder_tags": [
+        "桔梗"
+      ],
+      "subjects": [
+        "桔梗"
+      ],
+      "forms": [
+        "default-form"
+      ],
+      "shot_types": [
+        "upper-body"
+      ],
+      "filename_terms": [
+        "04",
+        "上身",
+        "人物参考",
+        "桔梗",
+        "默认形态"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-kikyo-shoulder-rest-sleeve-microfix/references/style-manga-curated-file-17fbec650f5e9c032d81.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos/桔梗/桔梗__默认形态__上身__人物参考__04.png",
+      "pdf_page": null,
+      "instructions": "Control only black-and-white manga mark-making: line hierarchy, black-white massing, halftone economy, facial simplification, and effect construction. Do not copy visible characters, dialogue, balloons, panel borders, layout, or story content."
+    },
+    {
+      "order": 2,
+      "role": "identity",
+      "item_id": "official:file:149a0334451c6119c480",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "149a0334451c6119c480e06cac7b83c11014a4d698120c220c4755d6ad6a9786",
+      "folder_path": "犬夜叉设定集",
+      "content_label": "犬夜叉设定集",
+      "folder_tags": [
+        "犬夜叉设定集"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "half-demon-form"
+      ],
+      "shot_types": [
+        "upper-body"
+      ],
+      "filename_terms": [
+        "犬夜叉上身图01"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-kikyo-shoulder-rest-sleeve-microfix/references/identity-official-file-149a0334451c6119c480.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/犬夜叉设定集/犬夜叉上身图01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, costume, weapon, prop, and scale only. Do not control rendering style or composition."
+    },
+    {
+      "order": 3,
+      "role": "identity",
+      "item_id": "official:file:1f892bd91be108443dad",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "1f892bd91be108443dadefc230746b997c49d8dc1579a9fcba3cbc1045dcb8fa",
+      "folder_path": "桔梗设定集",
+      "content_label": "桔梗设定集",
+      "folder_tags": [
+        "桔梗设定集"
+      ],
+      "subjects": [
+        "桔梗"
+      ],
+      "forms": [
+        "default-form"
+      ],
+      "shot_types": [
+        "full-body"
+      ],
+      "filename_terms": [
+        "桔梗巫女服全身图01"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-kikyo-shoulder-rest-sleeve-microfix/references/identity-official-file-1f892bd91be108443dad.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/桔梗设定集/桔梗巫女服全身图01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, costume, weapon, prop, and scale only. Do not control rendering style or composition."
+    },
+    {
+      "order": 4,
+      "role": "composition",
+      "item_id": "user-supplied:file:634661ffbcead8ce3789",
+      "source_id": "user-supplied",
+      "source_authority": "requested-composition",
+      "content_hash": "634661ffbcead8ce3789b9cdd8e44d485cfc09da751b1ade7a234a7d747e439b",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-kikyo-shoulder-rest-sleeve-microfix/references/composition-user-supplied-file-634661ffbcead8ce3789.png",
+      "original_path": "/Users/jquery/Documents/remak-inuyasha/outputs/第四话-小憩-半妖犬夜叉靠桔梗肩膀-袖子修正版.png",
+      "pdf_page": null,
+      "instructions": "Control only framing, crop, gaze direction, and broad silhouette. Do not control character identity, form, costume, color, or rendering style."
+    },
+    {
+      "order": 5,
+      "role": "composition",
+      "item_id": "user-supplied:file:4076550f6c05382f1d68",
+      "source_id": "user-supplied",
+      "source_authority": "requested-composition",
+      "content_hash": "4076550f6c05382f1d687129909e940c741ea4ac1da106e7a865d6f444907920",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-kikyo-shoulder-rest-sleeve-microfix/references/composition-user-supplied-file-4076550f6c05382f1d68.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/output/第四话-小憩-fengm.png",
+      "pdf_page": null,
+      "instructions": "Control only framing, crop, gaze direction, and broad silhouette. Do not control character identity, form, costume, color, or rendering style."
+    }
+  ]
+}

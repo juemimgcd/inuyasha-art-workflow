@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:e7e2307dc00882f1993d",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "e7e2307dc00882f1993d7d2b89ddb2c98cb133997d3633088bf32f0b3505609c",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-child-inuyasha-turnaround-color-fix/references/target-user-supplied-file-e7e2307dc00882f1993d.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-child-inuyasha-turnaround-costume-fix/outputs/犬夜叉__幼年形态__衍生角色设定表__四视图__v2-服装修正.png",
+      "pdf_page": null,
+      "instructions": "Preserve this image exactly except for the user's explicitly requested local edit.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 2,
+      "role": "form",
+      "item_id": "tv-curated:file:402c3966ffc2420a1427",
+      "source_id": "tv-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "402c3966ffc2420a1427c3ae3dd5329633fb9eff77e08ea6d49a3ae96cff83b5",
+      "folder_path": "犬夜叉",
+      "content_label": "犬夜叉",
+      "folder_tags": [
+        "犬夜叉"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "child-form"
+      ],
+      "subject_forms": {
+        "犬夜叉": [
+          "child-form"
+        ]
+      },
+      "shot_types": [
+        "action"
+      ],
+      "filename_terms": [
+        "01",
+        "动作",
+        "奔跑呼喊",
+        "幼年形态",
+        "犬夜叉"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-child-inuyasha-turnaround-color-fix/references/form-tv-curated-file-402c3966ffc2420a1427.jpeg",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/TV-photos/犬夜叉/犬夜叉__幼年形态__动作__奔跑呼喊__01.jpeg",
+      "pdf_page": null,
+      "instructions": "Control only the exact requested form or age state visible in this selected-medium original: age-specific proportions, silhouette, face construction, hair-to-ear relationship, and form-specific garment scale. Do not control general character identity beyond visible form evidence, rendering style, palette, scene composition, or story content. Exact focus: 只控制幼年犬夜叉白色领口内衬、上衣与裤装同一红色的配色关系；不控制动作、背景、人物表情、服装结构或水印",
+      "crop_box": null,
+      "focus": "只控制幼年犬夜叉白色领口内衬、上衣与裤装同一红色的配色关系；不控制动作、背景、人物表情、服装结构或水印"
+    }
+  ]
+}

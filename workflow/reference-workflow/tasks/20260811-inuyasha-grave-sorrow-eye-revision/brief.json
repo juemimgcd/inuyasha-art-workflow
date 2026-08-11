@@ -1,0 +1,67 @@
+{
+  "schema_version": 5,
+  "task_id": "20260811-inuyasha-grave-sorrow-eye-revision",
+  "created_at": "2026-08-11T08:13:29+08:00",
+  "request": "以用户新提供的眼睛同步稿为唯一底稿，继续微调双手与嘴型；保留已确认的眼睛、头部角度、动作与场景",
+  "intent": "edit",
+  "parent_task_id": null,
+  "change_category": "anatomy",
+  "change_request": "只重画画面左侧袖口内的手，参考用户第二张图的左手画法，将当前三根可见手指改为恰好四根细长、自然并拢的可见手指；拇指和手掌继续藏在袖内，其他区域不变",
+  "medium": "manga",
+  "deliverable": "illustration",
+  "period_mode": "classic-balanced",
+  "style_strategy": "two-layer-manga-fast",
+  "style_references": [],
+  "content_need": {},
+  "content_references": [],
+  "characters": [
+    "犬夜叉"
+  ],
+  "identity_forms": {
+    "犬夜叉": "half-demon-form"
+  },
+  "forms_and_costumes": [
+    "犬夜叉: half-demon-form"
+  ],
+  "scene": "半妖犬夜叉以用户新图中的原姿态站在墓碑前；本轮只改善嘴型与袖口附近双手的自然度和悲伤感",
+  "aspect_ratio": "1537:1023",
+  "invariants": [
+    "保留用户新底稿的1537x1023画布及编辑框外全部像素",
+    "已经确认的眼睛开合、眼睑、虹膜、瞳孔、眉线和视线保持用户新底稿不变",
+    "头部俯角、侧脸轮廓、额头、鼻、下巴、后脑、犬耳、刘海、长发和颈部均保持用户新底稿不变",
+    "肩膀、躯干、双臂、袖子、刀、双腿、双脚、人物站位与动作保持用户新底稿不变",
+    "只在嘴、刀旁手和大袖开口手三个局部编辑框内替换像素，其他区域精确保留",
+    "保留念珠、服装、墓碑文字、花朵、森林、湖面、山景、地面、所有落叶、墨线与网点；不加泪水"
+  ],
+  "latency_budget": {
+    "schema_version": 2,
+    "pre_generation_target_seconds": 30,
+    "post_generation_target_seconds": 30,
+    "max_technical_retries": 1,
+    "generation_latency_policy": "observe-only"
+  },
+  "form_references": [],
+  "local_edit": {
+    "mode": "crop-composite",
+    "target": "/Users/jquery/Documents/inuyahsa-official/output/four-finger-microfix-work/target-v8.png",
+    "edit_box": [
+      385,
+      560,
+      120,
+      110
+    ],
+    "context_box": [
+      340,
+      500,
+      256,
+      256
+    ],
+    "edit_box_in_context": [
+      45,
+      60,
+      120,
+      110
+    ],
+    "feather_pixels": 4
+  }
+}

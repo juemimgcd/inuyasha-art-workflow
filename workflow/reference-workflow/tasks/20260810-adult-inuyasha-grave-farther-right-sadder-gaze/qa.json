@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "成年半妖犬夜叉身份、犬耳、长发和少年面型保持。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "发型、念珠、火鼠裘、袴与人物身高保持目标图关系。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "犬耳、念珠、腰侧铁碎牙与赤足完整可见。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "保持黑白漫画线稿与网点画法。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "人物线条清晰，湖面留白，森林使用密集墨色。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "墓碑组右移后与犬夜叉间距增大，视线方向仍指向墓碑。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "犬夜叉白发与墓碑亮边从森林纹理中分离。"
+    },
+    {
+      "category": "construction",
+      "check": "人物、道具与背景使用一致的前后层级、透视方向和相对尺度",
+      "status": "pass",
+      "note": "人物、右移墓碑、湖与森林维持一致地平线和空间层级。"
+    },
+    {
+      "category": "construction",
+      "check": "身体接触、地面接触、衣物遮挡和道具承重连接连续且无悬浮穿模",
+      "status": "pass",
+      "note": "双脚、三石墓碑和花束均有连续地面接触。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "无对话框、边框、签名、logo 或水印；碑面痕迹保持风化不可辨识。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "1536x1024 横向 3:2 黑白漫画插图。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "n/a",
+      "note": "本次 edit 为 target-only。"
+    },
+    {
+      "category": "process",
+      "check": "selected-output 只控制已认可的连续性和完成度，没有覆盖官方身份或目标媒介画法",
+      "status": "n/a",
+      "note": "未使用 selected-output。"
+    },
+    {
+      "category": "process",
+      "check": "跨媒介 content 只控制清单中点名的可见内容，未泄漏来源媒介的配色、线条、阴影、背景或角色画法",
+      "status": "n/a",
+      "note": "未使用跨媒介 content。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "仅使用 manifest 中唯一 target 输入。"
+    }
+  ]
+}

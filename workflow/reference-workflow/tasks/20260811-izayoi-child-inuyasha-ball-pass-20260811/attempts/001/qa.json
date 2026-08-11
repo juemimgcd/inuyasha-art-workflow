@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "construction",
+      "check": "人物、道具与背景使用一致的前后层级、透视方向和相对尺度",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "construction",
+      "check": "身体接触、地面接触、衣物遮挡和道具承重连接连续且无悬浮穿模",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "process",
+      "check": "selected-output 只控制已认可的连续性和完成度，没有覆盖官方身份或目标媒介画法",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "process",
+      "check": "跨媒介 content 只控制清单中点名的可见内容，未泄漏来源媒介的配色、线条、阴影、背景或角色画法",
+      "status": "pending",
+      "note": ""
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pending",
+      "note": ""
+    }
+  ]
+}

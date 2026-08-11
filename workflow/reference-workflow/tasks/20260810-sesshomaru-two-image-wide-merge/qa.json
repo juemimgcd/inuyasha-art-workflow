@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "三处杀生丸仍保持用户目标图中的同一默认形态与年龄表现，未增删人物。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "全尺寸检查确认三处发型、月牙、面纹、服装层次与相对体型均清晰可辨。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "手部、尖耳、铠甲、毛皮与佩剑保持目标图结构，中央融合没有覆盖人物关键部位。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "成图保持纯黑白漫画线稿与网点，没有彩色或动画赛璐璐渲染。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "树影、服装与植物使用原图一致的线条层级、纯黑块和克制网点。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "左侧树上人物、中央远景人物和右侧近景头像形成清楚的远近焦点层级。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "中央保持大面积留白，连续树影与底部植物没有压过人物焦点。"
+    },
+    {
+      "category": "construction",
+      "check": "人物、道具与背景使用一致的前后层级、透视方向和相对尺度",
+      "status": "pass",
+      "note": "上方斜向树影与下方根系、藤蔓在接缝处形成连续前后层级。"
+    },
+    {
+      "category": "construction",
+      "check": "身体接触、地面接触、衣物遮挡和道具承重连接连续且无悬浮穿模",
+      "status": "pass",
+      "note": "人物原有地面、树干与服装遮挡关系保持可读，融合区域无明显悬浮或穿模。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "只保留左图原有拟声字，没有新增对话框、签名、logo 或水印。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "输出为 1499×1049 横向 PNG，比例约 10:7，符合大图拼接用途。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "n/a",
+      "note": ""
+    },
+    {
+      "category": "process",
+      "check": "selected-output 只控制已认可的连续性和完成度，没有覆盖官方身份或目标媒介画法",
+      "status": "n/a",
+      "note": ""
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "实际生成只使用 reference-manifest.json 中准备的单一合并底稿 target。"
+    }
+  ]
+}

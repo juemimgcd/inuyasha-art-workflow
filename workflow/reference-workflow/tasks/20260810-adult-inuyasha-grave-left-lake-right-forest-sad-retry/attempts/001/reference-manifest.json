@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:695525f3ca5281219df4",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "695525f3ca5281219df447338998f61afa52756674e5d6d088d8f3dc638900ec",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-adult-inuyasha-grave-left-lake-right-forest-sad-retry/references/target-user-supplied-file-695525f3ca5281219df4.jpg",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-adult-inuyasha-grave-left-lake-right-forest-sad/transport/用户目标图-传输版.jpg",
+      "pdf_page": null,
+      "instructions": "Preserve this image exactly except for the user's explicitly requested local edit.",
+      "crop_box": null,
+      "focus": ""
+    }
+  ]
+}

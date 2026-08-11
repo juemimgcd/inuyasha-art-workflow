@@ -1,0 +1,23 @@
+{
+  "target": "/Users/jquery/Documents/inuyahsa-official/output/four-finger-microfix-work/target-v8.png",
+  "candidate": "/Users/jquery/.codex/generated_images/019fec06-ee39-7f90-b878-9fa0eeee14db/exec-5b9845a1-4350-4db0-bf3c-3bb1f945b6ae.png",
+  "output": "/Users/jquery/Documents/inuyahsa-official/output/犬夜叉墓前忧伤左手四指微调__候选v9.png",
+  "target_sha256": "e27247b35df92041a74f19d05f83d36b2799439a40a62a4aa8d2d78e9e977118",
+  "candidate_sha256": "9014568ecb55ccc6b4750bfd1574efd090f59e5c14742678d3ee92c2c96285b2",
+  "output_sha256": "6be9103fa4e665b45ce50f9efee3b46dde3ffad447aabc54f0544a7c98b88377",
+  "context_box": [
+    340,
+    500,
+    256,
+    256
+  ],
+  "edit_box": [
+    385,
+    560,
+    120,
+    110
+  ],
+  "feather_pixels": 4,
+  "candidate_resized_to_context": true,
+  "outside_edit_box_preserved": true
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-08T09:28:37+08:00",
+  "status": "accepted",
+  "generator": "built-in image_gen",
+  "duration_seconds": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-sad-sakura-bust/outputs/inuyasha-human-form-sad-sakura-bust-v2.png",
+  "output_sha256": "d81b5a8bcaebced59587b894f5f320612b0916a502f0a80cc534a9064a75d510",
+  "reference_item_ids": [
+    "manga-curated:file:8e60715e27e853faa798",
+    "official:file:efe7eafd42e0ab48e48f",
+    "user-supplied:file:cd623f802cca7d2969e9"
+  ],
+  "failures": [],
+  "user_feedback": "",
+  "preference_tags": [],
+  "legacy_import": true
+}

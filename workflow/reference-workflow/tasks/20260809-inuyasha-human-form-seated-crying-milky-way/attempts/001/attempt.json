@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-09T23:31:19+08:00",
+  "status": "rejected",
+  "generator": "built-in-imagegen",
+  "duration_seconds": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-inuyasha-human-form-seated-crying-milky-way/outputs/inuyasha-human-form-seated-crying-milky-way-candidate-01.png",
+  "output_sha256": "0391ac42bfd902065ed1b071ab40bb9b9367d2a470037019050138d5244a519f",
+  "reference_item_ids": [
+    "manga-curated:file:4979f0e5da216eff0102",
+    "official:file:efe7eafd42e0ab48e48f",
+    "user-supplied:file:d848ba305d6e49b32a33"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "composition",
+      "note": "镜头过远，人物面部被埋头姿势与手臂遮住，眼睛和泪水没有成为视觉重点"
+    },
+    {
+      "category": "expression",
+      "note": "需要双眼睁开流泪，眉眼与嘴角保持平静克制，不能明显悲伤或像困倦"
+    }
+  ],
+  "user_feedback": "用户明确反馈：镜头贴近一点，着重面部泪水和眼睛；最好睁眼流泪，表情不要悲伤得很明显；银河也要凸显",
+  "preference_tags": []
+}

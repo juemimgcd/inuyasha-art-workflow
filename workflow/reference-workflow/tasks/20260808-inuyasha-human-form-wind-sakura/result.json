@@ -1,0 +1,23 @@
+{
+  "status": "accepted",
+  "generated_at": "2026-08-08T08:24:00+08:00",
+  "generator": "built-in image_gen",
+  "revision_required": false,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-wind-sakura/outputs/inuyasha-human-form-wind-sakura.png",
+  "user_facing_copy": "/Users/jquery/Documents/Codex/2026-08-07/new-chat/outputs/inuyasha-human-form-wind-sakura.png",
+  "dimensions": {
+    "width": 1024,
+    "height": 1536
+  },
+  "medium": "manga",
+  "period_mode": "classic-balanced",
+  "style_references": [
+    "manga-curated:file:d47d8442e4f7fd7c3875"
+  ],
+  "identity_references": [
+    "official:file:efe7eafd42e0ab48e48f",
+    "official:file:b69a31a9412dc8a2a06b"
+  ],
+  "qa": "pass",
+  "reference_audit_warning": "official:file:b69a31a9412dc8a2a06b is a half-demon-form sheet and was incorrectly passed to this historical human-form generation; schema 4 blocks this combination in future tasks"
+}

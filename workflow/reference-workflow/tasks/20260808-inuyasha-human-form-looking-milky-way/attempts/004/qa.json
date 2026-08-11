@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "人类形态明确：长黑发、普通侧耳，无犬耳、獠牙、利爪或妖纹。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "脸型、黑发墨块、交领上身与青年体态一致。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "普通人耳与言灵念珠结构清楚；按 brief 未出现武器与手部。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "全图为纯黑白漫画印刷感，没有彩色或摄影质感泄漏。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "线条、纯黑发块、白色皮肤、银河交叉网点与星点层级稳定。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "4:5 胸口以上仰视构图明确；双眼清醒、同向上望并保留克制忧伤，是第一焦点，银河形成对角引导。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "银河纹理集中在头部上方，脸部留白充足，没有压过眼睛。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "未见文字、气泡、分格、签名、logo 或水印。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "1122×1402，宽高比约 0.8003，符合 4:5 竖幅插图。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "pass",
+      "note": "只继承眼型、黑白块与网点方法，没有复制原图气泡、分格或剧情。"
+    },
+    {
+      "category": "process",
+      "check": "selected-output 只控制已认可的连续性和完成度，没有覆盖官方身份或目标媒介画法",
+      "status": "n/a",
+      "note": "连续性层判定 INSUFFICIENT，未使用 selected-output。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "实际生成参考为 manifest 中按顺序列出的漫画风格图与官方身份图；局部修正仅使用首轮成图。"
+    }
+  ]
+}

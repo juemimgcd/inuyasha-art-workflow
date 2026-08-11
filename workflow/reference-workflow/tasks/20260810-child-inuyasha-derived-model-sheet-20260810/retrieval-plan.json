@@ -1,0 +1,85 @@
+{
+  "schema_version": 3,
+  "task": "20260810-child-inuyasha-derived-model-sheet-20260810",
+  "gate": "Run one layer, inspect candidates, record HIT/MISS/INSUFFICIENT, then advance.",
+  "mode": "fast-default",
+  "candidate_limit": 6,
+  "continuity_requested": false,
+  "content_need": null,
+  "layers": [
+    {
+      "layer": 1,
+      "source": "official",
+      "primary_commands": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "child-form",
+          "--limit",
+          "6",
+          "--shot",
+          "full-body"
+        ]
+      ],
+      "fallback_without_shot": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "child-form",
+          "--limit",
+          "6"
+        ]
+      ],
+      "selection_budget": "one identity sheet per focal character; add a focused crop only for an unresolved construction detail"
+    },
+    {
+      "layer": 2,
+      "source": "tv-curated",
+      "primary_commands": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+          "--source",
+          "tv-curated",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "child-form",
+          "--shot",
+          "full-body",
+          "--limit",
+          "6",
+          "--columns",
+          "3"
+        ]
+      ],
+      "fallback_without_shot": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+          "--source",
+          "tv-curated",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "child-form",
+          "--limit",
+          "6",
+          "--columns",
+          "3"
+        ]
+      ],
+      "selection_budget": "one style screenshot by default; two only when one cannot resolve the requested rendering grammar"
+    }
+  ]
+}

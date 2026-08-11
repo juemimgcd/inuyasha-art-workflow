@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "attempt": 3,
+  "recorded_at": "2026-08-09T10:01:02+08:00",
+  "status": "error",
+  "generator": "built-in-image_gen",
+  "duration_seconds": null,
+  "output": null,
+  "output_sha256": null,
+  "reference_item_ids": [
+    "user-supplied:file:edacbdc7fe5ff543f8ab",
+    "official:file:cc54643e82bb244a2c95",
+    "official:file:d1e77d9ad13576657d98"
+  ],
+  "failures": [
+    {
+      "category": "technical",
+      "note": "built-in image generation returned HTTP 400 moderation_blocked at output stage; no image was produced; retry will describe only the sword attachment geometry and preserve all other pixels without restating scene content"
+    }
+  ],
+  "user_feedback": "无候选图，现有候选02和任务文件未被覆盖",
+  "preference_tags": []
+}

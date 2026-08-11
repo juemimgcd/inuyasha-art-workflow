@@ -1,0 +1,79 @@
+{
+  "built_at": "2026-08-11T18:29:00+08:00",
+  "database": "/Users/jquery/Documents/inuYasha-design/reference-workflow/catalog.sqlite3",
+  "counts": {
+    "image": 248,
+    "image_file": 277,
+    "duplicate_image_file": 29
+  },
+  "sources": {
+    "official": {
+      "image": 119,
+      "image_file": 122,
+      "duplicate_image_file": 3
+    },
+    "manga-curated": {
+      "image": 100,
+      "image_file": 120,
+      "duplicate_image_file": 20
+    },
+    "user-continuity": {
+      "image": 9,
+      "image_file": 9,
+      "duplicate_image_file": 0
+    },
+    "tv-curated": {
+      "image": 11,
+      "image_file": 11,
+      "duplicate_image_file": 0
+    },
+    "selected-output": {
+      "image": 9,
+      "image_file": 15,
+      "duplicate_image_file": 6
+    }
+  },
+  "library_signature": {
+    "official": {
+      "exists": true,
+      "file_count": 122,
+      "total_size": 87081902,
+      "latest_mtime_ns": 1786438767468237000,
+      "inventory_hash": "bc34fc36f3cec6ef542103dc1873dd74b2b30e6ec410e0dccb5f9a5289ca74fc"
+    },
+    "manga-curated": {
+      "exists": true,
+      "file_count": 120,
+      "total_size": 13794211,
+      "latest_mtime_ns": 1786277398512933482,
+      "inventory_hash": "3385c44cbb1ac817efc1545d24fcca7791fc0fe80f6b53f31184ddd91b666478"
+    },
+    "user-continuity": {
+      "exists": true,
+      "file_count": 9,
+      "total_size": 22545698,
+      "latest_mtime_ns": 1786085918701827886,
+      "inventory_hash": "9fb18cf80d370ade0ca85c0ca621aad3100536d332dd07068eba7ae054e0df7e"
+    },
+    "tv-curated": {
+      "exists": true,
+      "file_count": 11,
+      "total_size": 6689855,
+      "latest_mtime_ns": 1786337982375240407,
+      "inventory_hash": "7572a842d04ee2b926087e1176ce24e247e6a4d9bffde6ce50fd7aaff35a447a"
+    },
+    "selected-output": {
+      "exists": true,
+      "file_count": 15,
+      "total_size": 42590281,
+      "latest_mtime_ns": 1786170669801578099,
+      "inventory_hash": "8657199fe266821580395bd602e18b60018a4ec38d7daea42e01d4651b474ffe"
+    }
+  },
+  "annotation_count": 4,
+  "incremental_cache": {
+    "hash_cache_hits": 275,
+    "hash_computations": 2,
+    "rehash_requested": false
+  }
+}

@@ -1,0 +1,724 @@
+{
+  "root": "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos",
+  "mode": "apply",
+  "file_count": 119,
+  "rename_count": 119,
+  "unchanged_count": 0,
+  "renames": [
+    {
+      "old": "七宝/七宝上身图01.png",
+      "new": "七宝/七宝__默认形态__上身__人物参考__01.png",
+      "sha256": "3cf301f704d1be4347196b153ad3ebb8c8b1015ddd395a5bf80d8f6f0534e862",
+      "changed": true
+    },
+    {
+      "old": "七宝/七宝上身图02.png",
+      "new": "七宝/七宝__默认形态__上身__人物参考__02.png",
+      "sha256": "0fb15ebdbb98214f8099d6b472afd511ce9eb07c467a7c74c850daef4199ca91",
+      "changed": true
+    },
+    {
+      "old": "七宝/七宝侧脸图01.png",
+      "new": "七宝/七宝__默认形态__侧脸__人物参考__01.png",
+      "sha256": "e350cea2487367c57975563fc38dcb8c6d20a6ebabd387d4e89cdd05c110acc8",
+      "changed": true
+    },
+    {
+      "old": "七宝/七宝侧脸图02.png",
+      "new": "七宝/七宝__默认形态__侧脸__人物参考__02.png",
+      "sha256": "2336f3026e71f4ead90214d1b08d0cbcdec4b575e65225e242095bbef4bf234f",
+      "changed": true
+    },
+    {
+      "old": "七宝/七宝全身图01.png",
+      "new": "七宝/七宝__默认形态__全身__人物参考__01.png",
+      "sha256": "8751135af67a21fb8433b80a87962eceb666b3729c5ffbe07f72b1e85efbc31d",
+      "changed": true
+    },
+    {
+      "old": "七宝/戈薇和七宝01.png",
+      "new": "七宝/戈薇-七宝__默认形态__双人__同框__01.png",
+      "sha256": "6a62b270b84952cd35ce8ed9e5aadde4fd81bcc4714bc5854e5ef8bc364bf3ef",
+      "changed": true
+    },
+    {
+      "old": "七宝/犬夜叉和七宝01.png",
+      "new": "七宝/犬夜叉-七宝__默认形态__双人__同框__01.png",
+      "sha256": "02e6cd132e5e96a7c6df43b0a93934ebe7e5296d11851673e99be86b21509e52",
+      "changed": true
+    },
+    {
+      "old": "七宝/犬夜叉和七宝02.png",
+      "new": "七宝/犬夜叉-七宝__默认形态__双人__同框__02.png",
+      "sha256": "3585b95f6416d95c839c6006542840d7e891b9ec738d1c2a7e1c1369c4505331",
+      "changed": true
+    },
+    {
+      "old": "冥加/冥加全身图01.png",
+      "new": "冥加/冥加__默认形态__全身__人物参考__01.png",
+      "sha256": "45121014a63b89b12152dd66f24bb725b599a1db7d471af1a1de978f11204ce6",
+      "changed": true
+    },
+    {
+      "old": "冥加/冥加全身图02.png",
+      "new": "冥加/冥加__默认形态__全身__人物参考__02.png",
+      "sha256": "8996e057178c64aa71d415d60c24c8c76418730cef9a08a7143092986f550dff",
+      "changed": true
+    },
+    {
+      "old": "刀刀斋/刀刀斋上身图01.png",
+      "new": "刀刀斋/刀刀斋__默认形态__上身__人物参考__01.png",
+      "sha256": "a908b4a2395729bdcd711935c9b092122bf85ef754afb84ccc4f714862166f3c",
+      "changed": true
+    },
+    {
+      "old": "刀刀斋/刀刀斋上身图02.png",
+      "new": "刀刀斋/刀刀斋__默认形态__上身__人物参考__02.png",
+      "sha256": "521bc6f004a79a70e31d8a20cff3a7c2dee9209cd8c5fe149d6403e87a1ffbaf",
+      "changed": true
+    },
+    {
+      "old": "十六夜/十六夜上身图01.png",
+      "new": "十六夜/十六夜__默认形态__上身__人物参考__01.png",
+      "sha256": "c1198c4c5cd19cfc19c8c6f72eacb8174303106f81e848b0a47e3e1e23c2723d",
+      "changed": true
+    },
+    {
+      "old": "十六夜/十六夜上身图02.png",
+      "new": "十六夜/十六夜__默认形态__上身__人物参考__02.png",
+      "sha256": "876af11c5aa2fd24a7076791b4ff1e046d845ebd4ff95b4d714e4dd6034798f6",
+      "changed": true
+    },
+    {
+      "old": "十六夜/十六夜全身图01.png",
+      "new": "十六夜/十六夜__默认形态__全身__人物参考__01.png",
+      "sha256": "cb67f4934e8e0825eda6ac628fee066de26c02abb4a3ea2df50d1bd4ac0321d6",
+      "changed": true
+    },
+    {
+      "old": "十六夜/十六夜全身图02.png",
+      "new": "十六夜/十六夜__默认形态__全身__人物参考__02.png",
+      "sha256": "e071bc1eb4d37ea143f54b5b19e586bdc7fe8e64e480da278add0787b308c91b",
+      "changed": true
+    },
+    {
+      "old": "场景/寺庙大门.png",
+      "new": "场景/场景__不适用__远景__寺庙大门__01.png",
+      "sha256": "c107ef1437add2a641e4a65f5669b0b291b14159480e8bb87f1fc75c9ca2b98f",
+      "changed": true
+    },
+    {
+      "old": "场景/山路.png",
+      "new": "场景/场景__不适用__远景__山路__01.png",
+      "sha256": "553bbfbc183c7f36220d8a69734a45ce88265c0e3c8b087d85540c2d94c50ca6",
+      "changed": true
+    },
+    {
+      "old": "场景/府邸大门.png",
+      "new": "场景/场景__不适用__远景__府邸大门__01.png",
+      "sha256": "076e2e49b919c98f2d066fb1651a3986d95a53ce3a95083af7ab6ff300af12f8",
+      "changed": true
+    },
+    {
+      "old": "弥勒/弥勒上身图01.png",
+      "new": "弥勒/弥勒__默认形态__上身__人物参考__01.png",
+      "sha256": "9e0ec948bb866bb1cfc67ecdb5fe0e35593cfdfd8cea615ff012cde668f93baf",
+      "changed": true
+    },
+    {
+      "old": "弥勒/弥勒上身图02.png",
+      "new": "弥勒/弥勒__默认形态__上身__人物参考__02.png",
+      "sha256": "8563468110dd1a1cecaf9e2a9ba7fd9d5775a24f3bea3c89bbc3b09c110ae931",
+      "changed": true
+    },
+    {
+      "old": "弥勒/弥勒上身图03.png",
+      "new": "弥勒/弥勒__默认形态__上身__人物参考__03.png",
+      "sha256": "30e14a77dbe4caa03274a79c90f628f488d41aa7c9455d03f4d731ed4084453b",
+      "changed": true
+    },
+    {
+      "old": "弥勒/弥勒上身图04.png",
+      "new": "弥勒/弥勒__默认形态__上身__人物参考__04.png",
+      "sha256": "b25d012b72111992c932413b3c4e18efe3b26b94c353551d07a6ba5ae849f7f8",
+      "changed": true
+    },
+    {
+      "old": "弥勒/弥勒上身图05.png",
+      "new": "弥勒/弥勒__默认形态__上身__人物参考__05.png",
+      "sha256": "b2e85a7e43af58da5f7900ee0aac44147bd239f4ade8c2ded7d009fd29b22118",
+      "changed": true
+    },
+    {
+      "old": "弥勒/弥勒侧脸图01.png",
+      "new": "弥勒/弥勒__默认形态__侧脸__人物参考__01.png",
+      "sha256": "3c83aac5fabb132208d1da0d5e3b03f18faf6c858c0208ab7b62b32663d9b934",
+      "changed": true
+    },
+    {
+      "old": "弥勒/弥勒侧身图01.png",
+      "new": "弥勒/弥勒__默认形态__侧身__人物参考__01.png",
+      "sha256": "dc5b44e621c1ccc3ab3c12b74286047f20762a9db48873ab13742060ca9917b1",
+      "changed": true
+    },
+    {
+      "old": "弥勒/弥勒和珊瑚01.png",
+      "new": "弥勒/弥勒-珊瑚__默认形态__双人__同框__01.png",
+      "sha256": "04851d6589cb2aa26ba2add218dc6a55bd7b407f288e757bbcace24f706c3760",
+      "changed": true
+    },
+    {
+      "old": "戈薇/戈薇上身图01.png",
+      "new": "戈薇/戈薇__默认形态__上身__人物参考__01.png",
+      "sha256": "637872ad4e0dd2aa442bf95469604f0ff50e03d636e156d6e403839e1c5741bf",
+      "changed": true
+    },
+    {
+      "old": "戈薇/戈薇上身图02.png",
+      "new": "戈薇/戈薇__默认形态__上身__人物参考__02.png",
+      "sha256": "0fbb062a365b8cfa79925dbccee42038b0e4db656a7dfe3c7fc50b74e2fe456e",
+      "changed": true
+    },
+    {
+      "old": "戈薇/戈薇上身图03.png",
+      "new": "戈薇/戈薇__默认形态__上身__人物参考__03.png",
+      "sha256": "30a2b6bdf55db9cd09e749da1f95377dfb7ae98375fbe5c1ad930685a72f8d7a",
+      "changed": true
+    },
+    {
+      "old": "戈薇/戈薇上身图04.png",
+      "new": "戈薇/戈薇__默认形态__上身__人物参考__04.png",
+      "sha256": "2fbd35cc27786e5559d30b1777258e21da87fa893a5f11d42b9510e93203350e",
+      "changed": true
+    },
+    {
+      "old": "戈薇/戈薇上身图05.png",
+      "new": "戈薇/戈薇__默认形态__上身__人物参考__05.png",
+      "sha256": "bbdfde415b9957d7bdd16c1cd7c3ca9a397bc855ff76f27446fbff49c232a3b5",
+      "changed": true
+    },
+    {
+      "old": "戈薇/戈薇上身图06.png",
+      "new": "戈薇/戈薇__默认形态__上身__人物参考__06.png",
+      "sha256": "be6446ad75ea8ddab71be83f878994226686f2ad4e77b5df0f3390d03c6a7b7c",
+      "changed": true
+    },
+    {
+      "old": "戈薇/戈薇全身图01.png",
+      "new": "戈薇/戈薇__默认形态__全身__人物参考__01.png",
+      "sha256": "2ca01f3193dc72080084d29864b2fa1565154168f5b03cab48f7526c295d060e",
+      "changed": true
+    },
+    {
+      "old": "戈薇/戈薇全身图02.png",
+      "new": "戈薇/戈薇__默认形态__全身__人物参考__02.png",
+      "sha256": "846bd2af0e8be1422fe7122e16ef8ac578168c799ad163ddb44bf5eacad06988",
+      "changed": true
+    },
+    {
+      "old": "戈薇/戈薇和七宝01.png",
+      "new": "戈薇/戈薇-七宝__默认形态__双人__同框__01.png",
+      "sha256": "6a62b270b84952cd35ce8ed9e5aadde4fd81bcc4714bc5854e5ef8bc364bf3ef",
+      "changed": true
+    },
+    {
+      "old": "戈薇/戈薇和草太01.png",
+      "new": "戈薇/戈薇-草太__默认形态__双人__同框__01.png",
+      "sha256": "db046675a579336d9665535aeb9d897b1ef211002edff054b38edae25041bc40",
+      "changed": true
+    },
+    {
+      "old": "戈薇/戈薇和草太02.png",
+      "new": "戈薇/戈薇-草太__默认形态__双人__同框__02.png",
+      "sha256": "880ecc3a0f77687abcaadf2106de052754b9709410bc4adb51775a4cd23a04ce",
+      "changed": true
+    },
+    {
+      "old": "戈薇/犬夜叉和戈薇01.png",
+      "new": "戈薇/犬夜叉-戈薇__默认形态__双人__同框__01.png",
+      "sha256": "0664d22f673677b8d7f0d9e7155a0a64dec66cf7e229b827e9186df5a8fa76ee",
+      "changed": true
+    },
+    {
+      "old": "戈薇/犬夜叉和戈薇02.png",
+      "new": "戈薇/犬夜叉-戈薇__默认形态__双人__同框__02.png",
+      "sha256": "e5150d8d84bfd219d430b20cefa8d3b1e27e8fe3e05a3b0d48af6a2997f90bde",
+      "changed": true
+    },
+    {
+      "old": "戈薇/犬夜叉和戈薇03.png",
+      "new": "戈薇/犬夜叉-戈薇__默认形态__双人__同框__03.png",
+      "sha256": "f6cd8c02e6d82581bafe4f22ed95a79fd6b8526200da7d6de1fd746bc7286a97",
+      "changed": true
+    },
+    {
+      "old": "普通人物/和尚01.png",
+      "new": "普通人物/和尚__默认形态__近景__人物参考__01.png",
+      "sha256": "961204e3a68edf469ba2aa14b6de24303eb73454b61cad26fbb4104673160043",
+      "changed": true
+    },
+    {
+      "old": "杀生丸/杀生丸上身图01.png",
+      "new": "杀生丸/杀生丸__默认形态__上身__人物参考__01.png",
+      "sha256": "59832195a04d73283979626a4266da593b4aeb8980ed65fb704266c71111b27f",
+      "changed": true
+    },
+    {
+      "old": "杀生丸/杀生丸侧脸图01.png",
+      "new": "杀生丸/杀生丸__默认形态__侧脸__人物参考__01.png",
+      "sha256": "1a5ee70d0760b32564082ff22c72b552914547bab552d720c85c9353f95ab77a",
+      "changed": true
+    },
+    {
+      "old": "杀生丸/杀生丸侧脸图02.png",
+      "new": "杀生丸/杀生丸__默认形态__侧脸__人物参考__02.png",
+      "sha256": "2618b1933a97f5b47fe50a677ef05bc6a42d75db18d95ddc5b0c6bdfcfe6137e",
+      "changed": true
+    },
+    {
+      "old": "杀生丸/杀生丸和天生牙01.png",
+      "new": "杀生丸/杀生丸-天生牙__默认形态__动作__天生牙__01.png",
+      "sha256": "b48ac52f161f261e6dd0c250ecfc6b9efb3c43baff3339124e6d8d85d5aa890e",
+      "changed": true
+    },
+    {
+      "old": "杀生丸/杀生丸和天生牙02.png",
+      "new": "杀生丸/杀生丸-天生牙__默认形态__动作__天生牙__02.png",
+      "sha256": "ebd39ebc209cdbd1ce747d65558eb351304101df5d92cbff780dbe769a699523",
+      "changed": true
+    },
+    {
+      "old": "桔梗/桔梗上身图01.png",
+      "new": "桔梗/桔梗__默认形态__上身__人物参考__01.png",
+      "sha256": "bafa48dd03411aa07e6c882921422f78e3bb46eae38ba4204e33568e4e1ca2ed",
+      "changed": true
+    },
+    {
+      "old": "桔梗/桔梗上身图02.png",
+      "new": "桔梗/桔梗__默认形态__上身__人物参考__02.png",
+      "sha256": "4c28e372534450b0370c25c7990340bdf086732b0a8bbe98d20326498906c4e3",
+      "changed": true
+    },
+    {
+      "old": "桔梗/桔梗上身图03.png",
+      "new": "桔梗/桔梗__默认形态__上身__人物参考__03.png",
+      "sha256": "841a1cc633820905427bc248cd5166c22d87690c21aff10f00e7f885b0f31778",
+      "changed": true
+    },
+    {
+      "old": "桔梗/桔梗上身图04.png",
+      "new": "桔梗/桔梗__默认形态__上身__人物参考__04.png",
+      "sha256": "17fbec650f5e9c032d81c8bce19e301436447356da7712a5012eb9a78f0dfae8",
+      "changed": true
+    },
+    {
+      "old": "桔梗/桔梗上身图05.png",
+      "new": "桔梗/桔梗__默认形态__上身__人物参考__05.png",
+      "sha256": "30be80b51abbbd3fe3ea313e57ebd894edc348fb394bc9324c8a739dac295dc5",
+      "changed": true
+    },
+    {
+      "old": "桔梗/桔梗上身图06.png",
+      "new": "桔梗/桔梗__默认形态__上身__人物参考__06.png",
+      "sha256": "268ff4975082984a2a8d23e41e2eb1e13ea1417c4fcfcdb1ac25b149a926b4bc",
+      "changed": true
+    },
+    {
+      "old": "桔梗/桔梗上身图07.png",
+      "new": "桔梗/桔梗__默认形态__上身__人物参考__07.png",
+      "sha256": "06e771dd713e1db81b752302079ee2c42e8ba0df06f624504d8fd6efbcdd1602",
+      "changed": true
+    },
+    {
+      "old": "桔梗/桔梗上身图08.png",
+      "new": "桔梗/桔梗__默认形态__上身__人物参考__08.png",
+      "sha256": "ece6ad71729dd8c07d0214ddbd76b339c69fc19986fed3b102c301e1ba6bf241",
+      "changed": true
+    },
+    {
+      "old": "桔梗/桔梗上身图09.png",
+      "new": "桔梗/桔梗__默认形态__上身__人物参考__09.png",
+      "sha256": "deaeee34f593ffc997c02b17611edec497d8034d0cc41dca1d7f26644ac50277",
+      "changed": true
+    },
+    {
+      "old": "桔梗/桔梗上身图10.png",
+      "new": "桔梗/桔梗__默认形态__上身__人物参考__10.png",
+      "sha256": "fd0f2f7b08bf29a6ff1a80317711adb066602096980971c677bbb480c22e995f",
+      "changed": true
+    },
+    {
+      "old": "桔梗/桔梗全身图01.png",
+      "new": "桔梗/桔梗__默认形态__全身__人物参考__01.png",
+      "sha256": "2ade85595e7798b47f25a923443631d6501af957bb2bd4c5ebf5f635c1d8199d",
+      "changed": true
+    },
+    {
+      "old": "桔梗/桔梗和犬夜叉03.png",
+      "new": "桔梗/桔梗-犬夜叉__默认形态__双人__同框__03.png",
+      "sha256": "751957d124b296106277a94824cee0732f7ca9a7ff0d69b5e1fbac38a867781f",
+      "changed": true
+    },
+    {
+      "old": "桔梗/犬夜叉和桔梗01.png",
+      "new": "桔梗/犬夜叉-桔梗__默认形态__双人__同框__01.png",
+      "sha256": "b244478bd62b0efcf1f28652e9067af65a57d7d346e340e907fbba5687110c72",
+      "changed": true
+    },
+    {
+      "old": "桔梗/犬夜叉和桔梗02.png",
+      "new": "桔梗/犬夜叉-桔梗__默认形态__双人__同框__02.png",
+      "sha256": "787b991f546bf60f1ac4438601a4bdecae19f8b157820eb7cfe0e17ab675bc15",
+      "changed": true
+    },
+    {
+      "old": "桔梗/犬夜叉和桔梗04.png",
+      "new": "桔梗/犬夜叉-桔梗__默认形态__双人__同框__04.png",
+      "sha256": "7886bfd5eb9be0a4baa9c561b8ebce6abdb3812d4df6ce80894aac4bce00af7b",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/人类形态和未变化的铁碎牙01.png",
+      "new": "犬夜叉/犬夜叉-铁碎牙__人类形态__动作__未变化铁碎牙__01.png",
+      "sha256": "937a64a1a7ada14e33a8c84caf01fec75c73dc1da82d658cf94f7479a34c42e2",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/十六夜和犬夜叉01.png",
+      "new": "犬夜叉/十六夜-犬夜叉__默认形态__双人__同框__01.png",
+      "sha256": "8f7a2ef700f3ecd2505801ccf74671a3128d2c5d90e0d9efbdd929a5465b4b04",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/桔梗和犬夜叉03.png",
+      "new": "犬夜叉/桔梗-犬夜叉__默认形态__双人__同框__03.png",
+      "sha256": "751957d124b296106277a94824cee0732f7ca9a7ff0d69b5e1fbac38a867781f",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉上身图01.png",
+      "new": "犬夜叉/犬夜叉__默认形态__上身__人物参考__01.png",
+      "sha256": "d755737354e5af252e61e8fe46ebf3a73ef2b1129dc7288c1e4c5003f4f831b7",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉上身图02.png",
+      "new": "犬夜叉/犬夜叉__默认形态__上身__人物参考__02.png",
+      "sha256": "848888c3a655e54b13c0858ea3dcb9139f89d613fb282d48b83cbbb6d4323ef7",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉上身图03.png",
+      "new": "犬夜叉/犬夜叉__默认形态__上身__人物参考__03.png",
+      "sha256": "c902ce9489f223ccad956b5ba025bc0dbc804fbdfb0cd956417d9f14c972b72e",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉上身图04.png",
+      "new": "犬夜叉/犬夜叉__默认形态__上身__人物参考__04.png",
+      "sha256": "33c747a7749519c9136b12a6078ff2c2c273becac325a23b635b0d9987f8db61",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉人类形态01.png",
+      "new": "犬夜叉/犬夜叉__人类形态__近景__人物参考__01.png",
+      "sha256": "eadb08d023996da87e1bb6dd973f7c3ca065f32c1c5b3f15e7c8c7cccd504137",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉人类形态02.png",
+      "new": "犬夜叉/犬夜叉__人类形态__近景__人物参考__02.png",
+      "sha256": "817a09fa3adbab29f22550dec1acd82a1fa29fa7c5c9563a604f36e2831cae6f",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉人类形态03.png",
+      "new": "犬夜叉/犬夜叉__人类形态__近景__人物参考__03.png",
+      "sha256": "d47d8442e4f7fd7c38753e8cd494d13aa3a133f29d05c54a312db2e066b5bb6d",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉人类形态04.png",
+      "new": "犬夜叉/犬夜叉__人类形态__近景__人物参考__04.png",
+      "sha256": "558e542f4bf6b58e90a53e51dcbcfda6003c7d1314337ded27d664c6ddd07787",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉人类形态05.png",
+      "new": "犬夜叉/犬夜叉__人类形态__近景__人物参考__05.png",
+      "sha256": "8e60715e27e853faa798b99c0a501e719dcbcc940ba01d844e8fbadfe7236c1e",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉人类形态06.png",
+      "new": "犬夜叉/犬夜叉__人类形态__近景__人物参考__06.png",
+      "sha256": "4979f0e5da216eff01023384691f0470a6d2ee6fb62cce141ae39463dffd7e85",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉人类形态07.png",
+      "new": "犬夜叉/犬夜叉__人类形态__近景__人物参考__07.png",
+      "sha256": "0dcc4266ed28377c2485f1d2fb362ee43a43a089672b4a615e1b81213fc77592",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉侧脸图01.png",
+      "new": "犬夜叉/犬夜叉__默认形态__侧脸__人物参考__01.png",
+      "sha256": "565e5d15efb341bab7e8ba9c305ca9e650362acb7e995e510fdfcbe6156ea3b9",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉半全妖形态上半身图01.jpg",
+      "new": "犬夜叉/犬夜叉__全妖形态__上身__人物参考__01.jpg",
+      "sha256": "55f64dbc2942dd2a94d97def78169a9f68371077b3906736844f097c057a1c6c",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉半全妖形态上半身图02.jpg",
+      "new": "犬夜叉/犬夜叉__全妖形态__上身__人物参考__02.jpg",
+      "sha256": "c15b8e276680ee0585eb0213e7669d39764092d4d7e13b6006ab590ed5603bb7",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉和七宝01.png",
+      "new": "犬夜叉/犬夜叉-七宝__默认形态__双人__同框__01.png",
+      "sha256": "02e6cd132e5e96a7c6df43b0a93934ebe7e5296d11851673e99be86b21509e52",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉和七宝02.png",
+      "new": "犬夜叉/犬夜叉-七宝__默认形态__双人__同框__02.png",
+      "sha256": "3585b95f6416d95c839c6006542840d7e891b9ec738d1c2a7e1c1369c4505331",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉和变化的铁碎牙01.png",
+      "new": "犬夜叉/犬夜叉-铁碎牙__默认形态__动作__变化铁碎牙__01.png",
+      "sha256": "da6e88d1b4bc5c4f2eaa12e47fab1d29ff30a2bd7519720fc590bec4e2b1ea52",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉和变化的铁碎牙02.png",
+      "new": "犬夜叉/犬夜叉-铁碎牙__默认形态__动作__变化铁碎牙__02.png",
+      "sha256": "819e53697f4559b21d3b04761be1fed00fc880a983a531ab36bd71c4c7a772cd",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉和变化的铁碎牙03.png",
+      "new": "犬夜叉/犬夜叉-铁碎牙__默认形态__动作__变化铁碎牙__03.png",
+      "sha256": "d0cf380b90a5e59513e940bbcfb8582a1dbad3f08ea4d9f07370907101bc3182",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉和戈薇01.png",
+      "new": "犬夜叉/犬夜叉-戈薇__默认形态__双人__同框__01.png",
+      "sha256": "0664d22f673677b8d7f0d9e7155a0a64dec66cf7e229b827e9186df5a8fa76ee",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉和戈薇02.png",
+      "new": "犬夜叉/犬夜叉-戈薇__默认形态__双人__同框__02.png",
+      "sha256": "e5150d8d84bfd219d430b20cefa8d3b1e27e8fe3e05a3b0d48af6a2997f90bde",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉和戈薇03.png",
+      "new": "犬夜叉/犬夜叉-戈薇__默认形态__双人__同框__03.png",
+      "sha256": "f6cd8c02e6d82581bafe4f22ed95a79fd6b8526200da7d6de1fd746bc7286a97",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉和桔梗01.png",
+      "new": "犬夜叉/犬夜叉-桔梗__默认形态__双人__同框__01.png",
+      "sha256": "b244478bd62b0efcf1f28652e9067af65a57d7d346e340e907fbba5687110c72",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉和桔梗02.png",
+      "new": "犬夜叉/犬夜叉-桔梗__默认形态__双人__同框__02.png",
+      "sha256": "787b991f546bf60f1ac4438601a4bdecae19f8b157820eb7cfe0e17ab675bc15",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉和桔梗04.png",
+      "new": "犬夜叉/犬夜叉-桔梗__默认形态__双人__同框__04.png",
+      "sha256": "7886bfd5eb9be0a4baa9c561b8ebce6abdb3812d4df6ce80894aac4bce00af7b",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉和草太001.png",
+      "new": "犬夜叉/犬夜叉-草太__默认形态__双人__同框__01.png",
+      "sha256": "7235724a119015528c7a3041ebb0335b466e81441e3b806d0915114ee402c867",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉和食骨之井01.png",
+      "new": "犬夜叉/犬夜叉-食骨之井__默认形态__动作__食骨之井__01.png",
+      "sha256": "41443db099c7d3393a8585e0025f8d7a14ab40bb55b7ba98752406e3b273c91b",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉和食骨之井02.png",
+      "new": "犬夜叉/犬夜叉-食骨之井__默认形态__动作__食骨之井__02.png",
+      "sha256": "66888293995b507c50b4f207f2060d562118d55be59db06bfff76d75d46a8e3e",
+      "changed": true
+    },
+    {
+      "old": "犬夜叉/犬夜叉幼年形态图01.png",
+      "new": "犬夜叉/犬夜叉__幼年形态__近景__幼年参考__01.png",
+      "sha256": "cd73f043f0439d0ba73d4f440bc8e9d2bd9192c81716db2962f8fd62dd4869aa",
+      "changed": true
+    },
+    {
+      "old": "玲/玲上身图01.png",
+      "new": "玲/玲__默认形态__上身__人物参考__01.png",
+      "sha256": "379e1cf7fae7ef3663776dc4ddc702a6275d407be8a2a41b9b677843b0c71f59",
+      "changed": true
+    },
+    {
+      "old": "珊瑚/弥勒和珊瑚02.png",
+      "new": "珊瑚/弥勒-珊瑚__默认形态__双人__同框__02.png",
+      "sha256": "04851d6589cb2aa26ba2add218dc6a55bd7b407f288e757bbcace24f706c3760",
+      "changed": true
+    },
+    {
+      "old": "珊瑚/珊瑚上身图01.png",
+      "new": "珊瑚/珊瑚__默认形态__上身__人物参考__01.png",
+      "sha256": "37ab4853d77b3ac026cbdce034be997bfe224de5898454a7713c14a8ef26e8ff",
+      "changed": true
+    },
+    {
+      "old": "珊瑚/珊瑚侧脸图01.png",
+      "new": "珊瑚/珊瑚__默认形态__侧脸__人物参考__01.png",
+      "sha256": "7710358cc2900218557069a93e3f22207fb8e36a731b1d19da945adb904a31ba",
+      "changed": true
+    },
+    {
+      "old": "珊瑚/珊瑚全身图01.png",
+      "new": "珊瑚/珊瑚__默认形态__全身__人物参考__01.png",
+      "sha256": "8ddb048e08dd746aeb8ede1f0550bc250be90b7a53f173160b2ad5175ebe0bd9",
+      "changed": true
+    },
+    {
+      "old": "珊瑚/珊瑚全身图02.png",
+      "new": "珊瑚/珊瑚__默认形态__全身__人物参考__02.png",
+      "sha256": "973445ceae4fe9a180bfcf054be200c2b3890df8e9e65570f9e9ebf4b5168d42",
+      "changed": true
+    },
+    {
+      "old": "珊瑚/珊瑚和琥珀01.png",
+      "new": "珊瑚/珊瑚-琥珀__默认形态__双人__同框__01.png",
+      "sha256": "740efe8d860f21a0a7ff45b86e7aa510b2f72c2c2cd676517c80be5ba8638f90",
+      "changed": true
+    },
+    {
+      "old": "琥珀/珊瑚和琥珀01.png",
+      "new": "琥珀/珊瑚-琥珀__默认形态__双人__同框__01.png",
+      "sha256": "740efe8d860f21a0a7ff45b86e7aa510b2f72c2c2cd676517c80be5ba8638f90",
+      "changed": true
+    },
+    {
+      "old": "琥珀/琥珀全身图01.png",
+      "new": "琥珀/琥珀__默认形态__全身__人物参考__01.png",
+      "sha256": "2108a67e65fbf169ff505212b94b16869cd962d0f333bf7a21abc4ea9e4caf9d",
+      "changed": true
+    },
+    {
+      "old": "神乐/神乐上身图01.png",
+      "new": "神乐/神乐__默认形态__上身__人物参考__01.png",
+      "sha256": "c767fc55b2b3a567658415d2bc4b03ef9f6049cce960e1fabc4c145d75d442d1",
+      "changed": true
+    },
+    {
+      "old": "神乐/神乐上身图02.png",
+      "new": "神乐/神乐__默认形态__上身__人物参考__02.png",
+      "sha256": "de37fb27edae38cd5ea799074577f10aebfceaaf2bcb6f8b8cf82db71073c473",
+      "changed": true
+    },
+    {
+      "old": "神乐/神乐上身图03.png",
+      "new": "神乐/神乐__默认形态__上身__人物参考__03.png",
+      "sha256": "407db00b789fd6c09a6b0532b2cb1dee3cb2ab712a6aff0631e1c0d013ca4e0e",
+      "changed": true
+    },
+    {
+      "old": "神无/神无上身图01.png",
+      "new": "神无/神无__默认形态__上身__人物参考__01.png",
+      "sha256": "06c2503fa70cf1940f6218217ca46c7471fd4fbce117b00fc06740e97f96c1af",
+      "changed": true
+    },
+    {
+      "old": "神无/神无上身图02.png",
+      "new": "神无/神无__默认形态__上身__人物参考__02.png",
+      "sha256": "5c2d6a56d3e7a0b20fdbc8a3e47cf7190b84abe3365930f69c775e29df619aa0",
+      "changed": true
+    },
+    {
+      "old": "神无/神无上身图03.png",
+      "new": "神无/神无__默认形态__上身__人物参考__03.png",
+      "sha256": "7f6b45aaa27d4f6d541fbbadc5b506346c1a57719af9c45797edc11f284da6aa",
+      "changed": true
+    },
+    {
+      "old": "草太/戈薇和草太01.png",
+      "new": "草太/戈薇-草太__默认形态__双人__同框__01.png",
+      "sha256": "db046675a579336d9665535aeb9d897b1ef211002edff054b38edae25041bc40",
+      "changed": true
+    },
+    {
+      "old": "草太/戈薇和草太02.png",
+      "new": "草太/戈薇-草太__默认形态__双人__同框__02.png",
+      "sha256": "880ecc3a0f77687abcaadf2106de052754b9709410bc4adb51775a4cd23a04ce",
+      "changed": true
+    },
+    {
+      "old": "草太/犬夜叉和草太001.png",
+      "new": "草太/犬夜叉-草太__默认形态__双人__同框__01.png",
+      "sha256": "7235724a119015528c7a3041ebb0335b466e81441e3b806d0915114ee402c867",
+      "changed": true
+    },
+    {
+      "old": "铁碎牙/未变化的铁碎牙01.png",
+      "new": "铁碎牙/铁碎牙__不适用__细节__未变化铁碎牙__01.png",
+      "sha256": "ef0e44bab5683944068c43fe1de7e3dbad9e104c57377ed1949201f56b98761f",
+      "changed": true
+    },
+    {
+      "old": "铁碎牙/未变化的铁碎牙02.png",
+      "new": "铁碎牙/铁碎牙__不适用__细节__未变化铁碎牙__02.png",
+      "sha256": "dbd166c65e79abacb450fecc857ea6db89045d5ee47d18c02282852d2630f176",
+      "changed": true
+    },
+    {
+      "old": "铁碎牙/犬夜叉和变化的铁碎牙01.png",
+      "new": "铁碎牙/犬夜叉-铁碎牙__默认形态__动作__变化铁碎牙__01.png",
+      "sha256": "da6e88d1b4bc5c4f2eaa12e47fab1d29ff30a2bd7519720fc590bec4e2b1ea52",
+      "changed": true
+    },
+    {
+      "old": "铁碎牙/犬夜叉和变化的铁碎牙02.png",
+      "new": "铁碎牙/犬夜叉-铁碎牙__默认形态__动作__变化铁碎牙__02.png",
+      "sha256": "819e53697f4559b21d3b04761be1fed00fc880a983a531ab36bd71c4c7a772cd",
+      "changed": true
+    },
+    {
+      "old": "铁碎牙/犬夜叉和变化的铁碎牙03.png",
+      "new": "铁碎牙/犬夜叉-铁碎牙__默认形态__动作__变化铁碎牙__03.png",
+      "sha256": "d0cf380b90a5e59513e940bbcfb8582a1dbad3f08ea4d9f07370907101bc3182",
+      "changed": true
+    },
+    {
+      "old": "食骨之井/犬夜叉和食骨之井01.png",
+      "new": "食骨之井/犬夜叉-食骨之井__默认形态__动作__食骨之井__01.png",
+      "sha256": "41443db099c7d3393a8585e0025f8d7a14ab40bb55b7ba98752406e3b273c91b",
+      "changed": true
+    },
+    {
+      "old": "食骨之井/犬夜叉和食骨之井02.png",
+      "new": "食骨之井/犬夜叉-食骨之井__默认形态__动作__食骨之井__02.png",
+      "sha256": "66888293995b507c50b4f207f2060d562118d55be59db06bfff76d75d46a8e3e",
+      "changed": true
+    }
+  ],
+  "status": "complete"
+}

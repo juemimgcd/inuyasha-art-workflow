@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "attempt": 3,
+  "recorded_at": "2026-08-11T15:00:12+08:00",
+  "status": "error",
+  "generator": "built-in-imagegen",
+  "duration_seconds": 289.0,
+  "generation_seconds": 289.0,
+  "response_started_at": "2026-08-11T14:54:06+08:00",
+  "response_seconds": 366.0,
+  "pre_generation_seconds": 0.0,
+  "pre_generation_target_seconds": 90,
+  "pre_generation_target_met": true,
+  "post_generation_seconds": 77.0,
+  "post_generation_target_seconds": 30,
+  "post_generation_target_met": false,
+  "workflow_overhead_seconds": 77.0,
+  "response_slo_seconds": null,
+  "response_slo_met": null,
+  "output": null,
+  "output_sha256": null,
+  "reference_item_ids": [
+    "manga-curated:file:cb67f4934e8e0825eda6",
+    "official:file:6285125444be8011e070",
+    "official:file:c72310b3df3a4455f6eb",
+    "user-supplied:file:df23b5069d599a49c4ac"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "technical",
+      "note": "network error while uploading full-resolution target plus official face sheet; no image output"
+    }
+  ],
+  "user_feedback": "",
+  "preference_tags": []
+}

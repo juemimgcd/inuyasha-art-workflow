@@ -1,0 +1,21 @@
+{
+  "schema_version": 3,
+  "status": "accepted",
+  "generated_at": "2026-08-08T13:44:00+08:00",
+  "generator": "built-in image_gen",
+  "accepted_attempt": 1,
+  "revision_required": false,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-kikyo-shoulder-rest-sleeve-hidden-final/outputs/inuyasha-kikyo-shoulder-rest-sleeve-hidden-final.png",
+  "medium": "manga",
+  "intent": "new",
+  "revisions": [
+    {
+      "attempt": 1,
+      "status": "accepted",
+      "failures": [],
+      "user_feedback": "legacy import; detailed rejected attempts unavailable"
+    }
+  ],
+  "qa": "pass",
+  "legacy_import": true
+}

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "composition",
+      "item_id": "user-supplied:file:d1f6b39c1717d915ec76",
+      "source_id": "user-supplied",
+      "source_authority": "requested-composition",
+      "content_hash": "d1f6b39c1717d915ec760f5be7afaeb1a3c2e578972175bbf375596bcf2ec2d3",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-izayoi-grave-lineart-setting-sheet/references/composition-user-supplied-file-d1f6b39c1717d915ec76.jpg",
+      "original_path": "/Users/jquery/Downloads/Screenshot_20260804_091537.jpg",
+      "pdf_page": null,
+      "instructions": "Control the main stele front face, rounded crown, weathered vertical carving placement, and the three stone elements' visible relative positions. Discard subtitles, flowers, insects, grass, scenery, palette, lighting, and video framing."
+    },
+    {
+      "order": 2,
+      "role": "composition",
+      "item_id": "user-supplied:file:2d1c041cac7dd654044e",
+      "source_id": "user-supplied",
+      "source_authority": "requested-composition",
+      "content_hash": "2d1c041cac7dd654044ec56772d1cd2044705f3ea5dc48e19d58e48e3e8d558c",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-izayoi-grave-lineart-setting-sheet/references/composition-user-supplied-file-2d1c041cac7dd654044e.jpg",
+      "original_path": "/Users/jquery/Downloads/IMG_20260810_152818.jpg",
+      "pdf_page": null,
+      "instructions": "Control the rear and side thickness, rounded-top profile, ground contact, and front-to-back ordering of the three stone elements. Discard subtitles, flowers, insects, grass, lake, scenery, palette, lighting, and video framing."
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "schema_version": 5,
+  "task_id": "20260811-child-inuyasha-izayoi-ear-play-face-refinement",
+  "created_at": "2026-08-11T13:46:36+08:00",
+  "request": "只微调候选01中十六夜的面部，使其更秀气、更精致、更接近官方十六夜；犬夜叉、双手摸耳动作、和服、构图、背景和漫画笔触全部保持不变",
+  "intent": "edit",
+  "parent_task_id": "20260811-child-inuyasha-izayoi-ear-play-warm",
+  "change_category": "identity",
+  "change_request": "只修改十六夜现有面部区域：秀气鹅蛋脸、精致杏眼向下看犬夜叉、自然小鼻与克制温柔微笑；其他像素保持不变",
+  "medium": "manga",
+  "deliverable": "edit",
+  "period_mode": "classic-balanced",
+  "style_strategy": "two-layer-manga-fast",
+  "style_references": [],
+  "content_need": {},
+  "content_references": [],
+  "characters": [
+    "犬夜叉",
+    "十六夜"
+  ],
+  "identity_forms": {
+    "犬夜叉": "child-form",
+    "十六夜": "default-form"
+  },
+  "forms_and_costumes": [
+    "犬夜叉: child-form",
+    "十六夜: default-form"
+  ],
+  "scene": "安静的室内缘侧，十六夜坐姿把幼年犬夜叉安稳抱在怀里；孩子背靠她的胸前，头部位于她双手之间。十六夜微微俯身，一只手轻捏一侧犬耳耳尖，另一只手轻柔揉弄另一侧犬耳，两只手都清楚可见且各自只接触一只耳朵。幼年犬夜叉因被母亲逗弄耳朵而露出害羞、放松又略带别扭的可爱神情，十六夜低头温柔微笑。",
+  "aspect_ratio": "4:5",
+  "invariants": [
+    "画面只有十六夜与幼年犬夜叉两名角色，构图为亲密的半身至膝上双人图，母子身体有明确拥抱接触。",
+    "犬夜叉必须明确是幼年形态：孩童头身比例、圆润幼年脸、头顶一对犬耳、长白发、宽大的深色童装；不得成年化，不得出现念珠或铁碎牙。",
+    "十六夜必须有长直黑发、齐刘海、层叠贵族和服与温柔端庄的成年面容。",
+    "十六夜必须恰好有两只正常的手：左手与右手分别轻柔接触一只犬耳；两只犬耳完整可辨，不得多手、多指、缺指、耳朵粘连或第三只耳朵。",
+    "动作是母亲亲昵地把玩孩子耳朵，不得表现为拉扯、疼痛、惩罚、攻击或情色化。",
+    "成图必须使用黑白原著漫画语言：清晰蘸水笔线条、自然黑白块面、克制网点与柔和留白；不得出现 TV 动画配色、赛璐璐阴影或彩色。",
+    "氛围温馨、安静、生活化；背景只保留少量和室或缘侧线索，不抢人物。",
+    "不得出现对白、文字、气泡、分镜边框、签名、水印、第三人物或多余道具。"
+  ],
+  "latency_budget": {
+    "schema_version": 2,
+    "pre_generation_target_seconds": 30,
+    "post_generation_target_seconds": 30,
+    "max_technical_retries": 1,
+    "generation_latency_policy": "observe-only"
+  },
+  "local_edit": {
+    "mode": "crop-composite",
+    "target": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-child-inuyasha-izayoi-ear-play-warm/outputs/十六夜与幼年犬夜叉__怀中把玩双耳__温馨漫画__候选01.png",
+    "context_box": [
+      0,
+      0,
+      1122,
+      1402
+    ],
+    "edit_box": [
+      435,
+      270,
+      325,
+      255
+    ],
+    "feather_pixels": 12,
+    "change": "只替换十六夜现有面部区域，使脸型与五官更秀气精致并保持温柔向下凝视；编辑框外必须逐像素保留。"
+  }
+}

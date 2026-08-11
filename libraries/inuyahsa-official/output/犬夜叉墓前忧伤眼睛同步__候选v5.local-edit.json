@@ -1,0 +1,23 @@
+{
+  "target": "/Users/jquery/Documents/inuyahsa-official/output/eye-microfix-work/target-original.png",
+  "candidate": "/Users/jquery/.codex/generated_images/019fec06-ee39-7f90-b878-9fa0eeee14db/exec-8040eb11-a92b-48a8-b9a4-97b67240f420.png",
+  "output": "/Users/jquery/Documents/inuyahsa-official/output/犬夜叉墓前忧伤眼睛同步__候选v5.png",
+  "target_sha256": "f967f6779e416efe262c2837ad8499f6aaed15b1bf7945a756a46b5b9321e474",
+  "candidate_sha256": "c3d02ef9adf92533770382bbf2f6366028daa730867d7a380d63c95ae00d2e95",
+  "output_sha256": "e16f19c0ceb4b53a0c86d511d3fc4be8d8ff7cd75b72150c27ecb879c3142f5e",
+  "context_box": [
+    400,
+    0,
+    256,
+    256
+  ],
+  "edit_box": [
+    505,
+    95,
+    55,
+    55
+  ],
+  "feather_pixels": 4,
+  "candidate_resized_to_context": true,
+  "outside_edit_box_preserved": true
+}

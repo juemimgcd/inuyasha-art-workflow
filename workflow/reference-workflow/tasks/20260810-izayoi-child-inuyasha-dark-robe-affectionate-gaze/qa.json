@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "十六夜保持成年贵族女性身份；犬夜叉保持四到五头身幼年半妖形态。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "犬夜叉白发犬耳与深色火鼠裘层次正确；十六夜长黑发与贵族和服正确，眼神与浅笑更温柔宠溺。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "犬耳、双手和赤足清楚，无念珠、铁碎牙或新增道具。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "黑白漫画媒介占主导，无动画上色或灰度厚涂泄漏。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "火鼠裘使用一致的中深色网点，腰带更深；白发、皮肤和赤足保持白色。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "十六夜左侧低头看向犬夜叉，犬夜叉右侧抬头回应，面对面视线轴清楚。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "府邸与庭院完整保留，人物黑白剪影仍为主要焦点。"
+    },
+    {
+      "category": "construction",
+      "check": "人物、道具与背景使用一致的前后层级、透视方向和相对尺度",
+      "status": "pass",
+      "note": "成人与幼童尺度、地面、建筑透视和前后关系一致。"
+    },
+    {
+      "category": "construction",
+      "check": "身体接触、地面接触、衣物遮挡和道具承重连接连续且无悬浮穿模",
+      "status": "pass",
+      "note": "人物双足着地，长衣摆、袖、发、手足无悬浮、融合或穿模。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "无文字、气泡、签名、logo 或水印。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "PNG 为 1536×1024，精确 3:2 横向编辑成图。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "n/a",
+      "note": "本次未添加独立漫画 style 图；编辑目标控制原有漫画画法。"
+    },
+    {
+      "category": "process",
+      "check": "selected-output 只控制已认可的连续性和完成度，没有覆盖官方身份或目标媒介画法",
+      "status": "n/a",
+      "note": "本次未使用 selected-output。"
+    },
+    {
+      "category": "process",
+      "check": "跨媒介 content 只控制清单中点名的可见内容，未泄漏来源媒介的配色、线条、阴影、背景或角色画法",
+      "status": "n/a",
+      "note": "本次未使用跨媒介 content。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "按 manifest 顺序使用目标图、幼年犬夜叉深色火鼠裘设定表与十六夜表情设定。"
+    }
+  ]
+}

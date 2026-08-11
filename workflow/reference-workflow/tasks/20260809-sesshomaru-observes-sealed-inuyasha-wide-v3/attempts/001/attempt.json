@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-09T21:40:33+08:00",
+  "status": "error",
+  "generator": "built-in image_gen",
+  "duration_seconds": 68.0,
+  "output": null,
+  "output_sha256": null,
+  "reference_item_ids": [
+    "manga-curated:file:59832195a04d73283979",
+    "official:file:feb144894cb1375186a7",
+    "official:file:798eaba650545b06b4a7",
+    "user-supplied:file:5447fdd74550ea89c565"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "technical",
+      "note": "图像生成在输出阶段被安全系统误判为self-harm/violence并返回HTTP 400；未产生文件，下一次改用无伤魔法封印语义"
+    }
+  ],
+  "user_feedback": "",
+  "preference_tags": []
+}

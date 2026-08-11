@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "attempt": 2,
+  "recorded_at": "2026-08-09T21:45:54+08:00",
+  "status": "error",
+  "generator": "built-in image_gen",
+  "duration_seconds": 96.0,
+  "output": null,
+  "output_sha256": null,
+  "reference_item_ids": [
+    "manga-curated:file:59832195a04d73283979",
+    "official:file:feb144894cb1375186a7",
+    "official:file:798eaba650545b06b4a7",
+    "user-supplied:file:5447fdd74550ea89c565"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "technical",
+      "note": "第二次将封印改写为无伤魔法语义后仍在输出阶段被安全系统误判为self-harm；未产生文件，下一次移除胸前符箭并不再直接传入含该画面的构图参考"
+    }
+  ],
+  "user_feedback": "",
+  "preference_tags": []
+}

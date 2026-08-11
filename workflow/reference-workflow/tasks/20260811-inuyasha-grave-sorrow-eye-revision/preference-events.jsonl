@@ -1,0 +1,8 @@
+{"schema_version": 1, "recorded_at": "2026-08-11T08:16:47+08:00", "attempt": 1, "status": "rejected", "feedback": "用户明确反馈：参考新图继续微调眼睛部分，现在还是看不出悲伤", "tags": ["eye-expression:alert-melancholy"]}
+{"schema_version": 1, "recorded_at": "2026-08-11T08:22:38+08:00", "attempt": 2, "status": "rejected", "feedback": "用户明确反馈：还是看不出忧伤，眼睛睁开的角度太大，这个动作也看不出忧伤", "tags": ["eye-expression:narrower-sorrow", "pose:bowed-restrained-grief"]}
+{"schema_version": 1, "recorded_at": "2026-08-11T08:32:38+08:00", "attempt": 3, "status": "rejected", "feedback": "用户明确反馈：这个眼睛对了，但是头还是和上一张图一样吧，再微调一下", "tags": ["eye-expression:accepted-narrow-sorrow", "pose:stronger-head-bow"]}
+{"schema_version": 1, "recorded_at": "2026-08-11T08:41:57+08:00", "attempt": 4, "status": "rejected", "feedback": "用户澄清：只需把已经确认正确的眼睛微调同步到新提供的原姿态图片上", "tags": ["scope:eye-only-transfer"]}
+{"schema_version": 1, "recorded_at": "2026-08-11T09:12:23+08:00", "attempt": 5, "status": "rejected", "feedback": "用户明确反馈：左边的手不用画，右边只画在袖口里面的手", "tags": ["hand-scope:left-hidden-right-inside-sleeve"]}
+{"schema_version": 1, "recorded_at": "2026-08-11T09:23:27+08:00", "attempt": 6, "status": "error", "feedback": "第一次右袖局部生成发生网络错误；缩小上下文范围后仅重试一次", "tags": []}
+{"schema_version": 1, "recorded_at": "2026-08-11T09:29:48+08:00", "attempt": 7, "status": "rejected", "feedback": "用户明确追加：在右袖藏手版本基础上，把画面左边的手也画出来", "tags": ["hand-scope:both-inside-sleeves"]}
+{"schema_version": 1, "recorded_at": "2026-08-11T09:42:53+08:00", "attempt": 8, "status": "rejected", "feedback": "用户明确反馈：模仿第二张图左边手的画法，把三根手指改成四根", "tags": ["left-hand:four-visible-fingers"]}

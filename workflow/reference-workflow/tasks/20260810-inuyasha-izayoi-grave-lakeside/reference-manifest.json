@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "style",
+      "item_id": "manga-curated:file:b244478bd62b0efcf1f2",
+      "source_id": "manga-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "b244478bd62b0efcf1f28652e9067af65a57d7d346e340e907fbba5687110c72",
+      "folder_path": "桔梗",
+      "content_label": "桔梗",
+      "folder_tags": [
+        "桔梗",
+        "犬夜叉"
+      ],
+      "subjects": [
+        "桔梗",
+        "犬夜叉"
+      ],
+      "forms": [
+        "default-form",
+        "half-demon-form"
+      ],
+      "subject_forms": {
+        "桔梗": [
+          "default-form"
+        ],
+        "犬夜叉": [
+          "default-form",
+          "half-demon-form"
+        ]
+      },
+      "shot_types": [
+        "two-shot"
+      ],
+      "filename_terms": [
+        "01",
+        "双人",
+        "同框",
+        "犬夜叉-桔梗",
+        "默认形态"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-inuyasha-izayoi-grave-lakeside/references/style-manga-curated-file-b244478bd62b0efcf1f2.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos/桔梗/犬夜叉-桔梗__默认形态__双人__同框__01.png",
+      "pdf_page": null,
+      "instructions": "Control only black-and-white manga mark-making: line hierarchy, black-white massing, halftone economy, facial simplification, and effect construction. Do not copy visible characters, dialogue, balloons, panel borders, layout, or story content.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 2,
+      "role": "identity",
+      "item_id": "official:file:798eaba650545b06b4a7",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "798eaba650545b06b4a7ae52296946693548ee830a98896c1e82dcdf467f6158",
+      "folder_path": "犬夜叉设定集",
+      "content_label": "犬夜叉设定集",
+      "folder_tags": [
+        "犬夜叉设定集"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "half-demon-form"
+      ],
+      "subject_forms": {
+        "犬夜叉": [
+          "half-demon-form"
+        ]
+      },
+      "shot_types": [],
+      "filename_terms": [
+        "犬夜叉半妖形态图01"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-inuyasha-izayoi-grave-lakeside/references/identity-official-file-798eaba650545b06b4a7.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/犬夜叉设定集/犬夜叉半妖形态图01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, anatomy, costume, weapon or prop construction, attachment, and scale only. Do not control rendering style or scene composition.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 3,
+      "role": "composition",
+      "item_id": "user-supplied:file:56744d86bf6a0b6db0ae",
+      "source_id": "user-supplied",
+      "source_authority": "requested-composition",
+      "content_hash": "56744d86bf6a0b6db0ae66a9cb8607326b620cecd142c41cc60c22e42a0b6d67",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-inuyasha-izayoi-grave-lakeside/references/composition-user-supplied-file-56744d86bf6a0b6db0ae.png",
+      "original_path": "/Users/jquery/Library/Containers/com.tencent.qq/Data/tmp/51373c70-de23-4a3f-95cc-6d54b2cee518.png",
+      "pdf_page": null,
+      "instructions": "Control only framing, crop, gaze direction, and broad silhouette. Do not control character identity, form, costume, color, or rendering style."
+    },
+    {
+      "order": 4,
+      "role": "composition",
+      "item_id": "user-supplied:file:2d1c041cac7dd654044e",
+      "source_id": "user-supplied",
+      "source_authority": "requested-composition",
+      "content_hash": "2d1c041cac7dd654044ec56772d1cd2044705f3ea5dc48e19d58e48e3e8d558c",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-inuyasha-izayoi-grave-lakeside/references/composition-user-supplied-file-2d1c041cac7dd654044e.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/十六夜设定集/十六夜墓碑TV截图侧后面图01.jpg",
+      "pdf_page": null,
+      "instructions": "Control only framing, crop, gaze direction, and broad silhouette. Do not control character identity, form, costume, color, or rendering style."
+    }
+  ]
+}

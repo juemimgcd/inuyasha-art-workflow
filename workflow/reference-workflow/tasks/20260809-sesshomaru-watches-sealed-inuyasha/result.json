@@ -1,0 +1,20 @@
+{
+  "schema_version": 3,
+  "status": "accepted",
+  "generated_at": "2026-08-09T09:01:55+08:00",
+  "generator": "built-in image_gen",
+  "accepted_attempt": 1,
+  "revision_required": false,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-watches-sealed-inuyasha/output/sesshomaru-watches-sealed-inuyasha.png",
+  "medium": "manga",
+  "intent": "new",
+  "revisions": [
+    {
+      "attempt": 1,
+      "status": "accepted",
+      "failures": [],
+      "user_feedback": ""
+    }
+  ],
+  "qa": "pass"
+}

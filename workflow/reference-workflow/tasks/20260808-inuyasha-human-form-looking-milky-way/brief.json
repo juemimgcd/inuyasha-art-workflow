@@ -1,0 +1,38 @@
+{
+  "schema_version": 5,
+  "task_id": "20260808-inuyasha-human-form-looking-milky-way",
+  "created_at": "2026-08-08T21:48:21+08:00",
+  "request": "人类形态犬夜叉抬头看向银河，黑白漫画画风，上身图，忧伤而克制的氛围，重点刻画眼睛细节",
+  "intent": "new",
+  "parent_task_id": null,
+  "change_category": null,
+  "change_request": "",
+  "medium": "manga",
+  "deliverable": "illustration",
+  "period_mode": "classic-balanced",
+  "style_strategy": "three-layer-manga",
+  "style_references": [
+    "manga-curated:file:4979f0e5da216eff0102"
+  ],
+  "characters": [
+    "犬夜叉"
+  ],
+  "identity_forms": {
+    "犬夜叉": "human-form"
+  },
+  "forms_and_costumes": [
+    "犬夜叉: human-form",
+    "黑色长发、普通人耳、无头顶犬耳、无獠牙和利爪；保留言灵念珠与火鼠裘交领上身"
+  ],
+  "scene": "寂静夜色中的竖幅上身像：人类形态犬夜叉从胸口以上入画，微微后仰抬头凝望横贯天空的银河，长黑发被轻微夜风带起；情绪忧伤、孤独而克制，银河与星点只衬托脸和眼睛。",
+  "aspect_ratio": "4:5 portrait",
+  "invariants": [
+    "犬夜叉必须是人类形态：黑色长发、普通人耳、没有头顶犬耳、獠牙、利爪、额头月牙或脸颊妖纹",
+    "竖幅4:5上身图，从胸口以上入画，头部微微后仰，视线明确朝向高处银河",
+    "眼睛是第一视觉焦点：两眼结构对称稳定，上眼睑清楚，虹膜与瞳孔方向一致，保留一至两个克制高光，不画成现代动画式巨大闪亮眼睛",
+    "表情忧伤但不过度哭泣：眉眼略带疲惫和失落，嘴部闭合克制，不出现夸张泪流",
+    "黑白原著漫画印刷感：黑发为主要纯黑块并留窄白高光，皮肤保持白净，只用一层轻网点和少量短排线塑造夜色",
+    "银河使用黑色夜空、白色星点与稀疏网点形成，不使用彩色、发光渐变、摄影星空或现代数码特效",
+    "画面中只有犬夜叉一人，不出现铁碎牙、其他角色、文字、气泡、分格、签名、logo或水印"
+  ]
+}

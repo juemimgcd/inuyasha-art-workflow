@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "attempt": 8,
+  "recorded_at": "2026-08-11T16:18:05+08:00",
+  "status": "error",
+  "generator": "built-in-imagegen",
+  "duration_seconds": 256.0,
+  "generation_seconds": 256.0,
+  "response_started_at": "2026-08-11T15:54:29+08:00",
+  "response_seconds": 1416.0,
+  "pre_generation_seconds": 1091.0,
+  "pre_generation_target_seconds": 90,
+  "pre_generation_target_met": false,
+  "post_generation_seconds": 69.0,
+  "post_generation_target_seconds": 30,
+  "post_generation_target_met": false,
+  "workflow_overhead_seconds": 1160.0,
+  "response_slo_seconds": null,
+  "response_slo_met": null,
+  "output": null,
+  "output_sha256": null,
+  "reference_item_ids": [
+    "manga-curated:file:876af11c5aa2fd24a707",
+    "official:file:f4819e9df3546a3ed095",
+    "official:file:6285125444be8011e070",
+    "official:file:c72310b3df3a4455f6eb"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "technical",
+      "note": "network error while sending resumed local-file edit request to codex image edit endpoint"
+    }
+  ],
+  "user_feedback": "",
+  "preference_tags": []
+}

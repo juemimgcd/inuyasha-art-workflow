@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "attempt": 3,
+  "recorded_at": "2026-08-09T21:55:48+08:00",
+  "status": "error",
+  "generator": "built-in image_gen",
+  "duration_seconds": 61.0,
+  "output": null,
+  "output_sha256": null,
+  "reference_item_ids": [
+    "manga-curated:file:59832195a04d73283979",
+    "official:file:feb144894cb1375186a7",
+    "official:file:798eaba650545b06b4a7"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "technical",
+      "note": "已移除符箭与用户第一张构图位图后仍在输出阶段被误判为self-harm；未产生文件，下一次改为清醒、无接触的树中封印幻影表达"
+    }
+  ],
+  "user_feedback": "",
+  "preference_tags": []
+}

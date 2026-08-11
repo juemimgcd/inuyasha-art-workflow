@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "style",
+      "item_id": "manga-curated:file:1a5ee70d0760b3256408",
+      "source_id": "manga-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "1a5ee70d0760b32564082ff22c72b552914547bab552d720c85c9353f95ab77a",
+      "folder_path": "杀生丸",
+      "content_label": "杀生丸",
+      "folder_tags": [
+        "杀生丸"
+      ],
+      "subjects": [
+        "杀生丸"
+      ],
+      "forms": [
+        "default-form"
+      ],
+      "subject_forms": {
+        "杀生丸": [
+          "default-form"
+        ]
+      },
+      "shot_types": [
+        "profile"
+      ],
+      "filename_terms": [
+        "01",
+        "人物参考",
+        "侧脸",
+        "杀生丸",
+        "默认形态"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-observes-sealed-inuyasha-close-v3/references/style-manga-curated-file-1a5ee70d0760b3256408.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos/杀生丸/杀生丸__默认形态__侧脸__人物参考__01.png",
+      "pdf_page": null,
+      "instructions": "Control only black-and-white manga mark-making: line hierarchy, black-white massing, halftone economy, facial simplification, and effect construction. Do not copy visible characters, dialogue, balloons, panel borders, layout, or story content.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 2,
+      "role": "identity",
+      "item_id": "official:file:d81783eb582b92d0a036",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "d81783eb582b92d0a0362520d9c2dc2caa9ea5b18846d344154bbbbb0af90450",
+      "folder_path": "杀生丸设定集",
+      "content_label": "杀生丸设定集",
+      "folder_tags": [
+        "杀生丸设定集"
+      ],
+      "subjects": [
+        "杀生丸"
+      ],
+      "forms": [
+        "default-form"
+      ],
+      "subject_forms": {
+        "杀生丸": [
+          "default-form"
+        ]
+      },
+      "shot_types": [
+        "face"
+      ],
+      "filename_terms": [
+        "杀生丸头部表情图01"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-observes-sealed-inuyasha-close-v3/references/identity-official-file-d81783eb582b92d0a036.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/杀生丸设定集/杀生丸头部表情图01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, anatomy, costume, weapon or prop construction, attachment, and scale only. Do not control rendering style or scene composition.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 3,
+      "role": "identity",
+      "item_id": "official:file:798eaba650545b06b4a7",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "798eaba650545b06b4a7ae52296946693548ee830a98896c1e82dcdf467f6158",
+      "folder_path": "犬夜叉设定集",
+      "content_label": "犬夜叉设定集",
+      "folder_tags": [
+        "犬夜叉设定集"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "half-demon-form"
+      ],
+      "subject_forms": {
+        "犬夜叉": [
+          "half-demon-form"
+        ]
+      },
+      "shot_types": [],
+      "filename_terms": [
+        "犬夜叉半妖形态图01"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-observes-sealed-inuyasha-close-v3/references/identity-official-file-798eaba650545b06b4a7.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/犬夜叉设定集/犬夜叉半妖形态图01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, anatomy, costume, weapon or prop construction, attachment, and scale only. Do not control rendering style or scene composition.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 4,
+      "role": "composition",
+      "item_id": "user-supplied:file:1d0caf180589e779403d",
+      "source_id": "user-supplied",
+      "source_authority": "requested-composition",
+      "content_hash": "1d0caf180589e779403d74e60cc00e9ae6c33e2663f16a2497ddba90435efd21",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-observes-sealed-inuyasha-close-v3/references/composition-user-supplied-file-1d0caf180589e779403d.png",
+      "original_path": "/private/var/folders/9h/drdqs3qn2fl87zdxt1gy56h00000gn/T/codex-clipboard-35adb9ee-039b-46c9-a9ae-7f5f19a208a9.png",
+      "pdf_page": null,
+      "instructions": "Control only framing, crop, gaze direction, and broad silhouette. Do not control character identity, form, costume, color, or rendering style."
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": 5,
+  "task_id": "20260808-inuyasha-kikyo-shoulder-rest-right-shoulder-microfix",
+  "created_at": "2026-08-08T13:59:11+08:00",
+  "request": "以袖子完全隐藏版为唯一整体目标，只微调犬夜叉画面右侧、靠桔梗一侧的肩膀外轮廓。将过宽、过圆、向右下鼓出的肩部适度向内和向上收窄，使其与另一侧肩宽及斜靠姿势协调；保持桔梗左袖完全隐藏，其他画面全部不变。",
+  "medium": "manga",
+  "deliverable": "illustration",
+  "period_mode": "classic-balanced",
+  "style_strategy": "dynamic-curated",
+  "style_references": [
+    "manga-curated:file:17fbec650f5e9c032d81"
+  ],
+  "characters": [
+    "犬夜叉",
+    "桔梗"
+  ],
+  "identity_forms": {
+    "犬夜叉": "half-demon-form",
+    "桔梗": "default-form"
+  },
+  "forms_and_costumes": [
+    "犬夜叉: half-demon-form",
+    "桔梗: default-form"
+  ],
+  "scene": "延续袖子完全隐藏版的草地靠肩近景，只收窄犬夜叉画面右侧、靠桔梗一侧的肩部轮廓。",
+  "aspect_ratio": "4:5",
+  "invariants": [
+    "袖子完全隐藏版控制人物、表情、动作、构图、裁切、线条、网点、草地与留白",
+    "只将犬夜叉画面右侧肩峰与上臂外轮廓适度向内、向上收窄，减少右下方过宽圆鼓感",
+    "犬夜叉左右肩宽在斜靠透视下应协调，右肩不得显得比左肩宽大或厚重",
+    "收窄后继续使用相同网点火鼠裘，并以自然宽松衣褶连接颈根、肩峰、腋下与胸口",
+    "肩部收回后露出的窄区域自然接回桔梗白色衣襟、深色腰带或袴，不能出现新的白袖",
+    "桔梗左臂与左袖仍完全藏在犬夜叉头部和上背后方，正面只见抚发手",
+    "犬夜叉脸、头发、双犬耳、发绳、念珠、闭眼表情、颈部和靠肩位置完全不变",
+    "桔梗脸、视线、头发、衣襟、腰带、袴和右侧袖子完全不变",
+    "无文字、气泡、分格、签名、logo或水印"
+  ],
+  "intent": "new",
+  "parent_task_id": null,
+  "change_category": null,
+  "change_request": ""
+}

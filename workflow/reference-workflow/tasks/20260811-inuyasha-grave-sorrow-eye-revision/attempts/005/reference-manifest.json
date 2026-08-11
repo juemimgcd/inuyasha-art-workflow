@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:fd38ce04563ff9bf051c",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "fd38ce04563ff9bf051c4f23c215b3901203a6e3f0445ee161208abc4814bcac",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-inuyasha-grave-sorrow-eye-revision/references/target-user-supplied-file-fd38ce04563ff9bf051c-crop-100-0-700-700.png",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/output/hand-mouth-microfix-work/target-original.png",
+      "pdf_page": null,
+      "instructions": "This is a context crop from the edit target. Change only 只微调嘴型、刀旁右手和大袖开口处另一只手；眼睛、头部、动作、袖形、刀与场景不变; preserve crop-edge continuity for deterministic compositing into the original.",
+      "crop_box": [
+        100,
+        0,
+        700,
+        700
+      ],
+      "focus": "只微调嘴型、刀旁右手和大袖开口处另一只手；眼睛、头部、动作、袖形、刀与场景不变",
+      "rendered_content_hash": "32fdb3c9c7b4b5c9c9e99c1e7929c1f09bcf82116d3593d7718d2488ea6aee80",
+      "crop_source_hash": "84b0db4efb938441fbdd33ac1c0551ae6e80979fd605bb538ca11077729d33e2"
+    }
+  ]
+}

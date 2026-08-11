@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "attempt": 2,
+  "recorded_at": "2026-08-10T14:49:58+08:00",
+  "status": "rejected",
+  "generator": "built-in image_gen",
+  "duration_seconds": null,
+  "output": "/Users/jquery/.codex/generated_images/019fea5f-cace-74f0-834c-93ccfd7929d1/exec-5414b883-ce2e-42df-b8ef-952220917800.png",
+  "output_sha256": "2434799f0e8b5fe3dbdd3fd51223950c2895775b36df697cbf1e58536a21981c",
+  "reference_item_ids": [
+    "user-supplied:file:2e2299975882eb1e8c53",
+    "tv-curated:file:647cbeca552efd67d4ad"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "process",
+      "note": "视觉检查通过，但本轮补袖带调用额外使用了未写入 reference-manifest.json 的旧稿定位图；为保证任务可复现，改用当前闭合衣襟候选作为 target，并严格只传 target 与用户 TV 截图 form 后重做。"
+    }
+  ],
+  "user_feedback": "",
+  "preference_tags": []
+}

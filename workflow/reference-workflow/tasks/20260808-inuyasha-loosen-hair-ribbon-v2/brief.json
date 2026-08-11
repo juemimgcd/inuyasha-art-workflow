@@ -1,0 +1,35 @@
+{
+  "schema_version": 5,
+  "task_id": "20260808-inuyasha-loosen-hair-ribbon-v2",
+  "created_at": "2026-08-08T15:39:43+08:00",
+  "request": "第二次微调现有黑白漫画图：把犬夜叉后脑发绳的中心结和束发根部明显再放松一点，其他全部保持不变",
+  "medium": "manga",
+  "deliverable": "edit",
+  "period_mode": "classic-balanced",
+  "style_strategy": "three-layer-manga",
+  "style_references": [
+    "manga-curated:file:b244478bd62b0efcf1f2"
+  ],
+  "characters": [
+    "犬夜叉"
+  ],
+  "identity_forms": {
+    "犬夜叉": "half-demon-form"
+  },
+  "forms_and_costumes": [
+    "犬夜叉: half-demon-form"
+  ],
+  "scene": "桔梗坐在草地中，犬夜叉闭眼倚靠在她身前；只再次放松犬夜叉后脑束发结",
+  "aspect_ratio": "1123:1401 portrait",
+  "invariants": [
+    "保持上一版 1123:1401 竖幅构图、裁切和人物位置不变",
+    "保持犬夜叉与桔梗的脸、表情、犬耳、头发主体轮廓、服装、念珠和姿势不变",
+    "保持桔梗抚摸犬夜叉头部的手势、接触点与每根手指不变",
+    "保持背景草叶、留白、线条、黑白块面与网点不变",
+    "只进一步放松犬夜叉后脑发绳的中心结、两侧环和紧邻束发根部"
+  ],
+  "intent": "edit",
+  "parent_task_id": null,
+  "change_category": null,
+  "change_request": ""
+}

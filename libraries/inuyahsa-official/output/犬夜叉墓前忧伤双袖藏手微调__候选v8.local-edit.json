@@ -1,0 +1,23 @@
+{
+  "target": "/Users/jquery/Documents/inuyahsa-official/output/犬夜叉墓前忧伤右袖藏手微调__候选v7.png",
+  "candidate": "/Users/jquery/Documents/inuyahsa-official/output/hand-mouth-microfix-work/双袖藏手局部稿__候选v8.png",
+  "output": "/Users/jquery/Documents/inuyahsa-official/output/犬夜叉墓前忧伤双袖藏手微调__候选v8.png",
+  "target_sha256": "915e61aa9d52f388d87bb22f0b124e338c94178cd186456ff97e72fc06a5a6f2",
+  "candidate_sha256": "10439a1cadf2060789428aca3c90f43822c28d17d25b1a461c4e02fe74161ab2",
+  "output_sha256": "07c3752c3eb0c2950652d33a27eb47dcf1f630c9d0e0057ff6a8e56a9c7db684",
+  "context_box": [
+    350,
+    280,
+    400,
+    400
+  ],
+  "edit_box": [
+    385,
+    560,
+    120,
+    110
+  ],
+  "feather_pixels": 4,
+  "candidate_resized_to_context": true,
+  "outside_edit_box_preserved": true
+}

@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:edacbdc7fe5ff543f8ab",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "edacbdc7fe5ff543f8ab1fdceb8798fccb948a0db7ec146a9d4803053b8f8288",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-tenseiga-mount-construction/references/target-user-supplied-file-edacbdc7fe5ff543f8ab.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-sealed-inuyasha-weapon-shoes-manga-fix/output/sesshomaru-sealed-inuyasha-weapon-shoes-manga-fix-candidate-02.png",
+      "pdf_page": null,
+      "instructions": "Preserve this image exactly except for the user's explicitly requested local edit."
+    },
+    {
+      "order": 2,
+      "role": "identity",
+      "item_id": "official:file:feb144894cb1375186a7",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "feb144894cb1375186a7cab5e07366a4db34adbb85397cdd8128da33b67bcf37",
+      "folder_path": "杀生丸设定集",
+      "content_label": "杀生丸设定集",
+      "folder_tags": [
+        "杀生丸设定集"
+      ],
+      "subjects": [
+        "杀生丸"
+      ],
+      "forms": [
+        "default-form"
+      ],
+      "subject_forms": {
+        "杀生丸": [
+          "default-form"
+        ]
+      },
+      "shot_types": [
+        "back-view",
+        "full-body"
+      ],
+      "filename_terms": [
+        "杀生丸全身图03"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-tenseiga-mount-construction/references/identity-official-file-feb144894cb1375186a7-crop-60-90-320-500.png",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/杀生丸设定集/杀生丸全身图03.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, anatomy, costume, weapon or prop construction, attachment, and scale only. Do not control rendering style or scene composition. This prepared image is a task-local crop (60, 90, 320, 500) from the recorded source; use only construction visible inside the crop and do not infer omitted states. Exact focus: 左侧杀生丸背面人物的后腰佩带、鞘口固定、佩刀斜轴与衣摆前后遮挡；武器数量不沿用，任务中只保留一把天生牙。",
+      "crop_box": [
+        60,
+        90,
+        320,
+        500
+      ],
+      "focus": "左侧杀生丸背面人物的后腰佩带、鞘口固定、佩刀斜轴与衣摆前后遮挡；武器数量不沿用，任务中只保留一把天生牙。",
+      "rendered_content_hash": "9502c0a9fe599f0e64b38591e90be8c13cde4c67abfef9eb2c89269c062a1501",
+      "crop_source_hash": "77baa27f7f9f9103b239c39461bda1786ba9575941ce3e52bcb0e9d12cd611e9"
+    }
+  ]
+}

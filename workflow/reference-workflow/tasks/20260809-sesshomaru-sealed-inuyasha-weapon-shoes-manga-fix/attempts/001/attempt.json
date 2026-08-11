@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-09T09:42:13+08:00",
+  "status": "rejected",
+  "generator": "built-in-image_gen",
+  "duration_seconds": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-sealed-inuyasha-weapon-shoes-manga-fix/output/sesshomaru-sealed-inuyasha-weapon-shoes-manga-fix-candidate-01.png",
+  "output_sha256": "bc7471748a2861ff611aab6ad739d5fae7966213b8a46bf2a84de263b6e3b612",
+  "reference_item_ids": [
+    "user-supplied:file:c0bb26d556781b7b3e4a",
+    "manga-curated:file:b48ac52f161f261e6dd0",
+    "official:file:cc54643e82bb244a2c95",
+    "official:file:d1e77d9ad13576657d98"
+  ],
+  "failures": [
+    {
+      "category": "costume",
+      "note": "天生牙刀鞘与衣摆、长发和腰部层次关系不清，佩挂点悬空并产生穿模感"
+    },
+    {
+      "category": "composition",
+      "note": "犬夜叉封印时期的垂落姿态、长发覆盖和大量粗细树根藤蔓缠身程度不足，未匹配用户新提供的漫画参考"
+    }
+  ],
+  "user_feedback": "杀生丸这个刀的透视还是有问题，就跟穿模一样；犬夜叉应按新参考图的封印状态表现，树根缠得很多",
+  "preference_tags": []
+}

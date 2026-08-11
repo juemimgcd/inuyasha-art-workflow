@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "attempt": 5,
+  "recorded_at": "2026-08-11T15:59:49+08:00",
+  "status": "rejected",
+  "generator": "built-in-imagegen",
+  "duration_seconds": 57.0,
+  "generation_seconds": 57.0,
+  "response_started_at": "2026-08-11T15:54:29+08:00",
+  "response_seconds": 320.0,
+  "pre_generation_seconds": null,
+  "pre_generation_target_seconds": 90,
+  "pre_generation_target_met": null,
+  "post_generation_seconds": null,
+  "post_generation_target_seconds": 30,
+  "post_generation_target_met": null,
+  "workflow_overhead_seconds": null,
+  "response_slo_seconds": null,
+  "response_slo_met": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-izayoi-child-inuyasha-combing-hair-mirror-20260811/outputs/十六夜与幼年犬夜叉__蒔绘铜镜倒影梳头近景__候选03.png",
+  "output_sha256": "7bf597116fe971fd9fa57710cda04323fe6c1fa41bfc362211557a1d9325f3ec",
+  "reference_item_ids": [
+    "manga-curated:file:876af11c5aa2fd24a707",
+    "official:file:f4819e9df3546a3ed095",
+    "official:file:6285125444be8011e070",
+    "official:file:c72310b3df3a4455f6eb"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "expression",
+      "note": "幼年犬夜叉笑意过强，显得过度兴奋，与安静坐着由母亲梳头的情境不符"
+    }
+  ],
+  "user_feedback": "犬夜叉的表情再自然一点吧，这表情太乐了，看着很不合常理",
+  "preference_tags": []
+}

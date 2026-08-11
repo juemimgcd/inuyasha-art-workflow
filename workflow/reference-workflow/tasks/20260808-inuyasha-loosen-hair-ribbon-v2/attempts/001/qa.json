@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "犬夜叉保持半妖形态，桔梗保持原图角色设定；仅发绳松紧发生目标变化。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "脸、表情、犬耳、头发主体、服装层次与人物比例保持一致；束发根部按要求更蓬松。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "桔梗抚头的手势、犬耳、念珠与服装关键形状完整，无新增武器或饰品。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "成图仍由黑白漫画媒介主导，没有彩色或 TV 赛璐璐画法泄漏。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "局部新线条与原图的锥形墨线、黑白块面和节制网点一致。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "依偎动作、人物位置与整体剪影保持清楚，发绳仍系好且松弛感更明确。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "草叶和留白继续作为低干扰背景，没有与人物焦点竞争。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "没有红色标注框、文字、对话框、签名、logo 或水印。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "输出为 1123×1401 PNG，与 brief 的竖幅比例和局部编辑交付物一致。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "pass",
+      "note": "漫画截图仅约束黑白线条与网点语法，没有复制其人物动作、剧情、分镜或文字。"
+    },
+    {
+      "category": "process",
+      "check": "selected-output 只控制已认可的连续性和完成度，没有覆盖官方身份或目标媒介画法",
+      "status": "pass",
+      "note": "selected-output 仅约束既有构图连续性和完成度，没有覆盖官方身份或漫画画法。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "生成时按 manifest 顺序传入 target、manga style、official identity 与 selected-output continuity 四项本地参考。"
+    }
+  ]
+}

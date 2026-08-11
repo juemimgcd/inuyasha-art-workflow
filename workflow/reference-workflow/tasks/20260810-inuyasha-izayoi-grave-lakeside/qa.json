@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "仅一名正常成年/年轻成人比例的半妖犬夜叉，无幼年或人类形态混入。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "浅色长发、头顶犬耳、念珠、火鼠裘与宽裤清楚；约 6.5 至 7 头身，画面内高度接近构图参考左侧十六夜。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "双犬耳、念珠、赤足、手与腰间铁碎牙均可辨识；剑柄与鞘沿同一斜轴由衣袖后方衔接。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "纯黑白漫画处理，没有 TV 配色、赛璐璐色块、字幕或截图边框。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "轮廓有粗细层级，浅色头发保留纸白，衣物用中灰网点，墓碑和近岸植被承担主要密集纹理。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "犬夜叉在左、墓碑在右，人物视线和身体方向明确指向墓碑；两者之间留有祭奠距离。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "远湖和群山低对比，重点仍落在人物轮廓与深色主碑；前景草石虽细密但未遮挡身份关键区域。"
+    },
+    {
+      "category": "construction",
+      "check": "人物、道具与背景使用一致的前后层级、透视方向和相对尺度",
+      "status": "pass",
+      "note": "单一地平线与湖岸深度成立；主碑低于人物且两侧小碑层级清楚，湖面位于墓碑正对方向。"
+    },
+    {
+      "category": "construction",
+      "check": "身体接触、地面接触、衣物遮挡和道具承重连接连续且无悬浮穿模",
+      "status": "pass",
+      "note": "双脚、三块石碑和植被均稳定接地；头发、衣袖、手和佩刀遮挡顺序可读，无明显悬浮或穿模。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "成图无文字、碑文、字幕、气泡、边框、签名、logo 或水印。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "PNG 1536x1024，精确 3:2 横向单幅插图。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "pass",
+      "note": "没有复制风格参考中的桔梗、坐姿、花丛、双人关系、对白或分镜。"
+    },
+    {
+      "category": "process",
+      "check": "selected-output 只控制已认可的连续性和完成度，没有覆盖官方身份或目标媒介画法",
+      "status": "n/a",
+      "note": "本任务未使用 selected-output。"
+    },
+    {
+      "category": "process",
+      "check": "跨媒介 content 只控制清单中点名的可见内容，未泄漏来源媒介的配色、线条、阴影、背景或角色画法",
+      "status": "n/a",
+      "note": "未使用跨媒介 content 角色；TV 墓碑截图以用户提供的构图/尺度参考加入，成图仅保留石组与面湖关系且无 TV 画法泄漏。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "图像生成按 manifest 顺序传入 4 张 rendered_path：漫画风格、犬夜叉身份、位置/等高构图、墓碑/湖构图。"
+    }
+  ]
+}

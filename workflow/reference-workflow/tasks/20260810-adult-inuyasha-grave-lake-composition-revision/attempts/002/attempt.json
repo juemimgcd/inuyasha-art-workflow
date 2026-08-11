@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "attempt": 2,
+  "recorded_at": "2026-08-10T18:41:02+08:00",
+  "status": "rejected",
+  "generator": "imagegen",
+  "duration_seconds": 81.8,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-adult-inuyasha-grave-lake-composition-revision/outputs/成年半妖犬夜叉与十六夜墓碑__远湖鲜花构图__候选02.png",
+  "output_sha256": "bc141f97fb539b566fe82331c47c7f62c40220e0dba58c5b3497372ddb950709",
+  "reference_item_ids": [
+    "user-supplied:file:aa3648301e94751e85ba"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "composition",
+      "note": "用户改回候选01作为目标；湖应位于犬夜叉背后的画面左侧，墓碑后方画面右侧应为森林"
+    },
+    {
+      "category": "tone",
+      "note": "犬夜叉表情需要清醒克制但可见的忧伤感"
+    }
+  ],
+  "user_feedback": "用户指定以新附图为底图，湖在左、森林在右，犬夜叉表情忧伤",
+  "preference_tags": []
+}

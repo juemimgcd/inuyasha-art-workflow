@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "attempt": 4,
+  "recorded_at": "2026-08-08T22:18:12+08:00",
+  "status": "accepted",
+  "generator": "user-selected",
+  "duration_seconds": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-looking-milky-way/outputs/inuyasha-human-form-looking-milky-way-user-selected.png",
+  "output_sha256": "39135d867f4b52b8f9ebe14b1c7f8042949ac9118ed468511774b44531231a36",
+  "reference_item_ids": [
+    "manga-curated:file:4979f0e5da216eff0102",
+    "official:file:efe7eafd42e0ab48e48f"
+  ],
+  "failures": [],
+  "user_feedback": "用户明确选择首轮图：这张图更符合犬夜叉的气质；忧伤应保持清醒、克制和倔强，不能用沉重下垂的上眼睑表现成困倦",
+  "preference_tags": [
+    "character-temperament:inuyasha-alert",
+    "eye-expression:alert-melancholy"
+  ]
+}

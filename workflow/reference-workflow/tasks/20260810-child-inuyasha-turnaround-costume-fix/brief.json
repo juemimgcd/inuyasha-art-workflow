@@ -1,0 +1,39 @@
+{
+  "schema_version": 5,
+  "task_id": "20260810-child-inuyasha-turnaround-costume-fix",
+  "created_at": "2026-08-10T14:05:14+08:00",
+  "request": "基于现有犬夜叉幼年形态四视图，只修正四个视图的两处服装颜色：领口内衬改为白色，裤子改为与上衣相同的红色；其他内容全部保持不变。",
+  "intent": "edit",
+  "parent_task_id": null,
+  "change_category": "costume",
+  "change_request": "只改颜色，不改结构：将四个视图领口露出的窄内衬统一改为白色；将四个视图裤子的基础红色统一提亮到与各自上衣完全相同的红色，仅保留同一套TV赛璐璐阴影。腰带继续保持深色。其余全部不变。",
+  "medium": "tv",
+  "deliverable": "edit",
+  "period_mode": null,
+  "style_strategy": "two-layer-tv-fast",
+  "style_references": [],
+  "content_need": {},
+  "content_references": [],
+  "characters": [
+    "犬夜叉"
+  ],
+  "identity_forms": {
+    "犬夜叉": "child-form"
+  },
+  "forms_and_costumes": [
+    "犬夜叉: child-form"
+  ],
+  "scene": "保留目标图原有的暖白色设定纸背景、四个等高全身视图、原有间距与同一基线；只改四个方向的上衣与腰部服装结构。",
+  "aspect_ratio": "3:2",
+  "invariants": [
+    "画布尺寸、3:2构图、暖白背景、四视图顺序、人物位置、等高比例和脚底基线完全不变",
+    "四个头部、脸型、五官、金色眼睛、犬耳、银白发型与发长完全不变",
+    "幼年体型、四肢比例、站姿、手势和四个观察角度完全不变",
+    "原有TV动画式线条、配色、阴影和整体完成度不变",
+    "不添加念珠、武器、道具、文字、标签、水印或新装饰",
+    "服装修正以用户提供的TV截图可见结构为准，不复制其动作、背景或水印"
+  ],
+  "form_references": [
+    "tv-curated:file:402c3966ffc2420a1427"
+  ]
+}

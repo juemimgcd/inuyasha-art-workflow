@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "style",
+      "item_id": "tv-curated:file:07dd46c60a75b5f64fc2",
+      "source_id": "tv-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "07dd46c60a75b5f64fc289c70e4865a6251ff8d04896d1382d629dbf5cd92a8f",
+      "folder_path": "犬夜叉",
+      "content_label": "犬夜叉",
+      "folder_tags": [
+        "犬夜叉"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "child-form"
+      ],
+      "subject_forms": {
+        "犬夜叉": [
+          "child-form"
+        ]
+      },
+      "shot_types": [
+        "upper-body"
+      ],
+      "filename_terms": [
+        "02",
+        "上身",
+        "幼年形态",
+        "庭院抱球",
+        "犬夜叉"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-child-inuyasha-derived-model-sheet-20260810/references/style-tv-curated-file-07dd46c60a75b5f64fc2.jpeg",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/TV-photos/犬夜叉/犬夜叉__幼年形态__上身__庭院抱球__02.jpeg",
+      "pdf_page": null,
+      "instructions": "Control only TV rendering: palette, clean animation contours, cel-shadow depth, lighting, and background treatment. Do not override official character identity or copy the source shot's story and composition.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 2,
+      "role": "form",
+      "item_id": "tv-curated:file:8034784ef370ec436271",
+      "source_id": "tv-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "8034784ef370ec436271d8396516cb20c7c3f1b6d3ab3e70dce0235124a92869",
+      "folder_path": "犬夜叉",
+      "content_label": "犬夜叉",
+      "folder_tags": [
+        "犬夜叉"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "child-form"
+      ],
+      "subject_forms": {
+        "犬夜叉": [
+          "child-form"
+        ]
+      },
+      "shot_types": [
+        "upper-body"
+      ],
+      "filename_terms": [
+        "01",
+        "上身",
+        "幼年形态",
+        "庭院抱球",
+        "犬夜叉"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-child-inuyasha-derived-model-sheet-20260810/references/form-tv-curated-file-8034784ef370ec436271.jpeg",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/TV-photos/犬夜叉/犬夜叉__幼年形态__上身__庭院抱球__01.jpeg",
+      "pdf_page": null,
+      "instructions": "Control only the exact requested form or age state visible in this selected-medium original: age-specific proportions, silhouette, face construction, hair-to-ear relationship, and form-specific garment scale. Do not control general character identity beyond visible form evidence, rendering style, palette, scene composition, or story content.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 3,
+      "role": "form",
+      "item_id": "tv-curated:file:353d923b159df60ff9e7",
+      "source_id": "tv-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "353d923b159df60ff9e7c8674956f1db03897a01ab986c1b856ed5158b0cee75",
+      "folder_path": "犬夜叉",
+      "content_label": "犬夜叉",
+      "folder_tags": [
+        "犬夜叉"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "child-form"
+      ],
+      "subject_forms": {
+        "犬夜叉": [
+          "child-form"
+        ]
+      },
+      "shot_types": [
+        "medium-shot"
+      ],
+      "filename_terms": [
+        "01",
+        "中景",
+        "幼年形态",
+        "犬夜叉",
+        "蹲坐抱球"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-child-inuyasha-derived-model-sheet-20260810/references/form-tv-curated-file-353d923b159df60ff9e7.jpeg",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/TV-photos/犬夜叉/犬夜叉__幼年形态__中景__蹲坐抱球__01.jpeg",
+      "pdf_page": null,
+      "instructions": "Control only the exact requested form or age state visible in this selected-medium original: age-specific proportions, silhouette, face construction, hair-to-ear relationship, and form-specific garment scale. Do not control general character identity beyond visible form evidence, rendering style, palette, scene composition, or story content.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 4,
+      "role": "form",
+      "item_id": "tv-curated:file:c2a5fed65f9629a55ac4",
+      "source_id": "tv-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "c2a5fed65f9629a55ac4d0260dd3a2f6e59f12bdf7873d066e00875e7b883548",
+      "folder_path": "犬夜叉",
+      "content_label": "犬夜叉",
+      "folder_tags": [
+        "犬夜叉"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "child-form"
+      ],
+      "subject_forms": {
+        "犬夜叉": [
+          "child-form"
+        ]
+      },
+      "shot_types": [
+        "back-view"
+      ],
+      "filename_terms": [
+        "01",
+        "幼年形态",
+        "庭院面对人群",
+        "犬夜叉",
+        "背影"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-child-inuyasha-derived-model-sheet-20260810/references/form-tv-curated-file-c2a5fed65f9629a55ac4.jpeg",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/TV-photos/犬夜叉/犬夜叉__幼年形态__背影__庭院面对人群__01.jpeg",
+      "pdf_page": null,
+      "instructions": "Control only the exact requested form or age state visible in this selected-medium original: age-specific proportions, silhouette, face construction, hair-to-ear relationship, and form-specific garment scale. Do not control general character identity beyond visible form evidence, rendering style, palette, scene composition, or story content.",
+      "crop_box": null,
+      "focus": ""
+    }
+  ]
+}

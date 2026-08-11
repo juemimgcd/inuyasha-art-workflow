@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "attempt": 5,
+  "recorded_at": "2026-08-11T09:12:23+08:00",
+  "status": "rejected",
+  "generator": "builtin-imagegen+crop-composite",
+  "duration_seconds": 55.4,
+  "generation_seconds": 55.4,
+  "response_started_at": "2026-08-11T08:13:29+08:00",
+  "response_seconds": 3534.0,
+  "pre_generation_seconds": 2093.0,
+  "pre_generation_target_seconds": 30,
+  "pre_generation_target_met": false,
+  "post_generation_seconds": 1385.6,
+  "post_generation_target_seconds": 30,
+  "post_generation_target_met": false,
+  "workflow_overhead_seconds": 3478.6,
+  "response_slo_seconds": null,
+  "response_slo_met": null,
+  "output": "/Users/jquery/Documents/inuyahsa-official/output/犬夜叉墓前忧伤手与嘴微调__候选v6.png",
+  "output_sha256": "836b0d257496d1b725837b889f846c30cafe8d7b6935d00e63781c8849370864",
+  "reference_item_ids": [
+    "user-supplied:file:fd38ce04563ff9bf051c"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "anatomy",
+      "note": "误在画面左侧大袖口补出手，同时画面右侧手垂在刀旁而非收在袖口内"
+    }
+  ],
+  "user_feedback": "用户明确反馈：左边的手不用画，右边只画在袖口里面的手",
+  "preference_tags": [
+    "hand-scope:left-hidden-right-inside-sleeve"
+  ]
+}

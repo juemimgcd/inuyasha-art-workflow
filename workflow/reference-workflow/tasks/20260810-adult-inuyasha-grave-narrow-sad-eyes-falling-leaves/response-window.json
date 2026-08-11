@@ -1,0 +1,11 @@
+{
+  "schema_version": 2,
+  "started_at": "2026-08-10T22:00:32+08:00",
+  "pre_generation_started_at": "2026-08-10T22:00:32+08:00",
+  "pre_generation_target_seconds": 30,
+  "post_generation_target_seconds": 30,
+  "generation_latency_policy": "observe-only",
+  "phase": "generation",
+  "generation_started_at": "2026-08-10T22:07:41+08:00",
+  "pre_generation_seconds": 429.0
+}

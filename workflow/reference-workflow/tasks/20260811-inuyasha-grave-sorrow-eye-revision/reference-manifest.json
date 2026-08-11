@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:e27247b35df92041a74f",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "e27247b35df92041a74f19d05f83d36b2799439a40a62a4aa8d2d78e9e977118",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-inuyasha-grave-sorrow-eye-revision/references/target-user-supplied-file-e27247b35df92041a74f-crop-340-500-256-256.png",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/output/four-finger-microfix-work/target-v8.png",
+      "pdf_page": null,
+      "instructions": "This is a context crop from the edit target. Change only 只把画面左袖内三根可见手指改为四根，其他像素不变; preserve crop-edge continuity for deterministic compositing into the original.",
+      "crop_box": [
+        340,
+        500,
+        256,
+        256
+      ],
+      "focus": "只把画面左袖内三根可见手指改为四根，其他像素不变",
+      "rendered_content_hash": "84bd95a8be200667607396754fe8b1e168e72fe1b14241e338937bb119a80417",
+      "crop_source_hash": "9af8ee2c44596a43948ce9c784c61f3054c631ce8155d4f3c1cedfe8da952665"
+    },
+    {
+      "order": 2,
+      "role": "composition",
+      "item_id": "user-supplied:file:f743531d64998413d07a",
+      "source_id": "user-supplied",
+      "source_authority": "requested-composition",
+      "content_hash": "f743531d64998413d07af250d47b4dc48b25dd6cd0757ea284160b7c4108e1da",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-inuyasha-grave-sorrow-eye-revision/references/composition-user-supplied-file-f743531d64998413d07a.png",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/output/four-finger-microfix-work/reference-left-hand-context.png",
+      "pdf_page": null,
+      "instructions": "Control only framing, crop, gaze direction, and broad silhouette. Do not control character identity, form, costume, color, or rendering style."
+    }
+  ]
+}

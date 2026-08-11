@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "attempt": 5,
+  "recorded_at": "2026-08-09T10:18:57+08:00",
+  "status": "error",
+  "generator": "built-in-image_gen",
+  "duration_seconds": null,
+  "output": null,
+  "output_sha256": null,
+  "reference_item_ids": [
+    "user-supplied:file:edacbdc7fe5ff543f8ab",
+    "official:file:cc54643e82bb244a2c95",
+    "official:file:d1e77d9ad13576657d98"
+  ],
+  "failures": [
+    {
+      "category": "technical",
+      "note": "built-in image edit returned HTTP 500 internal server error after processing; no output file was produced; existing candidate02 remains intact"
+    }
+  ],
+  "user_feedback": "再次重试同一局部佩刀修正；若服务端继续失败则不把未通过的刀部位标记为最终接受",
+  "preference_tags": []
+}

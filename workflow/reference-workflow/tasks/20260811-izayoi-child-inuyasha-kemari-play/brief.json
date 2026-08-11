@@ -1,0 +1,62 @@
+{
+  "schema_version": 5,
+  "task_id": "20260811-izayoi-child-inuyasha-kemari-play",
+  "created_at": "2026-08-11T13:54:19+08:00",
+  "request": "十六夜与幼年形态犬夜叉在庭院里一起玩球；参考镰仓时代日本蹴鞠，以母子轻松传踢而非正式仪式表现；漫画风格，温馨活泼",
+  "intent": "new",
+  "parent_task_id": null,
+  "change_category": null,
+  "change_request": "",
+  "medium": "manga",
+  "deliverable": "illustration",
+  "period_mode": "classic-balanced",
+  "style_strategy": "manga-style-cross-medium-content",
+  "style_references": [
+    "manga-curated:file:cb67f4934e8e0825eda6"
+  ],
+  "content_need": {
+    "query": "庭院抱球",
+    "focus": "只参考幼年犬夜叉双手与球的接触关系及球相对幼童上身的尺度；不得复制动画画面中的庭院、姿势、镜头、色彩、轮廓或服装表现。",
+    "selected_medium_source": "manga-curated",
+    "fallback_source": "tv-curated",
+    "provenance": "observed-content"
+  },
+  "content_references": [
+    "tv-curated:file:07dd46c60a75b5f64fc2"
+  ],
+  "characters": [
+    "犬夜叉",
+    "十六夜"
+  ],
+  "identity_forms": {
+    "犬夜叉": "child-form",
+    "十六夜": "default-form"
+  },
+  "forms_and_costumes": [
+    "犬夜叉: child-form",
+    "十六夜: default-form"
+  ],
+  "scene": "战国时代贵族府邸的安静庭院里，十六夜与幼年犬夜叉进行轻松的母子传踢。十六夜在画面左后侧，稍稍提起宽大和服前摆，以优雅克制的右脚轻轻把鞠送向孩子；幼年犬夜叉在右前侧，赤足跃起或抬脚迎接，露出兴奋而专注的幼年神情。浅色鹿革鞠悬在两人之间，形成清楚的视觉中心；场面是生活化亲子游戏，不是正式八人蹴鞠仪式。",
+  "aspect_ratio": "4:5",
+  "invariants": [
+    "画面只有十六夜与幼年犬夜叉两名角色；两人都明确参与传踢，球位于两人之间，动作方向连续可读。",
+    "犬夜叉必须明确是幼年形态：孩童头身比例、圆润幼年脸、头顶一对犬耳、长白发、宽大的深色童装、赤足；不得成年化，不得出现念珠或铁碎牙。",
+    "十六夜保持长直黑发、齐刘海、层叠贵族和服与端庄成年比例；面部必须秀气精致，温柔看向幼年犬夜叉，不得画成儿童脸或泛化现代美型脸。",
+    "十六夜踢球动作必须适合宽大和服：只轻抬小腿与足尖，重心稳定，不做夸张足球大力抽射，不暴露腿部。",
+    "球参考日本蹴鞠鞠：约成人头部三分之二大小、浅色鹿革、略有手工鼓胀感、可见一圈细密缝合/收口线；不得画成现代足球、篮球、排球、带黑白拼片的球或华丽中国纹样球。",
+    "历史物件依据采用宫内厅蹴鞠说明：鹿革制、直径约20厘米、约120克；镰仓时代已流行于武士阶层。明代蹴鞠只作为文化类比，不控制日本鞠的外形。",
+    "成图必须是黑白原著漫画语言：清晰蘸水笔线条、自然黑白块面、克制网点与动作线；不得出现 TV 动画配色、赛璐璐阴影或彩色。",
+    "氛围温馨、活泼、亲密；背景只保留土庭、木构回廊、松树或庭石等少量庭院线索，不抢人物。",
+    "不得出现对白、文字、气泡、分镜边框、签名、水印、第三人物或多余现代物件。"
+  ],
+  "latency_budget": {
+    "schema_version": 2,
+    "pre_generation_target_seconds": 90,
+    "post_generation_target_seconds": 30,
+    "max_technical_retries": 1,
+    "generation_latency_policy": "observe-only"
+  },
+  "form_references": [
+    "manga-curated:file:cd73f043f0439d0ba73d"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:f1fe581ffb27c27242a5",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "f1fe581ffb27c27242a531fb2d5626985ec43c1f9f90c689dd38b74fb6cf0502",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-adult-inuyasha-grave-lake-composition-revision/references/target-user-supplied-file-f1fe581ffb27c27242a5.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-adult-inuyasha-facing-izayoi-grave-lake/outputs/成年半妖犬夜叉与十六夜墓碑__湖岸漫画__候选01.png",
+      "pdf_page": null,
+      "instructions": "Preserve this image exactly except for the user's explicitly requested local edit.",
+      "crop_box": null,
+      "focus": ""
+    }
+  ]
+}

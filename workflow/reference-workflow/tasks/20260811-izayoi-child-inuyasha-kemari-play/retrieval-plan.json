@@ -1,0 +1,202 @@
+{
+  "schema_version": 3,
+  "task": "20260811-izayoi-child-inuyasha-kemari-play",
+  "gate": "Run one layer, inspect candidates, record HIT/MISS/INSUFFICIENT, then advance.",
+  "mode": "cross-medium-content",
+  "candidate_limit": 3,
+  "timing_policy": {
+    "pre_generation_target_seconds": 90,
+    "post_generation_target_seconds": 30,
+    "generation_latency": "observe-only"
+  },
+  "execution_boundaries": [
+    "one serial candidate inspection",
+    "one batched prepare-compile-validate step",
+    "one image-generation call",
+    "one blocking check and preview handoff"
+  ],
+  "continuity_requested": false,
+  "content_need": {
+    "query": "庭院抱球",
+    "focus": "只参考幼年犬夜叉双手与球的接触关系及球相对幼童上身的尺度；不得复制动画画面中的庭院、姿势、镜头、色彩、轮廓或服装表现。",
+    "provenance": "observed-content"
+  },
+  "layers": [
+    {
+      "layer": 1,
+      "source": "official",
+      "primary_commands": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "child-form",
+          "--limit",
+          "3",
+          "--shot",
+          "action"
+        ],
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "十六夜",
+          "--form",
+          "default-form",
+          "--limit",
+          "3",
+          "--shot",
+          "action"
+        ]
+      ],
+      "fallback_without_shot": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "child-form",
+          "--limit",
+          "3"
+        ],
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "十六夜",
+          "--form",
+          "default-form",
+          "--limit",
+          "3"
+        ]
+      ],
+      "selection_budget": "one identity sheet per focal character; add a focused crop only for an unresolved construction detail"
+    },
+    {
+      "layer": 2,
+      "source": "manga-curated",
+      "primary_commands": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+          "--source",
+          "manga-curated",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "child-form",
+          "--shot",
+          "action",
+          "--limit",
+          "3",
+          "--columns",
+          "3"
+        ]
+      ],
+      "fallback_without_shot": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+          "--source",
+          "manga-curated",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "child-form",
+          "--limit",
+          "3",
+          "--columns",
+          "3"
+        ]
+      ],
+      "selection_budget": "one style screenshot by default; two only when one cannot resolve the requested rendering grammar"
+    },
+    {
+      "layer": 3,
+      "role": "content",
+      "need": "只参考幼年犬夜叉双手与球的接触关系及球相对幼童上身的尺度；不得复制动画画面中的庭院、姿势、镜头、色彩、轮廓或服装表现。",
+      "selected_medium": {
+        "source": "manga-curated",
+        "primary_commands": [
+          [
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+            "--source",
+            "manga-curated",
+            "--exact-term",
+            "庭院抱球",
+            "--shot",
+            "action",
+            "--limit",
+            "3",
+            "--columns",
+            "3"
+          ]
+        ],
+        "fallback_without_shot": [
+          [
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+            "--source",
+            "manga-curated",
+            "--exact-term",
+            "庭院抱球",
+            "--limit",
+            "3",
+            "--columns",
+            "3"
+          ]
+        ]
+      },
+      "cross_medium_fallback": {
+        "source": "tv-curated",
+        "allowed_after": [
+          "MISS",
+          "INSUFFICIENT"
+        ],
+        "primary_commands": [
+          [
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+            "--source",
+            "tv-curated",
+            "--exact-term",
+            "庭院抱球",
+            "--shot",
+            "action",
+            "--limit",
+            "3",
+            "--columns",
+            "3"
+          ]
+        ],
+        "fallback_without_shot": [
+          [
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+            "--source",
+            "tv-curated",
+            "--exact-term",
+            "庭院抱球",
+            "--limit",
+            "3",
+            "--columns",
+            "3"
+          ]
+        ]
+      },
+      "selection_budget": "at most one exact-focus content image; a cross-medium hit is content evidence only and never style or identity evidence"
+    }
+  ]
+}

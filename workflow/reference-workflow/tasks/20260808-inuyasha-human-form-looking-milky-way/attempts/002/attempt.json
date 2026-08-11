@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "attempt": 2,
+  "recorded_at": "2026-08-08T21:57:28+08:00",
+  "status": "accepted",
+  "generator": "gpt-image",
+  "duration_seconds": 37.0,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-looking-milky-way/outputs/inuyasha-human-form-looking-milky-way-final.png",
+  "output_sha256": "8f1ea1d4ee9b4d15982f55b989f464b83d518a6f5e7b9841ff5fa5d05b182992",
+  "reference_item_ids": [
+    "manga-curated:file:4979f0e5da216eff0102",
+    "official:file:efe7eafd42e0ab48e48f"
+  ],
+  "failures": [],
+  "user_feedback": "内部QA通过：人类形态、双眼同向上望、忧伤氛围、黑白漫画与4:5上身构图均符合 brief",
+  "preference_tags": []
+}

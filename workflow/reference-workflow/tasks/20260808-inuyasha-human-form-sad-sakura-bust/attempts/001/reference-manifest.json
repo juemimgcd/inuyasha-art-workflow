@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "style",
+      "item_id": "manga-curated:file:8e60715e27e853faa798",
+      "source_id": "manga-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "8e60715e27e853faa798b99c0a501e719dcbcc940ba01d844e8fbadfe7236c1e",
+      "folder_path": "犬夜叉",
+      "content_label": "犬夜叉",
+      "folder_tags": [
+        "犬夜叉"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "human-form"
+      ],
+      "shot_types": [
+        "close-up"
+      ],
+      "filename_terms": [
+        "05",
+        "人物参考",
+        "人类形态",
+        "犬夜叉",
+        "近景"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-sad-sakura-bust/references/style-manga-curated-file-8e60715e27e853faa798.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos/犬夜叉/犬夜叉__人类形态__近景__人物参考__05.png",
+      "pdf_page": null,
+      "instructions": "Control only black-and-white manga mark-making: line hierarchy, black-white massing, halftone economy, facial simplification, and effect construction. Do not copy visible characters, dialogue, balloons, panel borders, layout, or story content."
+    },
+    {
+      "order": 2,
+      "role": "identity",
+      "item_id": "official:file:efe7eafd42e0ab48e48f",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "efe7eafd42e0ab48e48f377f45329a5d3e8575a0c68f7505ba589f6d76e3110d",
+      "folder_path": "犬夜叉设定集",
+      "content_label": "犬夜叉设定集",
+      "folder_tags": [
+        "犬夜叉设定集"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "human-form"
+      ],
+      "shot_types": [],
+      "filename_terms": [
+        "犬夜叉人类形态图01"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-sad-sakura-bust/references/identity-official-file-efe7eafd42e0ab48e48f.jpg",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/犬夜叉设定集/犬夜叉人类形态图01.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, costume, weapon, prop, and scale only. Do not control rendering style or composition."
+    },
+    {
+      "order": 3,
+      "role": "composition",
+      "item_id": "user-supplied:file:cd623f802cca7d2969e9",
+      "source_id": "user-supplied",
+      "source_authority": "requested-composition",
+      "content_hash": "cd623f802cca7d2969e95e40289b587b694befdd98626a15d680881ab9ab207d",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-human-form-sad-sakura-bust/references/composition-user-supplied-file-cd623f802cca7d2969e9.jpg",
+      "original_path": "/Users/jquery/Downloads/DFF89D7E8F0DEF25E2EA1C5399CE65D1.jpg",
+      "pdf_page": null,
+      "instructions": "Control only framing, crop, gaze direction, and broad silhouette. Do not control character identity, form, costume, color, or rendering style."
+    }
+  ]
+}

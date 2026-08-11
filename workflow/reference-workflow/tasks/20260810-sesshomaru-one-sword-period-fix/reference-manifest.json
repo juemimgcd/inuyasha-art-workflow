@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:2b493d036cfb35e0b406",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "2b493d036cfb35e0b40651850d51583eefff0912334f1c8493f6f0a711d4ce27",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-sesshomaru-one-sword-period-fix/references/target-user-supplied-file-2b493d036cfb35e0b406-crop-120-650-470-480.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-kagome-to-sesshomaru-panel-edit/outputs/kagome-to-sesshomaru-user-approved-base.png",
+      "pdf_page": null,
+      "instructions": "This is a context crop from the edit target. Change only 只删除远景杀生丸腰间多余的一把刀，仅保留一把佩刀，并修顺腰带到刀鞘的单刀连接；编辑框外完全不变; preserve crop-edge continuity for deterministic compositing into the original.",
+      "crop_box": [
+        120,
+        650,
+        470,
+        480
+      ],
+      "focus": "只删除远景杀生丸腰间多余的一把刀，仅保留一把佩刀，并修顺腰带到刀鞘的单刀连接；编辑框外完全不变",
+      "rendered_content_hash": "774b274f877441c6b0974ae183b6ad29e57c2c991331861206aa680b316d3f5c",
+      "crop_source_hash": "d808082a5258ae579f8c998bce6ce485952c9734fae4bbf58b35be6a137945ff"
+    },
+    {
+      "order": 2,
+      "role": "identity",
+      "item_id": "official:file:cc54643e82bb244a2c95",
+      "source_id": "official",
+      "source_authority": "canonical-identity",
+      "content_hash": "cc54643e82bb244a2c95f124796749ed69a949babda3311399b486477dd68971",
+      "folder_path": "杀生丸设定集",
+      "content_label": "杀生丸设定集",
+      "folder_tags": [
+        "杀生丸设定集"
+      ],
+      "subjects": [
+        "杀生丸"
+      ],
+      "forms": [
+        "default-form"
+      ],
+      "subject_forms": {
+        "杀生丸": [
+          "default-form"
+        ]
+      },
+      "shot_types": [
+        "back-view",
+        "full-body"
+      ],
+      "filename_terms": [
+        "杀生丸全身图02"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-sesshomaru-one-sword-period-fix/references/identity-official-file-cc54643e82bb244a2c95-crop-650-140-260-340.png",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/杀生丸设定集/杀生丸全身图02.jpg",
+      "pdf_page": null,
+      "instructions": "Control canonical character identity, form, anatomy, costume, weapon or prop construction, attachment, and scale only. Do not control rendering style or scene composition. This prepared image is a task-local crop (650, 140, 260, 340) from the recorded source; use only construction visible inside the crop and do not infer omitted states. Exact focus: 右侧三分之四站姿的单刀腰间挂载、刀柄护手与刀鞘的前后遮挡；只控制保留的一把刀的连接，不改变目标人物造型",
+      "crop_box": [
+        650,
+        140,
+        260,
+        340
+      ],
+      "focus": "右侧三分之四站姿的单刀腰间挂载、刀柄护手与刀鞘的前后遮挡；只控制保留的一把刀的连接，不改变目标人物造型",
+      "rendered_content_hash": "81a62526fb17819dc358304136ae31726bbbfd0ecfcaa0fbf63c1b7644c1db69",
+      "crop_source_hash": "275b523322888dac86ede27a527fde76a8987b61044b1c4d2f63ed5f6037727d"
+    }
+  ]
+}

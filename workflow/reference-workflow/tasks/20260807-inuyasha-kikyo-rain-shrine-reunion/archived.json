@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "task_id": "20260807-inuyasha-kikyo-rain-shrine-reunion",
+  "archived_at": "2026-08-09T20:34:29+08:00",
+  "reason": "旧 schema、失效 PDF 页项目与官方参考哈希漂移无法在不改写历史证据的前提下修复；保留成图与记录，仅停止复用。",
+  "previous_result_status": "accepted",
+  "previous_output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260807-inuyasha-kikyo-rain-shrine-reunion/outputs/inuyasha-kikyo-rain-shrine-reunion.png",
+  "reversible": true
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Inuyasha Manga Art Workflow"
+  short_description: "Character-accurate manga/TV art with scoped references"
+  default_prompt: "Use $generate-inuyasha-manga-art to create or refine character-accurate Inuyasha art with validated medium, identity, continuity, and exact-focus content references."

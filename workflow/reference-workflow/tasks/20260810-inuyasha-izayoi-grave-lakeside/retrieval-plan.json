@@ -1,0 +1,165 @@
+{
+  "schema_version": 3,
+  "task": "20260810-inuyasha-izayoi-grave-lakeside",
+  "gate": "Run one layer, inspect candidates, record HIT/MISS/INSUFFICIENT, then advance.",
+  "mode": "cross-medium-content",
+  "candidate_limit": 4,
+  "continuity_requested": false,
+  "content_need": {
+    "query": "十六夜墓碑",
+    "focus": "只参考十六夜墓碑的主碑与两侧较小石碑的形制、相对高度，以及墓碑正对湖面的空间关系；不参考TV色彩、线条、光影、构图或角色渲染",
+    "provenance": "fallback-medium-original"
+  },
+  "layers": [
+    {
+      "layer": 1,
+      "source": "official",
+      "primary_commands": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "half-demon-form",
+          "--limit",
+          "4",
+          "--shot",
+          "wide-shot"
+        ]
+      ],
+      "fallback_without_shot": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/search_reference_index.py",
+          "--source",
+          "official",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "half-demon-form",
+          "--limit",
+          "4"
+        ]
+      ],
+      "selection_budget": "one identity sheet per focal character; add a focused crop only for an unresolved construction detail"
+    },
+    {
+      "layer": 2,
+      "source": "manga-curated",
+      "primary_commands": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+          "--source",
+          "manga-curated",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "half-demon-form",
+          "--shot",
+          "wide-shot",
+          "--limit",
+          "4",
+          "--columns",
+          "3"
+        ]
+      ],
+      "fallback_without_shot": [
+        [
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+          "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+          "--source",
+          "manga-curated",
+          "--subject",
+          "犬夜叉",
+          "--form",
+          "half-demon-form",
+          "--limit",
+          "4",
+          "--columns",
+          "3"
+        ]
+      ],
+      "selection_budget": "one style screenshot by default; two only when one cannot resolve the requested rendering grammar"
+    },
+    {
+      "layer": 3,
+      "role": "content",
+      "need": "只参考十六夜墓碑的主碑与两侧较小石碑的形制、相对高度，以及墓碑正对湖面的空间关系；不参考TV色彩、线条、光影、构图或角色渲染",
+      "selected_medium": {
+        "source": "manga-curated",
+        "primary_commands": [
+          [
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+            "--source",
+            "manga-curated",
+            "--exact-term",
+            "十六夜墓碑",
+            "--shot",
+            "wide-shot",
+            "--limit",
+            "4",
+            "--columns",
+            "3"
+          ]
+        ],
+        "fallback_without_shot": [
+          [
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+            "--source",
+            "manga-curated",
+            "--exact-term",
+            "十六夜墓碑",
+            "--limit",
+            "4",
+            "--columns",
+            "3"
+          ]
+        ]
+      },
+      "cross_medium_fallback": {
+        "source": "tv-curated",
+        "allowed_after": [
+          "MISS",
+          "INSUFFICIENT"
+        ],
+        "primary_commands": [
+          [
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+            "--source",
+            "tv-curated",
+            "--exact-term",
+            "十六夜墓碑",
+            "--shot",
+            "wide-shot",
+            "--limit",
+            "4",
+            "--columns",
+            "3"
+          ]
+        ],
+        "fallback_without_shot": [
+          [
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python",
+            "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/browse_curated_styles.py",
+            "--source",
+            "tv-curated",
+            "--exact-term",
+            "十六夜墓碑",
+            "--limit",
+            "4",
+            "--columns",
+            "3"
+          ]
+        ]
+      },
+      "selection_budget": "at most one exact-focus content image; a cross-medium hit is content evidence only and never style or identity evidence"
+    }
+  ]
+}

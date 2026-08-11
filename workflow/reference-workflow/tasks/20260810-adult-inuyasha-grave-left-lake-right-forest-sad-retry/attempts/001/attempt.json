@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-10T19:25:28+08:00",
+  "status": "error",
+  "generator": "imagegen",
+  "duration_seconds": 212.8,
+  "output": null,
+  "output_sha256": null,
+  "reference_item_ids": [
+    "user-supplied:file:695525f3ca5281219df4"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "technical",
+      "note": "network error sending image edit request after resumed run; no output produced"
+    }
+  ],
+  "user_feedback": "",
+  "preference_tags": []
+}

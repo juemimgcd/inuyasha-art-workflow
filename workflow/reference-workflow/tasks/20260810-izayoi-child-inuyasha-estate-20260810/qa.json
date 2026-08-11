@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "十六夜为成年贵族女性；犬夜叉为显著幼童比例，未成年化。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "十六夜长直发、齐刘海与多层和服清晰；犬夜叉犬耳、长发、圆润幼年脸型、宽袖和身高差清晰。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "双耳位置正确；手收于衣袖内且遮挡自然；幼年犬夜叉无念珠、铁碎牙或其他武器道具。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "黑白漫画语言占主导，无 TV 配色、赛璐璐阴影或动画轮廓泄漏。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "蘸水笔粗细变化、黑白块面与克制网点明确，皮肤保持干净。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "十六夜固定左侧、幼年犬夜叉固定右侧；身高差和两人剪影均清楚。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "府邸与松树细节较丰富，但人物的大面积黑发、白面与前景轮廓仍保持主焦点。"
+    },
+    {
+      "category": "construction",
+      "check": "人物、道具与背景使用一致的前后层级、透视方向和相对尺度",
+      "status": "pass",
+      "note": "两人、庭院地面、石灯笼、回廊和屋舍共享一致的地平线、尺度和纵深。"
+    },
+    {
+      "category": "construction",
+      "check": "身体接触、地面接触、衣物遮挡和道具承重连接连续且无悬浮穿模",
+      "status": "pass",
+      "note": "双脚落地明确，衣摆与地面关系连续，袖口和身体遮挡没有穿模。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "无文字、对白框、签名、logo、水印或台标。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "PNG 1536×1024，精确 3:2 横向独立插图。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "pass",
+      "note": "仅继承黑白笔触、网点与建筑线条体系，没有复制参考中的文字、分镜或姿态。"
+    },
+    {
+      "category": "process",
+      "check": "selected-output 只控制已认可的连续性和完成度，没有覆盖官方身份或目标媒介画法",
+      "status": "n/a",
+      "note": "本任务未选择 selected-output 连续性参考。"
+    },
+    {
+      "category": "process",
+      "check": "跨媒介 content 只控制清单中点名的可见内容，未泄漏来源媒介的配色、线条、阴影、背景或角色画法",
+      "status": "pass",
+      "note": "TV 输入只贡献土路、修剪松、花丛和石灯笼的可见空间关系；抱球动作、色彩、镜头和动画画法均未进入成图。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "生成调用严格按清单顺序传入 5 张 prepared reference。"
+    }
+  ]
+}

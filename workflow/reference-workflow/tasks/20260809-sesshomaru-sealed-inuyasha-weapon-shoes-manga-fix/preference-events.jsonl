@@ -1,0 +1,8 @@
+{"schema_version": 1, "recorded_at": "2026-08-09T09:42:13+08:00", "attempt": 1, "status": "rejected", "feedback": "杀生丸这个刀的透视还是有问题，就跟穿模一样；犬夜叉应按新参考图的封印状态表现，树根缠得很多", "tags": []}
+{"schema_version": 1, "recorded_at": "2026-08-09T09:52:17+08:00", "attempt": 2, "status": "rejected", "feedback": "内部复查：保留犬夜叉、树根、画风、鞋履和构图，只重做天生牙的佩带连接与遮挡层级", "tags": []}
+{"schema_version": 1, "recorded_at": "2026-08-09T10:01:02+08:00", "attempt": 3, "status": "error", "feedback": "无候选图，现有候选02和任务文件未被覆盖", "tags": []}
+{"schema_version": 1, "recorded_at": "2026-08-09T10:09:15+08:00", "attempt": 4, "status": "error", "feedback": "重试相同的纯局部天生牙佩挂修正，不改变设计范围", "tags": []}
+{"schema_version": 1, "recorded_at": "2026-08-09T10:18:57+08:00", "attempt": 5, "status": "error", "feedback": "再次重试同一局部佩刀修正；若服务端继续失败则不把未通过的刀部位标记为最终接受", "tags": []}
+{"schema_version": 1, "recorded_at": "2026-08-09T10:28:03+08:00", "attempt": 6, "status": "error", "feedback": "用户再次确认当前可见天生牙仍像悬浮；废弃留白加细带方案，改为重画左腰实体腰带和包住鞘口的宽固定环", "tags": []}
+{"schema_version": 1, "recorded_at": "2026-08-09T10:44:57+08:00", "attempt": 7, "status": "error", "feedback": "不接受候选02的悬浮佩刀；下一次必须使用腰带与包住鞘口的宽固定环形成实体承重连接", "tags": []}
+{"schema_version": 1, "recorded_at": "2026-08-09T11:01:21+08:00", "attempt": 8, "status": "error", "feedback": "用户要求生成微调图；内置编辑不可用，需用户明确同意后才能切换CLI备用路径", "tags": []}

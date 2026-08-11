@@ -1,0 +1,26 @@
+{
+  "schema_version": 5,
+  "task_id": "20260810-sesshomaru-two-image-wide-merge",
+  "created_at": "2026-08-10T11:05:51+08:00",
+  "request": "将用户提供的两张杀生丸黑白漫画图合成为一张横向大图：第一张固定在左侧，第二张固定在右侧，衔接自然，整体画面协调。",
+  "intent": "edit",
+  "parent_task_id": null,
+  "change_category": "composition",
+  "change_request": "只协调两图之间的中央接缝与整体等高排版；保留两张原图中的人物脸、身体、服饰、纹样、武器、线稿和网点，不增删人物。",
+  "medium": "manga",
+  "deliverable": "edit",
+  "period_mode": "classic-balanced",
+  "style_strategy": "two-layer-manga-fast",
+  "style_references": [],
+  "characters": [],
+  "identity_forms": {},
+  "forms_and_costumes": [],
+  "scene": "横向黑白漫画插图：左侧完整保留第一张林间树干与杀生丸构图，右侧完整保留第二张杀生丸远近景构图；仅用连续的斜向树影、留白、藤蔓和地面植物连接中央窄接缝。",
+  "aspect_ratio": "10:7",
+  "invariants": [
+    "第一张始终位于左侧，第二张始终位于右侧",
+    "两张原图中的杀生丸脸型、五官、月牙与妖纹、发型、身体、服饰纹样、武器、姿态和人物数量保持不变",
+    "保留黑白漫画线稿、网点与纯黑块，不上色，不添加文字、边框、签名、logo 或水印",
+    "只允许调整中央窄接缝及等高排版，用树影、藤蔓与植物延续背景，不覆盖人物主体"
+  ]
+}

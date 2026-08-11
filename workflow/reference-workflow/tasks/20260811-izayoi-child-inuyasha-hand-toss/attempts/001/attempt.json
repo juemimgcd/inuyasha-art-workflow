@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-11T14:08:50+08:00",
+  "status": "error",
+  "generator": "built-in image_gen",
+  "duration_seconds": 140.9,
+  "generation_seconds": 140.9,
+  "response_started_at": "2026-08-11T14:08:50+08:00",
+  "response_seconds": 0.0,
+  "pre_generation_seconds": null,
+  "pre_generation_target_seconds": 30,
+  "pre_generation_target_met": null,
+  "post_generation_seconds": null,
+  "post_generation_target_seconds": 30,
+  "post_generation_target_met": null,
+  "workflow_overhead_seconds": null,
+  "response_slo_seconds": null,
+  "response_slo_met": null,
+  "output": null,
+  "output_sha256": null,
+  "reference_item_ids": [],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "technical",
+      "note": "完整画布作为参考上传时远程 /codex/images/edits 网络发送失败，未返回图像"
+    }
+  ],
+  "user_feedback": "",
+  "preference_tags": []
+}

@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "犬夜叉为半妖形态，桔梗为巫女形态；两人均为成年原作时期外观。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "犬夜叉白色长发与犬耳、桔梗黑色姬发与巫女服均清楚，前后景体型关系自然。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "犬耳、言灵念珠、宽袖狩衣、袴与佩刀形状可读；桔梗手部和服装结构无关键畸变。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "成图由黑白线稿、墨块和网点主导，没有彩色 TV 动画或灰阶截图质感泄漏。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "轮廓有明显蘸水笔粗细变化，雨幕、石板与树冠使用克制网点和黑色块面。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "犬夜叉为近景主焦点，桔梗位于神社檐下形成第二焦点；对视关系与情绪距离清楚。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "高密度纹理集中在树冠、雨幕和建筑暗部，人物面部与服装留白保持可读。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "画面内没有标题、对白框、拟声词、签名、logo 或水印。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "ImageGen 调用按清单顺序使用了风格、构图、犬夜叉身份和桔梗身份四张参考图。"
+    }
+  ]
+}

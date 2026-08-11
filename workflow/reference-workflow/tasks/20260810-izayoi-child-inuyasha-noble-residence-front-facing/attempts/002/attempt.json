@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "attempt": 2,
+  "recorded_at": "2026-08-10T16:44:33+08:00",
+  "status": "rejected",
+  "generator": "built-in-imagegen",
+  "duration_seconds": 66.9,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-izayoi-child-inuyasha-noble-residence-front-facing/outputs/十六夜与幼年犬夜叉__贵族府邸__面对面__候选02.png",
+  "output_sha256": "452aaacfb50d34f073138c30b3e7d1d1be52156e771d00c797effd4ed9cd79b5",
+  "reference_item_ids": [
+    "manga-curated:file:cb67f4934e8e0825eda6",
+    "official:file:6285125444be8011e070",
+    "official:file:4158557fab085f93df87",
+    "user-supplied:file:5fbc49854f2c07848fe0"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "costume",
+      "note": "幼年犬夜叉的火鼠裘被画成白色，未按更新后的幼年设定表使用中深色漫画网点和更深腰带。"
+    },
+    {
+      "category": "expression",
+      "note": "十六夜虽然低头看向幼年犬夜叉，但眼睑、瞳孔方向和嘴角不够柔和，缺少母亲宠溺感。"
+    }
+  ],
+  "user_feedback": "用户要求重生成：修正犬夜叉服装色调，并加强十六夜宠溺眼神。",
+  "preference_tags": []
+}

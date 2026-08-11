@@ -1,0 +1,930 @@
+#!/usr/bin/env python3
+"""Copy selected catalog images into an ordered task reference set."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+from image_sheet import build_contact_sheet
+from workflow_common import (
+    atomic_write_json,
+    atomic_write_text,
+    find_executable,
+    load_config,
+    open_database,
+    workflow_paths,
+    workflow_root,
+)
+
+ALLOWED_ROLES = {
+    "target",
+    "style",
+    "identity",
+    "form",
+    "composition",
+    "continuity",
+    "content",
+}
+ROLE_ORDER = {
+    "target": 0,
+    "style": 1,
+    "identity": 2,
+    "form": 3,
+    "continuity": 4,
+    "composition": 5,
+    "content": 6,
+}
+MANGA_STYLE_INSTRUCTION = (
+    "Control only black-and-white manga mark-making: line hierarchy, black-white "
+    "massing, halftone economy, facial simplification, and effect construction. "
+    "Do not copy visible characters, dialogue, balloons, panel borders, layout, or story content."
+)
+TV_STYLE_INSTRUCTION = (
+    "Control only TV rendering: palette, clean animation contours, cel-shadow depth, "
+    "lighting, and background treatment. Do not override official character identity "
+    "or copy the source shot's story and composition."
+)
+IDENTITY_INSTRUCTION = (
+    "Control canonical character identity, form, anatomy, costume, weapon or prop "
+    "construction, attachment, and scale only. Do not control rendering style or "
+    "scene composition."
+)
+FORM_INSTRUCTION = (
+    "Control only the exact requested form or age state visible in this selected-medium "
+    "original: age-specific proportions, silhouette, face construction, hair-to-ear "
+    "relationship, and form-specific garment scale. Do not control general character "
+    "identity beyond visible form evidence, rendering style, palette, scene composition, "
+    "or story content."
+)
+CONTINUITY_INSTRUCTION = (
+    "Control only the user's selected visual continuity and proven finish quality. "
+    "Do not override official identity, the selected medium's rendering grammar, or the new composition."
+)
+CONTENT_INSTRUCTION = (
+    "Control only the exact visible content named by Exact focus: the requested "
+    "action state, object or creature configuration, effect phase, or necessary "
+    "spatial relationship. Do not control named-character identity, form, costume, "
+    "palette, rendering style, camera framing, background treatment, or story staging."
+)
+
+
+def parse_selection(value: str) -> tuple[str, str]:
+    if "=" not in value:
+        raise argparse.ArgumentTypeError("selection must look like ROLE=ITEM_ID")
+    role, item_id = value.split("=", 1)
+    if role not in ALLOWED_ROLES:
+        raise argparse.ArgumentTypeError(f"unknown role: {role}")
+    if not item_id:
+        raise argparse.ArgumentTypeError("item id cannot be empty")
+    return role, item_id
+
+
+def parse_crop(value: str) -> tuple[str, tuple[int, int, int, int]]:
+    item_id, separator, coordinates = value.partition("=")
+    if not separator or not item_id:
+        raise argparse.ArgumentTypeError("crop must look like ITEM_ID=X,Y,WIDTH,HEIGHT")
+    try:
+        crop_box = tuple(int(part.strip()) for part in coordinates.split(","))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("crop coordinates must be integers") from exc
+    if len(crop_box) != 4:
+        raise argparse.ArgumentTypeError("crop must contain X,Y,WIDTH,HEIGHT")
+    validate_crop_box(crop_box)
+    return item_id, crop_box
+
+
+def parse_box(value: str) -> tuple[int, int, int, int]:
+    try:
+        box = tuple(int(part.strip()) for part in value.split(","))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("box coordinates must be integers") from exc
+    if len(box) != 4:
+        raise argparse.ArgumentTypeError("box must look like X,Y,WIDTH,HEIGHT")
+    validate_crop_box(box)
+    return box
+
+
+def parse_focus(value: str) -> tuple[str, str]:
+    item_id, separator, focus = value.partition("=")
+    if not separator or not item_id or not focus.strip():
+        raise argparse.ArgumentTypeError("focus must look like ITEM_ID=VISIBLE_DETAIL")
+    return item_id, focus.strip()
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--workflow-root", type=Path)
+    parser.add_argument("--task-dir", type=Path, required=True)
+    parser.add_argument("--select", type=parse_selection, action="append", default=[])
+    parser.add_argument(
+        "--crop",
+        type=parse_crop,
+        action="append",
+        default=[],
+        metavar="ITEM_ID=X,Y,WIDTH,HEIGHT",
+        help="Prepare a task-local crop from a newly selected catalog image.",
+    )
+    parser.add_argument(
+        "--focus",
+        type=parse_focus,
+        action="append",
+        default=[],
+        metavar="ITEM_ID=VISIBLE_DETAIL",
+        help="State the exact visible construction a selected reference may control.",
+    )
+    parser.add_argument(
+        "--external",
+        type=parse_selection,
+        action="append",
+        default=[],
+        metavar="ROLE=PATH",
+        help="Add a user-supplied target or composition image without global indexing.",
+    )
+    parser.add_argument(
+        "--external-target-crop",
+        type=parse_box,
+        metavar="X,Y,WIDTH,HEIGHT",
+        help=(
+            "Prepare only this context crop from the one external target. Use for "
+            "a crop-and-composite microfix, not a whole-canvas edit."
+        ),
+    )
+    parser.add_argument(
+        "--external-target-focus",
+        default="",
+        help="Name the exact local change controlled by --external-target-crop.",
+    )
+    parser.add_argument(
+        "--external-target-max-edge",
+        type=int,
+        metavar="PIXELS",
+        help=(
+            "Prepare a downscaled JPEG transport proxy for a full-canvas external "
+            "target while retaining the original file and hash as provenance."
+        ),
+    )
+    parser.add_argument(
+        "--external-target-jpeg-quality",
+        type=int,
+        default=88,
+        metavar="1-95",
+        help="JPEG quality for --external-target-max-edge (default: 88).",
+    )
+    parser.add_argument("--dpi", type=int, default=150)
+    parser.add_argument("--columns", type=int, default=2)
+    return parser.parse_args()
+
+
+def safe_name(value: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9._-]+", "-", value).strip("-")
+
+
+def file_hash(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def image_pixel_hash(path: Path) -> str:
+    from PIL import Image
+
+    with Image.open(path) as image:
+        image.load()
+        digest = hashlib.sha256()
+        digest.update(image.mode.encode("utf-8"))
+        digest.update(f"{image.width}x{image.height}".encode("ascii"))
+        digest.update(image.tobytes())
+        return digest.hexdigest()
+
+
+def source_crop_pixel_hash(source: Path, crop_box: tuple[int, int, int, int]) -> str:
+    from PIL import Image
+
+    with Image.open(source) as image:
+        validate_crop_box(crop_box, image.size)
+        x, y, width, height = crop_box
+        cropped = image.crop((x, y, x + width, y + height))
+        digest = hashlib.sha256()
+        digest.update(cropped.mode.encode("utf-8"))
+        digest.update(f"{cropped.width}x{cropped.height}".encode("ascii"))
+        digest.update(cropped.tobytes())
+        return digest.hexdigest()
+
+
+def render_external_transport(
+    source: Path,
+    target: Path,
+    max_edge: int,
+    quality: int,
+) -> dict[str, Any]:
+    """Create a small upload proxy without replacing the source-of-truth target."""
+    if max_edge < 256:
+        raise ValueError("external target max edge must be at least 256 pixels")
+    if quality < 1 or quality > 95:
+        raise ValueError("external target JPEG quality must be between 1 and 95")
+
+    from PIL import Image
+
+    with Image.open(source) as image:
+        image.load()
+        source_dimensions = [image.width, image.height]
+        converted = image.convert("RGBA")
+        background = Image.new("RGBA", converted.size, "white")
+        background.alpha_composite(converted)
+        rendered = background.convert("RGB")
+        rendered.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
+        rendered_dimensions = [rendered.width, rendered.height]
+        rendered.save(target, format="JPEG", quality=quality, optimize=True)
+
+    return {
+        "kind": "downscaled-jpeg",
+        "max_edge": max_edge,
+        "quality": quality,
+        "source_dimensions": source_dimensions,
+        "rendered_dimensions": rendered_dimensions,
+        "rendered_content_hash": file_hash(target),
+    }
+
+
+def validate_crop_box(
+    crop_box: tuple[int, int, int, int],
+    image_size: tuple[int | None, int | None] | None = None,
+) -> None:
+    x, y, width, height = crop_box
+    if min(x, y) < 0 or min(width, height) < 1:
+        raise ValueError("crop coordinates must be non-negative with positive size")
+    if image_size and all(value is not None for value in image_size):
+        image_width, image_height = image_size
+        if x + width > image_width or y + height > image_height:
+            raise ValueError(
+                f"crop {crop_box} exceeds image bounds {image_width}x{image_height}"
+            )
+
+
+def render_item(
+    row,
+    role: str,
+    output: Path,
+    dpi: int,
+    crop_box: tuple[int, int, int, int] | None = None,
+) -> Path:
+    if crop_box is not None:
+        if row["kind"] != "image":
+            raise ValueError(
+                "Task-local crops currently require a catalog image source"
+            )
+        full_image = Path(row["path"])
+        x, y, width, height = crop_box
+        target = output / (
+            f"{role}-{safe_name(row['item_id'])}-crop-{x}-{y}-{width}-{height}.png"
+        )
+        from PIL import Image
+
+        with Image.open(full_image) as image:
+            validate_crop_box(crop_box, image.size)
+            cropped = image.crop((x, y, x + width, y + height))
+            cropped.save(target, format="PNG")
+        return target
+
+    suffix = ".jpg" if row["kind"] == "pdf_page" else Path(row["path"]).suffix.lower()
+    target = output / f"{role}-{safe_name(row['item_id'])}{suffix}"
+    if target.exists():
+        return target
+    if row["kind"] == "image":
+        shutil.copy2(row["path"], target)
+        return target
+    if row["kind"] != "pdf_page":
+        raise ValueError(f"Cannot prepare item kind {row['kind']}; select an image")
+    pdftoppm = find_executable("pdftoppm")
+    if not pdftoppm:
+        raise RuntimeError("pdftoppm is required")
+    prefix = target.with_suffix("")
+    subprocess.run(
+        [
+            pdftoppm,
+            "-f",
+            str(row["pdf_page"]),
+            "-l",
+            str(row["pdf_page"]),
+            "-singlefile",
+            "-jpeg",
+            "-r",
+            str(dpi),
+            "-jpegopt",
+            "quality=92",
+            row["path"],
+            str(prefix),
+        ],
+        check=True,
+    )
+    if not target.is_file():
+        raise RuntimeError(f"Renderer did not create {target}")
+    return target
+
+
+def instruction_for(
+    role: str,
+    medium: str,
+    crop_box: tuple[int, int, int, int] | None = None,
+    focus: str = "",
+    source_medium: str | None = None,
+    content_provenance: str = "observed-content",
+) -> str:
+    if role == "identity":
+        instruction = IDENTITY_INSTRUCTION
+    elif role == "form":
+        instruction = FORM_INSTRUCTION
+    elif role == "style":
+        instruction = (
+            MANGA_STYLE_INSTRUCTION if medium == "manga" else TV_STYLE_INSTRUCTION
+        )
+    elif role == "continuity":
+        instruction = CONTINUITY_INSTRUCTION
+    elif role == "content":
+        if not focus:
+            raise ValueError("Content references require an exact focus")
+        instruction = CONTENT_INSTRUCTION
+        if source_medium and source_medium != medium:
+            instruction += (
+                f" This is cross-medium {source_medium}-to-{medium} content evidence. "
+                f"Ignore all {source_medium} palette, contour, shading, texture, and "
+                f"background grammar; translate only the named content into the {medium} "
+                "rendering established by the style reference."
+            )
+        if content_provenance == "fallback-medium-original":
+            if not source_medium or source_medium == medium:
+                raise ValueError(
+                    "fallback-medium-original provenance requires cross-medium content"
+                )
+            instruction += (
+                " This design is explicitly original to the fallback medium; label "
+                "the result as a source-medium-derived adaptation and do not present "
+                "it as selected-medium canonical evidence."
+            )
+    else:
+        instruction = ""
+    if crop_box is not None:
+        instruction += (
+            f" This prepared image is a task-local crop {crop_box} from the recorded "
+            "source; use only construction visible inside the crop and do not infer "
+            "omitted states."
+        )
+    if focus:
+        instruction += f" Exact focus: {focus}"
+    return instruction.strip()
+
+
+def json_values(row, field: str) -> set[str]:
+    return set(json.loads(row[field] or "[]"))
+
+
+def json_object(row, field: str) -> dict[str, list[str]]:
+    if hasattr(row, "keys") and field not in row.keys():
+        return {}
+    return json.loads(row[field] or "{}")
+
+
+def validate_reference(
+    row, role: str, item_id: str, medium: str, identity_forms: dict[str, str]
+) -> None:
+    if role not in ALLOWED_ROLES:
+        raise SystemExit(f"Unknown reference role in manifest: {role}")
+
+    source_id = row["source_id"]
+    if role == "identity" and source_id != "official":
+        raise SystemExit(
+            f"Identity references must come from official setting sheets: {item_id}"
+        )
+    if role == "form":
+        expected_source = "manga-curated" if medium == "manga" else "tv-curated"
+        if source_id != expected_source:
+            raise SystemExit(
+                f"{medium} form references must come from {expected_source}: {item_id}"
+            )
+    if role == "style":
+        expected_source = "manga-curated" if medium == "manga" else "tv-curated"
+        if source_id != expected_source:
+            raise SystemExit(
+                f"{medium} style references must come from {expected_source}: {item_id}"
+            )
+    if role == "target" and source_id != "user-continuity":
+        raise SystemExit(f"Target references must come from user-continuity: {item_id}")
+    if role == "continuity" and source_id not in {
+        "selected-output",
+        "user-continuity",
+    }:
+        raise SystemExit(
+            "Continuity references must come from selected-output or user-continuity: "
+            f"{item_id}"
+        )
+    if role == "composition" and source_id != "user-continuity":
+        raise SystemExit(f"Composition references must be user-supplied: {item_id}")
+    if role == "content" and source_id not in {"manga-curated", "tv-curated"}:
+        raise SystemExit(
+            "Content references must come from manga-curated or tv-curated: "
+            f"{item_id}"
+        )
+
+    if not identity_forms:
+        return
+    subjects = json_values(row, "subjects")
+    forms = json_values(row, "forms")
+    subject_forms = json_object(row, "subject_forms")
+    matching_subjects = subjects & set(identity_forms)
+    if role in {"identity", "form"} and not matching_subjects:
+        raise SystemExit(
+            f"{role.title()} reference does not name any requested character: "
+            f"{item_id}; indexed subjects={sorted(subjects) or ['unclassified']}"
+        )
+    for subject in sorted(matching_subjects):
+        required_form = identity_forms[subject]
+        compatible_forms = set(subject_forms.get(subject, [])) or forms
+        if required_form not in compatible_forms:
+            indexed = sorted(compatible_forms) or ["unclassified"]
+            raise SystemExit(
+                "Form-incompatible reference rejected: "
+                f"{item_id} depicts {subject} as {indexed}, "
+                f"but this task requires {required_form}"
+            )
+
+
+def validate_reference_order(references: list[tuple[str, str]]) -> None:
+    roles = [role for role, _ in references]
+    if roles.count("target") > 1:
+        raise SystemExit("Use at most one target reference")
+    if roles.count("continuity") > 1:
+        raise SystemExit("Use at most one selected-output continuity reference")
+    if roles.count("content") > 1:
+        raise SystemExit("Use at most one exact-focus content reference")
+    if "target" in roles and roles[0] != "target":
+        raise SystemExit("A target reference must be first")
+    ranks = [ROLE_ORDER[role] for role in roles]
+    if ranks != sorted(ranks):
+        raise SystemExit(
+            "Reference order must be target, style, identity, form, continuity, composition, content"
+        )
+
+
+def main() -> int:
+    args = parse_args()
+    if args.dpi < 72 or args.dpi > 300:
+        raise SystemExit("--dpi must be between 72 and 300")
+    config = load_config()
+    root = workflow_root(config, args.workflow_root)
+    database = workflow_paths(root)["database"]
+    if not database.is_file():
+        raise SystemExit("Catalog missing; run build_reference_index.py first")
+
+    task_dir = args.task_dir.expanduser().resolve()
+    brief_path = task_dir / "brief.json"
+    if not task_dir.is_dir() or not brief_path.is_file():
+        raise SystemExit("--task-dir must be a task created by init_art_task.py")
+    brief = json.loads(brief_path.read_text(encoding="utf-8"))
+    medium = brief.get("medium")
+    identity_forms = brief.get("identity_forms", {})
+    content_need = brief.get("content_need") or {}
+    content_provenance = content_need.get("provenance", "observed-content")
+
+    output = task_dir / "references"
+    output.mkdir(exist_ok=True)
+    manifest_path = task_dir / "reference-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    connection = open_database(database, read_only=True)
+
+    def resolve_item(item_id: str):
+        return connection.execute(
+            """
+            SELECT items.*, sources.label AS source_label, sources.medium,
+                   sources.authority
+            FROM items JOIN sources ON sources.source_id = items.source_id
+            WHERE items.item_id = ? OR items.item_id = (
+                SELECT aliases.item_id FROM item_aliases AS aliases
+                WHERE aliases.alias_id = ?
+            )
+            """,
+            (item_id, item_id),
+        ).fetchone()
+
+    def canonical_assignments(
+        values: list[tuple[str, Any]], label: str
+    ) -> dict[str, Any]:
+        assignments: dict[str, Any] = {}
+        for requested_id, value in values:
+            row = resolve_item(requested_id)
+            if row is None:
+                connection.close()
+                raise SystemExit(f"Unknown catalog item in --{label}: {requested_id}")
+            canonical_id = row["item_id"]
+            if canonical_id in assignments:
+                connection.close()
+                raise SystemExit(
+                    f"Duplicate --{label} for catalog item: {requested_id}"
+                )
+            assignments[canonical_id] = value
+        return assignments
+
+    crop_requests = canonical_assignments(args.crop, "crop")
+    focus_requests = canonical_assignments(args.focus, "focus")
+    if set(crop_requests) - set(focus_requests):
+        connection.close()
+        missing = sorted(set(crop_requests) - set(focus_requests))
+        raise SystemExit(f"Every --crop requires a matching --focus: {missing}")
+
+    existing_canonical: dict[str, tuple[str, str]] = {}
+    all_references = []
+    for entry in manifest.get("references", []):
+        item_id = entry.get("item_id", "")
+        role = entry.get("role", "")
+        if entry.get("source_id") == "user-supplied":
+            if role not in {"target", "composition"}:
+                connection.close()
+                raise SystemExit(f"Unsupported user-supplied role: {role}")
+            if item_id in existing_canonical:
+                connection.close()
+                raise SystemExit(f"Duplicate user-supplied item: {item_id}")
+            existing_canonical[item_id] = (role, item_id)
+            all_references.append((role, item_id))
+            continue
+        existing_row = resolve_item(item_id)
+        if existing_row is None:
+            connection.close()
+            raise SystemExit(
+                f"Unknown catalog item in manifest: {item_id or '[missing]'}"
+            )
+        canonical_id = existing_row["item_id"]
+        if canonical_id in existing_canonical:
+            connection.close()
+            raise SystemExit(f"Duplicate catalog item in manifest: {item_id}")
+        validate_reference(existing_row, role, item_id, medium, identity_forms)
+        if role == "content":
+            focus = entry.get("focus", "").strip()
+            if not focus:
+                connection.close()
+                raise SystemExit(f"Content reference requires an exact focus: {item_id}")
+            if focus != content_need.get("focus"):
+                connection.close()
+                raise SystemExit(
+                    "Content reference focus must match brief.content_need.focus: "
+                    f"{item_id}"
+                )
+        existing_canonical[canonical_id] = (role, item_id)
+        all_references.append((role, canonical_id))
+
+    canonical_roles = {
+        canonical_id: role for canonical_id, (role, _) in existing_canonical.items()
+    }
+    external_target_rows = []
+    external_composition_rows = []
+    for role, path_text in args.external:
+        if role not in {"target", "composition"}:
+            connection.close()
+            raise SystemExit("--external supports target or composition images only")
+        source = Path(path_text).expanduser().resolve()
+        if not source.is_file():
+            connection.close()
+            raise SystemExit(f"External {role} image is missing: {source}")
+        content_hash = file_hash(source)
+        item_id = f"user-supplied:file:{content_hash[:20]}"
+        if item_id in canonical_roles:
+            if canonical_roles[item_id] != role:
+                connection.close()
+                raise SystemExit(
+                    f"User-supplied image already has role {canonical_roles[item_id]}, "
+                    f"not {role}: {source}"
+                )
+            continue
+        row = (role, item_id, source, content_hash)
+        if role == "target":
+            external_target_rows.append(row)
+        else:
+            external_composition_rows.append(row)
+
+    if args.external_target_crop and len(external_target_rows) != 1:
+        connection.close()
+        raise SystemExit(
+            "--external-target-crop requires exactly one newly added external target"
+        )
+    if args.external_target_crop and not args.external_target_focus.strip():
+        connection.close()
+        raise SystemExit("--external-target-crop requires --external-target-focus")
+    if args.external_target_crop and args.external_target_max_edge:
+        connection.close()
+        raise SystemExit(
+            "--external-target-max-edge cannot be combined with --external-target-crop"
+        )
+    if args.external_target_max_edge and len(external_target_rows) != 1:
+        connection.close()
+        raise SystemExit(
+            "--external-target-max-edge requires exactly one newly added external target"
+        )
+
+    if external_target_rows and all_references:
+        connection.close()
+        raise SystemExit("Add the external target before any other task references")
+    for role, item_id, source, content_hash in external_target_rows:
+        canonical_roles[item_id] = role
+        all_references.append((role, item_id))
+
+    selected_rows = []
+    selected_canonical_ids = set()
+    for role, item_id in args.select:
+        row = resolve_item(item_id)
+        if row is None:
+            connection.close()
+            raise SystemExit(f"Unknown catalog item: {item_id}")
+        canonical_id = row["item_id"]
+        if canonical_id in canonical_roles:
+            existing_role = canonical_roles[canonical_id]
+            if existing_role != role:
+                connection.close()
+                raise SystemExit(
+                    f"Reference already has role {existing_role}, not {role}: {item_id}"
+                )
+            continue
+        validate_reference(row, role, item_id, medium, identity_forms)
+        focus = focus_requests.get(canonical_id, "")
+        if role == "content":
+            if not focus:
+                connection.close()
+                raise SystemExit(
+                    f"Content reference requires --focus {canonical_id}=VISIBLE_CONTENT"
+                )
+            if not content_need.get("focus"):
+                connection.close()
+                raise SystemExit(
+                    "Plan exact content retrieval before selection; brief.content_need.focus is missing"
+                )
+            if focus != content_need.get("focus"):
+                connection.close()
+                raise SystemExit(
+                    "--focus for a content reference must exactly match "
+                    "brief.content_need.focus"
+                )
+        selected_rows.append(
+            (
+                role,
+                canonical_id,
+                row,
+                crop_requests.get(canonical_id),
+                focus,
+            )
+        )
+        selected_canonical_ids.add(canonical_id)
+        canonical_roles[canonical_id] = role
+        all_references.append((role, canonical_id))
+
+    unused_detail_requests = (
+        set(crop_requests) | set(focus_requests)
+    ) - selected_canonical_ids
+    if unused_detail_requests:
+        connection.close()
+        raise SystemExit(
+            "--crop and --focus must name references newly added with --select: "
+            f"{sorted(unused_detail_requests)}"
+        )
+
+    for role, item_id, source, content_hash in external_composition_rows:
+        if item_id in canonical_roles:
+            connection.close()
+            raise SystemExit(f"Duplicate external image role: {item_id}")
+        canonical_roles[item_id] = role
+        all_references.append((role, item_id))
+    external_rows = [*external_target_rows, *external_composition_rows]
+    validate_reference_order(all_references)
+    connection.close()
+
+    if (
+        len(manifest.get("references", [])) + len(selected_rows) + len(external_rows)
+        > 6
+    ):
+        raise SystemExit(
+            "Prepare at most six references total; two to four is the normal target"
+        )
+
+    current_style_ids = {
+        canonical_id
+        for canonical_id, (role, _) in existing_canonical.items()
+        if role == "style"
+    }
+    requested_style_ids = current_style_ids | {
+        item_id for role, item_id, _, _, _ in selected_rows if role == "style"
+    }
+    if len(requested_style_ids) > 2:
+        raise SystemExit("Use at most two curated style screenshots per task")
+
+    added = []
+    for role, item_id, source, content_hash in external_target_rows:
+        crop_box = args.external_target_crop
+        transport = None
+        if crop_box is None and args.external_target_max_edge:
+            target = output / f"{role}-{safe_name(item_id)}-transport.jpg"
+            transport = render_external_transport(
+                source,
+                target,
+                args.external_target_max_edge,
+                args.external_target_jpeg_quality,
+            )
+        elif crop_box is None:
+            target = output / f"{role}-{safe_name(item_id)}{source.suffix.lower()}"
+            if not target.exists():
+                shutil.copy2(source, target)
+        else:
+            x, y, width, height = crop_box
+            target = output / (
+                f"{role}-{safe_name(item_id)}-crop-{x}-{y}-{width}-{height}.png"
+            )
+            from PIL import Image
+
+            with Image.open(source) as image:
+                validate_crop_box(crop_box, image.size)
+                image.crop((x, y, x + width, y + height)).save(target, format="PNG")
+        entry = {
+            "order": len(manifest.get("references", [])) + len(added) + 1,
+            "role": role,
+            "item_id": item_id,
+            "source_id": "user-supplied",
+            "source_authority": "edit-target",
+            "content_hash": content_hash,
+            "folder_path": "",
+            "content_label": "",
+            "folder_tags": [],
+            "subjects": [],
+            "forms": [],
+            "subject_forms": {},
+            "shot_types": [],
+            "filename_terms": [],
+            "rendered_path": str(target),
+            "original_path": str(source),
+            "pdf_page": None,
+            "instructions": (
+                (
+                    "This is a context crop from the edit target. Change only "
+                    f"{args.external_target_focus.strip()}; preserve crop-edge "
+                    "continuity for deterministic compositing into the original."
+                )
+                if crop_box is not None
+                else (
+                    "Preserve this image exactly except for the user's explicitly "
+                    "requested local edit."
+                )
+            ),
+            "crop_box": list(crop_box) if crop_box is not None else None,
+            "focus": args.external_target_focus.strip() if crop_box else "",
+        }
+        if transport is not None:
+            entry["transport"] = transport
+        if crop_box is not None:
+            entry["rendered_content_hash"] = file_hash(target)
+            entry["crop_source_hash"] = source_crop_pixel_hash(source, crop_box)
+        added.append(entry)
+
+    for role, item_id, row, crop_box, focus in selected_rows:
+        target = render_item(row, role, output, args.dpi, crop_box)
+        entry = {
+            "order": len(manifest.get("references", [])) + len(added) + 1,
+            "role": role,
+            "item_id": item_id,
+            "source_id": row["source_id"],
+            "source_authority": row["authority"],
+            "content_hash": row["content_hash"],
+            "folder_path": row["folder_path"],
+            "content_label": row["content_label"],
+            "folder_tags": json.loads(row["folder_tags"]),
+            "subjects": json.loads(row["subjects"]),
+            "forms": json.loads(row["forms"]),
+            "subject_forms": json.loads(row["subject_forms"]),
+            "shot_types": json.loads(row["shot_types"]),
+            "filename_terms": json.loads(row["filename_terms"]),
+            "rendered_path": str(target),
+            "original_path": row["path"],
+            "pdf_page": row["pdf_page"],
+            "instructions": instruction_for(
+                role,
+                medium,
+                crop_box,
+                focus,
+                source_medium=row["medium"],
+                content_provenance=content_provenance,
+            ),
+            "crop_box": list(crop_box) if crop_box is not None else None,
+            "focus": focus,
+        }
+        if crop_box is not None:
+            entry["rendered_content_hash"] = file_hash(target)
+            entry["crop_source_hash"] = source_crop_pixel_hash(
+                Path(row["path"]), crop_box
+            )
+        if role == "content":
+            cross_medium = row["medium"] != medium
+            entry["evidence_medium"] = row["medium"]
+            entry["cross_medium"] = cross_medium
+            entry["conversion"] = (
+                f"{row['medium']}-to-{medium}-content" if cross_medium else None
+            )
+            entry["provenance"] = content_provenance
+        added.append(entry)
+
+    for role, item_id, source, content_hash in external_composition_rows:
+        target = output / f"{role}-{safe_name(item_id)}{source.suffix.lower()}"
+        if not target.exists():
+            shutil.copy2(source, target)
+        added.append(
+            {
+                "order": len(manifest.get("references", [])) + len(added) + 1,
+                "role": role,
+                "item_id": item_id,
+                "source_id": "user-supplied",
+                "source_authority": "requested-composition",
+                "content_hash": content_hash,
+                "folder_path": "",
+                "content_label": "",
+                "folder_tags": [],
+                "subjects": [],
+                "forms": [],
+                "subject_forms": {},
+                "shot_types": [],
+                "filename_terms": [],
+                "rendered_path": str(target),
+                "original_path": str(source),
+                "pdf_page": None,
+                "instructions": (
+                    "Control only framing, crop, gaze direction, and broad silhouette. "
+                    "Do not control character identity, form, costume, color, or rendering style."
+                ),
+            }
+        )
+
+    manifest.setdefault("references", []).extend(added)
+    atomic_write_json(manifest_path, manifest)
+    brief["style_references"] = [
+        entry["item_id"] for entry in manifest["references"] if entry["role"] == "style"
+    ]
+    brief["form_references"] = [
+        entry["item_id"] for entry in manifest["references"] if entry["role"] == "form"
+    ]
+    brief["content_references"] = [
+        entry["item_id"]
+        for entry in manifest["references"]
+        if entry["role"] == "content"
+    ]
+    atomic_write_json(brief_path, brief)
+
+    entries = [
+        (
+            Path(entry["rendered_path"]),
+            (
+                f"{entry['order']}. {entry['role']} | {entry['source_id']} | "
+                f"{entry['item_id'].rsplit(':', 1)[-1][-12:]}"
+            ),
+        )
+        for entry in manifest["references"]
+    ]
+    contact_sheet = output / "contact-sheet.jpg"
+    build_contact_sheet(entries, contact_sheet, columns=args.columns)
+    lines = ["# Reference manifest", ""]
+    for entry in manifest["references"]:
+        locator = entry["original_path"]
+        if entry["pdf_page"] and Path(locator).suffix.lower() == ".pdf":
+            locator += f"#page={entry['pdf_page']}"
+        lines.extend(
+            [
+                f"## Image {entry['order']}: {entry['role']}",
+                "",
+                f"- Item: `{entry['item_id']}`",
+                f"- Authority: `{entry['source_authority']}`",
+                f"- Prepared file: `{entry['rendered_path']}`",
+                f"- Source: `{locator}`",
+                f"- Folder labels: `{', '.join(entry.get('folder_tags', [])) or 'N/A'}`",
+                f"- Content label: `{entry.get('content_label') or 'N/A'}`",
+                f"- Subjects: `{', '.join(entry.get('subjects', [])) or 'N/A'}`",
+                f"- Forms: `{', '.join(entry.get('forms', [])) or 'N/A'}`",
+                f"- Subject forms: `{json.dumps(entry.get('subject_forms', {}), ensure_ascii=False)}`",
+                f"- Shot types: `{', '.join(entry.get('shot_types', [])) or 'N/A'}`",
+                f"- Crop box: `{entry.get('crop_box') or 'N/A'}`",
+                f"- Exact focus: `{entry.get('focus') or 'N/A'}`",
+                f"- Prompt instruction: {entry['instructions'] or '[fill before generation]'}",
+                "",
+            ]
+        )
+    atomic_write_text(task_dir / "reference-manifest.md", "\n".join(lines))
+    print(manifest_path)
+    print(contact_sheet)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        raise SystemExit(2)

@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:1485015e4b9a2489ed1b",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "1485015e4b9a2489ed1bf2e290e81d3daf0539c4020f1dbe74acc40ebbea0167",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-inuyasha-grave-sorrow-eye-revision/references/target-user-supplied-file-1485015e4b9a2489ed1b-crop-100-0-700-700.png",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/output/hand-mouth-microfix-work/v6-left-restored.png",
+      "pdf_page": null,
+      "instructions": "This is a context crop from the edit target. Change only 删除刀旁外露手；只在画面右侧袖口内画少量自然手指；画面左侧袖口不画手; preserve crop-edge continuity for deterministic compositing into the original.",
+      "crop_box": [
+        100,
+        0,
+        700,
+        700
+      ],
+      "focus": "删除刀旁外露手；只在画面右侧袖口内画少量自然手指；画面左侧袖口不画手",
+      "rendered_content_hash": "04ff0a83b04bf2b6484dded9e2677ddd2715f78b49734c86c5b1849662290d5a",
+      "crop_source_hash": "b4cc034ad1b9419ed7280ea8d32fafa9e28561c9e1b250460e805d6374070dd3"
+    },
+    {
+      "order": 2,
+      "role": "composition",
+      "item_id": "user-supplied:file:5d4523785af067266ca2",
+      "source_id": "user-supplied",
+      "source_authority": "requested-composition",
+      "content_hash": "5d4523785af067266ca240de2c2e7cf4c55bedc2ecd6dcae5e9162b7334dc599",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-inuyasha-grave-sorrow-eye-revision/references/composition-user-supplied-file-5d4523785af067266ca2.png",
+      "original_path": "/Users/jquery/Documents/inuyahsa-official/output/hand-mouth-microfix-work/character-context.png",
+      "pdf_page": null,
+      "instructions": "Control only framing, crop, gaze direction, and broad silhouette. Do not control character identity, form, costume, color, or rendering style."
+    }
+  ]
+}

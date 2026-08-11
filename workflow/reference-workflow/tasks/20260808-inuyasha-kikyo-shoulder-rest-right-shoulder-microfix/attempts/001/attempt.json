@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-08T14:02:00+08:00",
+  "status": "accepted",
+  "generator": "built-in image_gen",
+  "duration_seconds": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-kikyo-shoulder-rest-right-shoulder-microfix/outputs/inuyasha-kikyo-shoulder-rest-right-shoulder-microfix.png",
+  "output_sha256": "b60b6b7356a3d50613de4960e5d9c0d6a6c3244d4d3c15a382b21cb82a1374eb",
+  "reference_item_ids": [
+    "manga-curated:file:17fbec650f5e9c032d81",
+    "official:file:149a0334451c6119c480",
+    "official:file:1f892bd91be108443dad",
+    "user-supplied:file:99793035a1ed0edd8cd4"
+  ],
+  "failures": [],
+  "user_feedback": "",
+  "preference_tags": [],
+  "legacy_import": true
+}

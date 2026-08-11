@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "人类形态明确：黑色长发、普通侧耳，无犬耳、白发、獠牙、利爪或妖纹。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "长黑发外轮廓、火鼠裘交领宽袖和青年男性体态与官方设定一致；埋头遮挡下仍可辨识。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "可见普通人耳、念珠、双手和赤足结构清楚；按 brief 不出现铁碎牙。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "纯黑白印刷漫画处理占主导，没有彩色动画、摄影星空或灰阶绘画泄漏。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "外轮廓较重，黑发/夜空为纯黑块，服装为单层中网点，银河以白点和颗粒网点构成。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "fail",
+      "note": "用户反馈镜头过远且面部被手臂与头发遮住，眼睛和泪水未成为焦点；下一版需改为胸像近景并让双眼睁开。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "银河是按 brief 要求的背景第一景观，草地退居下缘；高对比人物仍是情绪焦点。"
+    },
+    {
+      "category": "construction",
+      "check": "人物、道具与背景使用一致的前后层级、透视方向和相对尺度",
+      "status": "pass",
+      "note": "天空、地平草线、坐姿和人物尺度统一，前后层级无冲突。"
+    },
+    {
+      "category": "construction",
+      "check": "身体接触、地面接触、衣物遮挡和道具承重连接连续且无悬浮穿模",
+      "status": "pass",
+      "note": "臀腿坐实草地，双脚落地，前臂连续承托在双膝上；袖口、手指、脸侧与头发遮挡关系清楚，无明显悬浮或穿模。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "全图无文字、气泡、分格、边框、签名、logo 或水印。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "输出为 1122×1402 PNG，比例与 4:5 竖幅插图一致。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "pass",
+      "note": "只复用了黑发、网点、线条与草地简化方式；没有复制参考页的对白、气泡、分格或姿势。"
+    },
+    {
+      "category": "process",
+      "check": "selected-output 只控制已认可的连续性和完成度，没有覆盖官方身份或目标媒介画法",
+      "status": "n/a",
+      "note": "本任务 Layer 3 为 INSUFFICIENT，未选择 selected-output 参考。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "生成调用严格按 manifest 顺序使用 style、identity、composition 三张已检查并已准备的图片。"
+    }
+  ]
+}

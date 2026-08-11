@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "attempt": 2,
+  "recorded_at": "2026-08-09T20:53:30+08:00",
+  "status": "rejected",
+  "generator": "built-in image_gen",
+  "duration_seconds": 107.0,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-tenseiga-mount-construction/outputs/sesshomaru-tenseiga-mount-candidate-02.png",
+  "output_sha256": "0b4a17c25c7eec7a72794c2a85a1636b2b3bc60cdebe39d65b2db31f88c7f3ce",
+  "reference_item_ids": [
+    "user-supplied:file:edacbdc7fe5ff543f8ab",
+    "official:file:feb144894cb1375186a7"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "preservation",
+      "note": "目标区外仍被整体重绘，且输出尺寸从1086x1448变为1085x1449，不能视为局部修图"
+    },
+    {
+      "category": "construction",
+      "note": "单刀及悬挂轴线更清楚，但根系、人物与服装轮廓均发生非授权变化"
+    }
+  ],
+  "user_feedback": "",
+  "preference_tags": []
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-09T09:31:03+08:00",
+  "status": "rejected",
+  "generator": "built-in-image_gen",
+  "duration_seconds": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260809-sesshomaru-sealed-inuyasha-back-view-v2/output/sesshomaru-sealed-inuyasha-back-view-v2.png",
+  "output_sha256": "ce30f903a747aeda7111502a1672ce3bc3fb234ad061855a03161eac2e5f651f",
+  "reference_item_ids": [
+    "user-supplied:file:8a846750c4162b34e244",
+    "official:file:cc54643e82bb244a2c95",
+    "official:file:d1e77d9ad13576657d98",
+    "official:file:798eaba650545b06b4a7"
+  ],
+  "failures": [
+    {
+      "category": "anatomy",
+      "note": "杀生丸双脚被错误画成赤足，缺少官方设定中的尖头包覆式鞋履与绑带结构"
+    },
+    {
+      "category": "costume",
+      "note": "杀生丸天生牙的刀柄刀鞘轴线和腰胯空间不一致，透视不成立；犬夜叉腰间错误出现刀柄与刀鞘"
+    },
+    {
+      "category": "medium",
+      "note": "人物线条过于光洁均匀，森林纹理和灰阶过密，整体不像高桥留美子原作黑白漫画的蘸水笔线条、留白与克制网点"
+    }
+  ],
+  "user_feedback": "调整杀生丸的刀的透视、杀生丸的鞋子、移除这个时期犬夜叉腰间的刀，并改成真正的原作漫画画风",
+  "preference_tags": []
+}

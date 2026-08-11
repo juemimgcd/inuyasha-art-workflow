@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-10T15:50:12+08:00",
+  "status": "rejected",
+  "generator": "built-in image_gen",
+  "duration_seconds": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-izayoi-grave-lineart-setting-sheet/outputs/十六夜墓碑线稿设定集__v1-结构过多.png",
+  "output_sha256": "5a19887b89e61ddda72571e2b2b0649b136f7c1a09bd0ae448795c4d991f9e9b",
+  "reference_item_ids": [
+    "user-supplied:file:d1f6b39c1717d915ec76",
+    "user-supplied:file:2d1c041cac7dd654044e"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "construction",
+      "note": "周围石构件扩增过多，未保持参考图中明确的三碑层级；碑面刻痕过于像伪文字"
+    }
+  ],
+  "user_feedback": "",
+  "preference_tags": []
+}

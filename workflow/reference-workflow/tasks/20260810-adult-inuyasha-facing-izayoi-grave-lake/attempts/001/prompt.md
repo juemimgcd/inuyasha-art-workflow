@@ -1,0 +1,34 @@
+# Generation specification
+
+Goal: 参考用户图中左侧成人与右侧对象的位置关系，生成黑白漫画插图：左侧为成年半妖犬夜叉，右侧为十六夜墓碑，墓碑正对湖面；犬夜叉在画面中的头顶到脚底高度必须与原图十六夜一致，墓碑结构与高度参考本地设定集。
+Scene and exact moment: 安静的湖岸墓地。成年半妖犬夜叉站在画面左侧，身体和面部朝右，隔着一小段距离凝视画面右侧的十六夜墓碑；墓碑正面朝向右后方的湖面，镜头从偏左的侧面观察，因此同时能读出犬夜叉侧面、墓碑的侧后厚度和远处湖面。地面是稀疏草地与石岸，湖对岸只有简化的山林与薄雾。
+Format: 3:2; illustration; classic-balanced.
+
+Identity requirements:
+- 犬夜叉 (half-demon-form): 长发；少年体型；银白长发；头顶双犬耳；言灵念珠；火鼠裘交领宽袖；宽松袴；赤足；铁碎牙；可见獠牙与利爪但保持少年面型；不得混入杀生丸的额头月牙、脸纹、肩部毛皮或侧耳
+
+Reference authority:
+- Input 1 (style): Control only black-and-white manga mark-making: line hierarchy, black-white massing, halftone economy, facial simplification, and effect construction. Do not copy visible characters, dialogue, balloons, panel borders, layout, or story content.
+- Input 2 (identity): Control canonical character identity, form, anatomy, costume, weapon or prop construction, attachment, and scale only. Do not control rendering style or scene composition.
+- Input 3 (composition): Control only the left-right relationship, eye-line, empty space between subjects, and the left adult figure's exact on-canvas height: replace the left woman with adult half-demon Inuyasha at the same head-to-sole height, and replace the right child with the grave. Do not copy Izayoi, child Inuyasha, the residence, garden, costume, identity, or rendering.
+- Input 4 (composition): Control only Izayoi's grave construction and scale hierarchy: one tall rounded thick main stele, one medium stone attached low, and one smaller rear-side stone, with weathered shallow illegible vertical marks. Use the rear/side thickness when the grave faces the lake. Do not copy this sheet's blank layout or multiple-view arrangement.
+
+Priority order: requested scene and focal hierarchy first, official identity anchors second, selected-medium rendering third, and exact-focus content evidence fourth. Never blend the roles.
+
+Composition: design a new composition from the request with one clear focal hierarchy. Do not copy a style screenshot's characters, dialogue, panel layout, pose, or story.
+
+Spatial construction: use one coherent depth system; keep body direction, relative scale, overlap, ground contact, and prop attachment mechanically continuous.
+
+Medium construction: Use flexible tapered dip-pen contours, clean white skin, decisive black masses, restrained halftone, one dense texture zone, and a readable focal silhouette.
+
+Required invariants:
+- 严格沿用用户构图参考的左右位置和体量关系：犬夜叉占据左侧，墓碑占据右侧，两者之间留出清晰负空间，不复制参考图中的十六夜、幼年犬夜叉、宅邸或庭院
+- 犬夜叉必须是成年身形的半妖形态；在画面中的头顶到赤足脚底高度与构图参考里十六夜一致，约占画布高度的百分之八十五到九十，头顶和脚下留白也接近原图
+- 犬夜叉保持银白长发、头顶犬耳、少年面型、言灵念珠、火鼠裘交领宽袖、宽松袴、赤足，铁碎牙收在腰侧刀鞘中；不得出现杀生丸的月牙、脸纹、肩部毛皮或侧耳
+- 十六夜墓碑采用设定集的三石结构：圆顶厚重主碑、中型副碑贴近主碑下部、另一侧稍靠后的低矮小碑；主碑约到犬夜叉胸口至肩下，副碑和小碑按设定图相对比例递减，三块都真实接地
+- 墓碑的正面明确朝向湖面，镜头可见侧后厚度；碑面仅有风化到不可辨认的浅竖刻痕，不生成可读文字
+- 单幅黑白漫画插图，经典均衡画法；柔韧蘸水笔线条、干净白皮肤、克制网点、头发和远山的少量实黑，湖面以留白和细横线表现
+- 氛围安静、克制、带纪念意味；犬夜叉表情清醒沉静，不哭喊、不跪地、不做夸张动作
+- 不出现十六夜本人、幼年犬夜叉、其他角色、花束、供品、宅邸、现代物件、对话框、分镜边框、字幕、可读文字、签名、logo 或水印
+
+No unrequested lettering, speech balloons, panel borders, signature, logo, or watermark.

@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "attempt": 7,
+  "recorded_at": "2026-08-09T10:44:57+08:00",
+  "status": "error",
+  "generator": "built-in-image_gen",
+  "duration_seconds": null,
+  "output": null,
+  "output_sha256": null,
+  "reference_item_ids": [
+    "user-supplied:file:edacbdc7fe5ff543f8ab",
+    "official:file:cc54643e82bb244a2c95",
+    "official:file:d1e77d9ad13576657d98"
+  ],
+  "failures": [
+    {
+      "category": "technical",
+      "note": "built-in image edit again failed with a network error before producing output; the revised belt and broad mounting-loop design was not rendered and candidate02 remains unchanged"
+    }
+  ],
+  "user_feedback": "不接受候选02的悬浮佩刀；下一次必须使用腰带与包住鞘口的宽固定环形成实体承重连接",
+  "preference_tags": []
+}

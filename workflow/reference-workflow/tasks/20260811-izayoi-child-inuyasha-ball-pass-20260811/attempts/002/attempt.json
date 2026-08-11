@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "attempt": 2,
+  "recorded_at": "2026-08-11T14:54:06+08:00",
+  "status": "rejected",
+  "generator": "built-in-imagegen",
+  "duration_seconds": 129.0,
+  "generation_seconds": 129.0,
+  "response_started_at": "2026-08-11T14:39:06+08:00",
+  "response_seconds": 900.0,
+  "pre_generation_seconds": 574.0,
+  "pre_generation_target_seconds": 90,
+  "pre_generation_target_met": false,
+  "post_generation_seconds": 197.0,
+  "post_generation_target_seconds": 30,
+  "post_generation_target_met": false,
+  "workflow_overhead_seconds": 771.0,
+  "response_slo_seconds": null,
+  "response_slo_met": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-izayoi-child-inuyasha-ball-pass-20260811/outputs/十六夜与幼年犬夜叉__双手举起请求传球__候选01.png",
+  "output_sha256": "bc5ed534e64d0ce6c0d71d48fc08f26c8d444850ae1151fa13916409fd40425b",
+  "reference_item_ids": [
+    "manga-curated:file:cb67f4934e8e0825eda6",
+    "official:file:6285125444be8011e070",
+    "official:file:c72310b3df3a4455f6eb",
+    "user-supplied:file:df23b5069d599a49c4ac"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "identity",
+      "note": "十六夜面部过于幼态，眼型偏圆、脸型偏短，需要微调为成年贵族女性"
+    }
+  ],
+  "user_feedback": "还行，但是这个十六夜的脸有点太幼态了，再微调一下吧",
+  "preference_tags": []
+}

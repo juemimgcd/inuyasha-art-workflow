@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "attempt": 1,
+  "recorded_at": "2026-08-08T12:55:26+08:00",
+  "status": "accepted",
+  "generator": "built-in image_gen",
+  "duration_seconds": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260808-inuyasha-kikyo-shoulder-rest-sleeve-fix/outputs/inuyasha-kikyo-shoulder-rest-sleeve-fix.png",
+  "output_sha256": "634661ffbcead8ce3789b9cdd8e44d485cfc09da751b1ade7a234a7d747e439b",
+  "reference_item_ids": [
+    "manga-curated:file:17fbec650f5e9c032d81",
+    "official:file:149a0334451c6119c480",
+    "official:file:1f892bd91be108443dad",
+    "user-supplied:file:e5c21d712da13835709a"
+  ],
+  "failures": [],
+  "user_feedback": "",
+  "preference_tags": [],
+  "legacy_import": true
+}

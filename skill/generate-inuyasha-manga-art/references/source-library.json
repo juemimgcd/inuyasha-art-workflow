@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "workflow_root": "/Users/jquery/Documents/inuYasha-design/reference-workflow",
+  "sources": [
+    {
+      "id": "official",
+      "label": "官方角色设定集",
+      "path": "/Users/jquery/Documents/inuyahsa-official",
+      "source_type": "image-directory",
+      "medium": "identity",
+      "authority": "canonical-identity",
+      "evidence_roles": ["identity"],
+      "default_tags": ["official", "setting-sheet", "identity"],
+      "folder_form_defaults": {
+        "犬夜叉设定集": ["half-demon-form"],
+        "戈薇设定集": ["default-form"],
+        "桔梗设定集": ["default-form"],
+        "杀生丸设定集": ["default-form"],
+        "弥勒设定集": ["default-form"],
+        "珊瑚设定集": ["default-form"],
+        "七宝设定集": ["default-form"],
+        "云母设定集": ["tiny-form"],
+        "邪见设定集": ["default-form"],
+        "玲设定集": ["default-form"],
+        "琥珀设定集": ["default-form"],
+        "钢牙设定集": ["default-form"],
+        "神乐设定集": ["default-form"],
+        "神无设定集": ["default-form"],
+        "十六夜设定集": ["default-form"],
+        "枫婆婆设定集": ["default-form"],
+        "幼年枫设定集": ["child-form"],
+        "刀刀斋设定集": ["default-form"],
+        "哞哞设定集": ["default-form"],
+        "戈薇爷爷设定集": ["default-form"],
+        "普通人物设定集": ["default-form"]
+      },
+      "path_form_overrides": {
+        "犬夜叉设定集/犬夜叉人类形态图01.jpg": ["human-form"]
+      }
+    },
+    {
+      "id": "manga-curated",
+      "label": "持续扩充的精选漫画原图",
+      "path": "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos",
+      "source_type": "image-directory",
+      "medium": "manga",
+      "authority": "selected-medium-original",
+      "evidence_roles": ["rendering", "composition", "content"],
+      "default_tags": ["manga", "curated", "original-panel"],
+      "collection_policy": "user-curated-growing",
+      "subject_form_aliases": {
+        "犬夜叉": {
+          "default-form": ["half-demon-form"]
+        }
+      },
+      "metadata_policy": {
+        "primary": "folder-names",
+        "content_label": "leaf-folder",
+        "inherit_ancestor_folders": true,
+        "deduplicate_by_content": true
+      }
+    },
+    {
+      "id": "user-continuity",
+      "label": "用户原创与连续性参考",
+      "path": "/Users/jquery/Documents/inuyasha-mine",
+      "source_type": "image-directory",
+      "medium": "user-original",
+      "authority": "user-continuity",
+      "evidence_roles": ["continuity", "target"],
+      "default_tags": ["user-original", "continuity"]
+    },
+    {
+      "id": "tv-curated",
+      "label": "精选 TV 动画截图",
+      "path": "/Users/jquery/Documents/inuYasha-design/origin-photos/TV-photos",
+      "source_type": "image-directory",
+      "medium": "tv",
+      "authority": "selected-medium-original",
+      "evidence_roles": ["rendering", "composition", "content", "palette"],
+      "default_tags": ["tv", "curated", "anime-frame"],
+      "collection_policy": "user-curated-growing",
+      "subject_form_aliases": {
+        "犬夜叉": {
+          "default-form": ["half-demon-form"]
+        }
+      },
+      "metadata_policy": {
+        "primary": "folder-names",
+        "content_label": "leaf-folder",
+        "inherit_ancestor_folders": true,
+        "deduplicate_by_content": true
+      }
+    },
+    {
+      "id": "selected-output",
+      "label": "精选原创成图",
+      "path": "/Users/jquery/Documents/inuYasha-design/selected-output",
+      "source_type": "image-directory",
+      "medium": "user-original",
+      "authority": "selected-user-original",
+      "evidence_roles": ["continuity"],
+      "default_tags": ["selected-output", "user-original", "accepted-quality"],
+      "collection_policy": "user-selected-growing",
+      "metadata_policy": {
+        "primary": "structured-filenames",
+        "content_label": "leaf-folder",
+        "inherit_ancestor_folders": true,
+        "deduplicate_by_content": true
+      }
+    }
+  ]
+}

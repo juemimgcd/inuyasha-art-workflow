@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "status": "accepted",
+  "generation_mode": "built-in-imagegen",
+  "target_medium": "manga",
+  "visual_mode": "classic-balanced",
+  "aspect_ratio": "2:3",
+  "source_image": "/Users/jquery/.codex/generated_images/019fdb0e-a7a3-7be1-868d-00a3905bc602/exec-34223689-a621-4c79-b6b6-bf71c0098fd8.png",
+  "task_output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260807-inuyasha-kikyo-rain-shrine-reunion/outputs/inuyasha-kikyo-rain-shrine-reunion.png",
+  "deliverable_output": "/Users/jquery/Documents/Codex/2026-08-07/new-chat/outputs/inuyasha-kikyo-rain-shrine-reunion.png",
+  "references": [
+    "style-manga-volumes-vol-13-p0071.jpg",
+    "composition-manga-volumes-vol-10-p0072.jpg",
+    "identity-official-file-dea1360ba34b.jpg",
+    "identity-official-file-f83513307742.jpg"
+  ],
+  "qa_summary": {
+    "passed": 9,
+    "failed": 0,
+    "revision_required": false
+  },
+  "accepted_at": "2026-08-07T15:45:00+08:00"
+}

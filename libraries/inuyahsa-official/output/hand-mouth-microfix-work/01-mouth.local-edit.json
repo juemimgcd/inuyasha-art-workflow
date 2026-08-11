@@ -1,0 +1,23 @@
+{
+  "target": "/Users/jquery/Documents/inuyahsa-official/output/hand-mouth-microfix-work/target-original.png",
+  "candidate": "/Users/jquery/.codex/generated_images/019fec06-ee39-7f90-b878-9fa0eeee14db/exec-611d7825-25af-4a1d-85b0-36f49637a0af.png",
+  "output": "/Users/jquery/Documents/inuyahsa-official/output/hand-mouth-microfix-work/01-mouth.png",
+  "target_sha256": "fd38ce04563ff9bf051c4f23c215b3901203a6e3f0445ee161208abc4814bcac",
+  "candidate_sha256": "c6a7e73465737fd66e7ad87b06f6206f75f7a326c00211074a7e1c25a2f9ffbc",
+  "output_sha256": "fd86ffa652c130e473ff19546ba9b9a2e8d8dcf943eae9e2e343f152f847d11f",
+  "context_box": [
+    100,
+    0,
+    700,
+    700
+  ],
+  "edit_box": [
+    510,
+    135,
+    70,
+    60
+  ],
+  "feather_pixels": 4,
+  "candidate_resized_to_context": true,
+  "outside_edit_box_preserved": true
+}

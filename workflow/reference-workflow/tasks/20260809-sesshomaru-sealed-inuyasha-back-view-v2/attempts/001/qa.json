@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "杀生丸为清醒旁观者的成年妖怪背影；犬夜叉为半妖形态的封印沉睡者，身份和状态正确。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "杀生丸只露长发、大肩毛与背面层叠衣甲；犬夜叉保留犬耳、浅色长发和火鼠裘，颈部完全没有念珠。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "犬夜叉颈部无珠链或项链；杀生丸腰间仅一把天生牙、一个刀柄和一个刀鞘，没有第二把刀。封印箭清楚。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "保持纯黑白漫画插图，没有彩色、摄影、柔光或赛璐璐渲染泄漏。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "沿用目标图的有机粗细线条、清洁人物留白、树皮与藤蔓网点及黑白层级。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "杀生丸位于右前景且只露背影，头、肩、身体方向统一朝向左侧犬夜叉；犬夜叉完整可见。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "杀生丸背影与犬夜叉剪影完全错开，没有遮挡犬夜叉、封印箭或御神木；森林纹理仍集中在左侧。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "未见文字、音效字、气泡、分格、签名、logo 或水印。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "成图为 1086×1448 PNG，严格 3:4 竖幅，符合编辑交付要求。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "n/a",
+      "note": "本次未新增漫画风格截图，媒介连续性由目标图控制。"
+    },
+    {
+      "category": "process",
+      "check": "selected-output 只控制已认可的连续性和完成度，没有覆盖官方身份或目标媒介画法",
+      "status": "n/a",
+      "note": "本次未使用 selected-output；目标图本身提供编辑连续性。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "实际输入与 manifest 一致：目标图、杀生丸背面全身设定、天生牙设定和犬夜叉半妖设定，共 4 张。"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": 5,
+  "task_id": "20260808-inuyasha-kikyo-gentle-shoulder-rest",
+  "created_at": "2026-08-08T12:33:48+08:00",
+  "request": "根据第四话-小憩.md第457至590行：半妖形态犬夜叉以桔梗的发绳束起长发，释然地闭眼靠在桔梗肩膀上；桔梗披散长发，温柔地把手放在他束起的头发上；草地微风，温柔安静的黑白漫画插图，无文字。",
+  "medium": "manga",
+  "deliverable": "illustration",
+  "period_mode": "classic-balanced",
+  "style_strategy": "dynamic-curated",
+  "style_references": [
+    "manga-curated:file:17fbec650f5e9c032d81",
+    "manga-curated:file:268ff4975082984a2a8d"
+  ],
+  "characters": [
+    "犬夜叉",
+    "桔梗"
+  ],
+  "identity_forms": {
+    "犬夜叉": "half-demon-form",
+    "桔梗": "default-form"
+  },
+  "forms_and_costumes": [
+    "犬夜叉: half-demon-form",
+    "桔梗: default-form"
+  ],
+  "scene": "草地上的安静小憩：半妖犬夜叉把由桔梗发绳束起的银白长发垂在脑后，闭眼轻靠桔梗肩头；桔梗披散黑色长发，低头温柔看他，并将一只手轻放在发结后的长发上。",
+  "aspect_ratio": "4:5",
+  "invariants": [
+    "犬夜叉必须是半妖形态：银白长发、头顶犬耳、念珠与火鼠裘；不得变成黑发人类形态，也不得长出杀生丸的侧耳、月牙或脸纹",
+    "桔梗必须是年轻巫女：黑色长发已完全披散、齐刘海与长侧发、白小袖和长袴；不得画成戈薇或现代校服",
+    "桔梗原本的发绳必须清楚系在犬夜叉脑后，束起的是犬夜叉的银白长发，头顶犬耳仍完整可见",
+    "犬夜叉闭眼、嘴角有极轻的释然笑意，头自然枕在桔梗肩上；桔梗没有躲开，一只手轻放在他的发结与长发上",
+    "温柔安静的黑白漫画印刷质感，4:5竖幅单幅插图，无文字、气泡、分格、签名、logo或水印",
+    "背景仅保留草地、微风与少量植物，不能抢过两人面部与靠肩动作的视觉焦点",
+    "不出现铁碎牙、弓箭、箭筒或其他战斗道具"
+  ],
+  "intent": "new",
+  "parent_task_id": null,
+  "change_category": null,
+  "change_request": ""
+}

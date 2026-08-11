@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "attempt": 3,
+  "recorded_at": "2026-08-11T15:44:38+08:00",
+  "status": "rejected",
+  "generator": "built-in-imagegen",
+  "duration_seconds": 45.0,
+  "generation_seconds": 45.0,
+  "response_started_at": "2026-08-11T15:39:19+08:00",
+  "response_seconds": 319.0,
+  "pre_generation_seconds": 0.0,
+  "pre_generation_target_seconds": 90,
+  "pre_generation_target_met": true,
+  "post_generation_seconds": 274.0,
+  "post_generation_target_seconds": 30,
+  "post_generation_target_met": false,
+  "workflow_overhead_seconds": 274.0,
+  "response_slo_seconds": null,
+  "response_slo_met": null,
+  "output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260811-izayoi-child-inuyasha-combing-hair-mirror-20260811/outputs/十六夜与幼年犬夜叉__战国镜台前梳头__候选01.png",
+  "output_sha256": "c5cd46b0c673c1d677f3a2686543dda54f1b13c1ea351c8ab85103f80d9e0f1f",
+  "reference_item_ids": [
+    "manga-curated:file:876af11c5aa2fd24a707",
+    "official:file:f4819e9df3546a3ed095",
+    "official:file:6285125444be8011e070",
+    "official:file:c72310b3df3a4455f6eb"
+  ],
+  "reference_blame_item_ids": [],
+  "failures": [
+    {
+      "category": "composition",
+      "note": "角色在镜外侧拍，未形成以镜面倒影为主体且露出镜框的主观构图"
+    },
+    {
+      "category": "identity",
+      "note": "十六夜面部与官方设定相似度不足"
+    },
+    {
+      "category": "prop",
+      "note": "镜框装饰过于朴素，贵族蒔绘镜具身份不够明确"
+    }
+  ],
+  "user_feedback": "我是想让两个人都在镜子里，镜头也是镜子里面的两个人，最好是把镜子的边框也漏出来交代一下是镜子里面的景象。还有就是这个十六夜长得和十六夜不太像，镜子也应该装饰的好看一点，因为十六夜是贵族",
+  "preference_tags": []
+}

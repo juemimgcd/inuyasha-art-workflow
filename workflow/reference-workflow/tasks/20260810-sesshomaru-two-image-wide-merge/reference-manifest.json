@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:a8ab72747daaf0819b90",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "a8ab72747daaf0819b90592ed525421b94d92d6867363d60108c700dc019d971",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-sesshomaru-two-image-wide-merge/references/target-user-supplied-file-a8ab72747daaf0819b90.png",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-sesshomaru-two-image-wide-merge/outputs/sesshomaru-merge-base.png",
+      "pdf_page": null,
+      "instructions": "Preserve this image exactly except for the user's explicitly requested local edit.",
+      "crop_box": null,
+      "focus": ""
+    }
+  ]
+}

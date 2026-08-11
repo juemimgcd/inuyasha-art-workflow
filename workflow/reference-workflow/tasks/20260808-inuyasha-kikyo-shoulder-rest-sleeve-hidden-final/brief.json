@@ -1,0 +1,42 @@
+{
+  "schema_version": 5,
+  "task_id": "20260808-inuyasha-kikyo-shoulder-rest-sleeve-hidden-final",
+  "created_at": "2026-08-08T13:40:27+08:00",
+  "request": "以袖子微调版为唯一整体目标，完全删除正面可见的桔梗左袖。桔梗左臂从犬夜叉头部和上背后方伸向头顶，正面只看见抚发的手；左肩、手臂与宽袖全部被犬夜叉遮挡。原白色袖块区域补回犬夜叉网点火鼠裘与桔梗腰带、袴的自然遮挡关系，其余画面不变。",
+  "medium": "manga",
+  "deliverable": "illustration",
+  "period_mode": "classic-balanced",
+  "style_strategy": "dynamic-curated",
+  "style_references": [
+    "manga-curated:file:17fbec650f5e9c032d81"
+  ],
+  "characters": [
+    "犬夜叉",
+    "桔梗"
+  ],
+  "identity_forms": {
+    "犬夜叉": "half-demon-form",
+    "桔梗": "default-form"
+  },
+  "forms_and_costumes": [
+    "犬夜叉: half-demon-form",
+    "桔梗: default-form"
+  ],
+  "scene": "延续袖子微调版的草地靠肩近景；桔梗左臂从犬夜叉头部与上背后方伸向头顶，正面只露出抚发的左手，整条左袖完全被犬夜叉遮挡。",
+  "aspect_ratio": "4:5",
+  "invariants": [
+    "袖子微调版控制全部人物、表情、姿势、构图、裁切、线条、网点、草地与留白",
+    "红框所指的正面白色左袖布块必须完全消失，不保留短袖片、袖角、折叠边或白色布柱",
+    "桔梗左肩、左上臂、左肘、左前臂、左袖和袖口全部位于犬夜叉头部与上背后方，从正面不可见",
+    "正面只保留桔梗放在犬夜叉束发上的一只五指左手；遮挡关系自然暗示手臂来自背后",
+    "删除白袖后的区域补画为犬夜叉连续的网点火鼠裘，并在右下自然接回桔梗的腰带和深色袴",
+    "不得在犬夜叉胸前或两人之间新增任何白色袖布、手臂、手、围巾或衣片",
+    "犬夜叉的脸、闭眼表情、双犬耳、束发、发绳、念珠和靠肩姿势完全不变",
+    "桔梗的脸、视线、黑发、白色衣襟、腰带、袴和右侧未抬起的袖子完全不变",
+    "无文字、气泡、分格、签名、logo或水印"
+  ],
+  "intent": "new",
+  "parent_task_id": null,
+  "change_category": null,
+  "change_request": ""
+}

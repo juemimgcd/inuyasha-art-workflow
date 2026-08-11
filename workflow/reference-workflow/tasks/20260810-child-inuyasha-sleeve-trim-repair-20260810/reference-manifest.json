@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "order": 1,
+      "role": "target",
+      "item_id": "user-supplied:file:c77d32443e31791f6e6e",
+      "source_id": "user-supplied",
+      "source_authority": "edit-target",
+      "content_hash": "c77d32443e31791f6e6ead69143d7bcb0a19eccda754f8a386ee5caeda59a050",
+      "folder_path": "",
+      "content_label": "",
+      "folder_tags": [],
+      "subjects": [],
+      "forms": [],
+      "subject_forms": {},
+      "shot_types": [],
+      "filename_terms": [],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-child-inuyasha-sleeve-trim-repair-20260810/references/target-user-supplied-file-c77d32443e31791f6e6e.png",
+      "original_path": "/Users/jquery/.codex/generated_images/019fea5f-cace-74f0-834c-93ccfd7929d1/exec-011f4125-739f-4cf3-ba3d-1942b4647a35.png",
+      "pdf_page": null,
+      "instructions": "Preserve this image exactly except for the user's explicitly requested local edit.",
+      "crop_box": null,
+      "focus": ""
+    },
+    {
+      "order": 2,
+      "role": "form",
+      "item_id": "tv-curated:file:647cbeca552efd67d4ad",
+      "source_id": "tv-curated",
+      "source_authority": "selected-medium-original",
+      "content_hash": "647cbeca552efd67d4addd3d2a6d67ee9e140b1eec9adc5cb8978de247ccd60b",
+      "folder_path": "犬夜叉",
+      "content_label": "犬夜叉",
+      "folder_tags": [
+        "犬夜叉"
+      ],
+      "subjects": [
+        "犬夜叉"
+      ],
+      "forms": [
+        "child-form"
+      ],
+      "subject_forms": {
+        "犬夜叉": [
+          "child-form"
+        ]
+      },
+      "shot_types": [
+        "close-up"
+      ],
+      "filename_terms": [
+        "01",
+        "幼年形态",
+        "犬夜叉",
+        "脸部特写",
+        "负伤抬头"
+      ],
+      "rendered_path": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-child-inuyasha-sleeve-trim-repair-20260810/references/form-tv-curated-file-647cbeca552efd67d4ad.jpeg",
+      "original_path": "/Users/jquery/Documents/inuYasha-design/origin-photos/TV-photos/犬夜叉/犬夜叉__幼年形态__脸部特写__负伤抬头__01.jpeg",
+      "pdf_page": null,
+      "instructions": "Control only the exact requested form or age state visible in this selected-medium original: age-specific proportions, silhouette, face construction, hair-to-ear relationship, and form-specific garment scale. Do not control general character identity beyond visible form evidence, rendering style, palette, scene composition, or story content.",
+      "crop_box": null,
+      "focus": ""
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "status_values": [
+    "pending",
+    "pass",
+    "fail",
+    "n/a"
+  ],
+  "checks": [
+    {
+      "category": "identity",
+      "check": "角色名称、年龄或形态正确",
+      "status": "pass",
+      "note": "人类形态明确：长黑发、无犬耳、无獠牙和利爪，少年侧脸与官方设定一致。"
+    },
+    {
+      "category": "identity",
+      "check": "发型、脸部标志、服装层次和相对体型正确",
+      "status": "pass",
+      "note": "黑发轮廓、紧凑少年脸、火鼠袍交领、宽袖和上身体型层次清楚。"
+    },
+    {
+      "category": "identity",
+      "check": "手、耳朵、饰品、武器和道具保持身份关键形状",
+      "status": "pass",
+      "note": "耳部为普通人耳且没有头顶犬耳；言灵念珠完整可读；按 brief 不出现手与铁碎牙。"
+    },
+    {
+      "category": "medium",
+      "check": "目标媒介占主导且没有非目标媒介泄漏",
+      "status": "pass",
+      "note": "v2 以纯黑头发、中灰衣料、轻灰天空网点和加深草地构成完整黑白漫画层级，没有 TV 动画或数字灰阶泄漏。"
+    },
+    {
+      "category": "medium",
+      "check": "线条、网点或赛璐璐阴影符合所选视觉模式",
+      "status": "pass",
+      "note": "v2 将衣料提升为稳定中灰网点，并在天空和草地使用不同密度；外轮廓、脸部细线与发丝高光仍有清楚层级，皮肤保持白净。"
+    },
+    {
+      "category": "composition",
+      "check": "焦点层级清楚，动作方向和剪影可读",
+      "status": "pass",
+      "note": "右侧脸、低垂视线与黑发大轮廓构成单一焦点；头发和花瓣向左流动，情绪与方向可读。"
+    },
+    {
+      "category": "composition",
+      "check": "背景细节没有与焦点角色竞争",
+      "status": "pass",
+      "note": "草坪和樱花枝虽加深但仍处于次级；面部周围保留较亮的局部留白，背景网点没有压过人物。"
+    },
+    {
+      "category": "technical",
+      "check": "没有非要求文字、对话框、签名、logo 或水印",
+      "status": "pass",
+      "note": "成图没有文字、对白框、拟声字、分镜边框、签名、logo 或水印。"
+    },
+    {
+      "category": "technical",
+      "check": "成图比例与交付物类型符合 brief",
+      "status": "pass",
+      "note": "输出为 1122×1402 的 4:5 竖版上身插图，裁切与 brief 一致。"
+    },
+    {
+      "category": "process",
+      "check": "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情",
+      "status": "pass",
+      "note": "初始漫画截图只控制墨线；v2 用户参考只控制网点密度、衣料中灰和草地墨色，没有复制其全身构图、刀、姿势或具体衣褶。"
+    },
+    {
+      "category": "process",
+      "check": "实际使用的参考图与 reference-manifest.json 一致",
+      "status": "pass",
+      "note": "初始生成与 reference-manifest.json 一致；v2 修订按 revision-manifest-01.json 使用原目标、用户明暗参考和官方身份图。"
+    }
+  ]
+}
