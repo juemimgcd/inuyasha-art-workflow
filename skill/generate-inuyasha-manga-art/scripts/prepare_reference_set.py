@@ -20,6 +20,7 @@ from workflow_common import (
     find_executable,
     load_config,
     open_database,
+    resolve_recorded_path,
     workflow_paths,
     workflow_root,
 )
@@ -431,8 +432,7 @@ def validate_reference(
         raise SystemExit(f"Composition references must be user-supplied: {item_id}")
     if role == "content" and source_id not in {"manga-curated", "tv-curated"}:
         raise SystemExit(
-            "Content references must come from manga-curated or tv-curated: "
-            f"{item_id}"
+            f"Content references must come from manga-curated or tv-curated: {item_id}"
         )
 
     if not identity_forms:
@@ -570,7 +570,9 @@ def main() -> int:
             focus = entry.get("focus", "").strip()
             if not focus:
                 connection.close()
-                raise SystemExit(f"Content reference requires an exact focus: {item_id}")
+                raise SystemExit(
+                    f"Content reference requires an exact focus: {item_id}"
+                )
             if focus != content_need.get("focus"):
                 connection.close()
                 raise SystemExit(
@@ -881,7 +883,7 @@ def main() -> int:
 
     entries = [
         (
-            Path(entry["rendered_path"]),
+            resolve_recorded_path(entry["rendered_path"]),
             (
                 f"{entry['order']}. {entry['role']} | {entry['source_id']} | "
                 f"{entry['item_id'].rsplit(':', 1)[-1][-12:]}"

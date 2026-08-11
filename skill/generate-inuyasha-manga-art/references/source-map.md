@@ -6,13 +6,15 @@ Use each source only for its declared role. The local catalog is a locator for a
 
 | Source | Path | Authority | Normal use |
 | --- | --- | --- | --- |
-| `official` | `/Users/jquery/Documents/inuyahsa-official` | canonical identity | Character name, face, anatomy, form, costume, weapon/prop construction and attachment, scar, and scale. |
-| `manga-curated` | `/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos` | growing user-curated manga style and scoped content | One or two inspected screenshots for manga rendering, or one separately selected exact-focus content reference. |
-| `tv-curated` | `/Users/jquery/Documents/inuYasha-design/origin-photos/TV-photos` | growing user-curated TV rendering and scoped content | TV rendering for TV tasks, or one separately selected exact-focus content reference. |
-| `user-continuity` | `/Users/jquery/Documents/inuyasha-mine` | requested continuity | A user-original form or prior accepted interpretation when explicitly requested. |
-| `selected-output` | `/Users/jquery/Documents/inuYasha-design/selected-output` | selected user-original precedent | One inspected accepted output for continuity and finish quality after identity and medium style are resolved. |
+| `official` | `${REPO_ROOT}/libraries/inuyahsa-official` | canonical identity | Character name, face, anatomy, form, costume, weapon/prop construction and attachment, scar, and scale. |
+| `manga-curated` | `${REPO_ROOT}/libraries/origin-photos/manga-photos` | growing user-curated manga style and scoped content | One or two inspected screenshots for manga rendering, or one separately selected exact-focus content reference. |
+| `tv-curated` | `${REPO_ROOT}/libraries/origin-photos/TV-photos` | growing user-curated TV rendering and scoped content | TV rendering for TV tasks, or one separately selected exact-focus content reference. |
+| `user-continuity` | `${REPO_ROOT}/libraries/inuyasha-mine` | requested continuity | A user-original form or prior accepted interpretation when explicitly requested. |
+| `selected-output` | `${REPO_ROOT}/libraries/selected-output` | selected user-original precedent | One inspected accepted output for continuity and finish quality after identity and medium style are resolved. |
 
-Keep path casing and spelling exact. `inuyahsa-official` is the directory's existing spelling.
+`${REPO_ROOT}` is the clone directory resolved from `INUYASHA_WORKFLOW_HOME` or
+the repo-local skill location. Keep path casing and spelling exact.
+`inuyahsa-official` is the directory's existing spelling.
 
 For both curated `origin-photos` sources, treat every folder name as inherited retrieval metadata and the leaf folder as the screenshot's content label. For `selected-output`, use its structured filenames as primary metadata and its character folders as inherited tags. All three libraries are user-owned and open-ended.
 

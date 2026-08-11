@@ -1,0 +1,40 @@
+name: Cross-platform workflow
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Compile Python scripts
+        run: python -m compileall -q skill/generate-inuyasha-manga-art/scripts
+      - name: Run unit tests
+        run: python -m unittest discover -s skill/generate-inuyasha-manga-art/tests -v
+      - name: Check Windows setup and PowerShell launcher
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          .\setup-windows.ps1 -SkipDependencyInstall -SkipCatalogBuild
+          $skill = "$HOME\.agents\skills\generate-inuyasha-manga-art"
+          & "$skill\scripts\run-python.ps1" `
+            "$skill\scripts\build_reference_index.py" --help
+      - name: Check POSIX launcher
+        if: runner.os != 'Windows'
+        shell: bash
+        run: >-
+          skill/generate-inuyasha-manga-art/scripts/run-python
+          skill/generate-inuyasha-manga-art/scripts/build_reference_index.py
+          --help

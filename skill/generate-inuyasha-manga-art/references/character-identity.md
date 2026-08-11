@@ -4,15 +4,22 @@ Use this guide for identity, costume, equipment, transformations, and relative s
 
 ## Authority and inspection protocol
 
-The setting-sheet root is `/Users/jquery/Documents/inuyahsa-official` (keep the directory's existing spelling). This directory contains the 设定集. Treat each `<角色>设定集` folder as authoritative for that named character's canonical structural identity. Use `source-map.md` to distinguish it from the user's original art, selected outputs, manga screenshots, and TV screenshots. When the user explicitly requests one of their original variants from `/Users/jquery/Documents/inuyasha-mine`, preserve that variant instead of silently replacing it with the canonical form.
+The setting-sheet root is the configured `official` source, normally
+`${REPO_ROOT}/libraries/inuyahsa-official` (keep the directory's existing
+spelling). This directory contains the 设定集. Treat each `<角色>设定集` folder
+as authoritative for that named character's canonical structural identity. Use
+`source-map.md` to distinguish it from the user's original art, selected outputs,
+manga screenshots, and TV screenshots. When the user explicitly requests one
+of their original variants from the configured `user-continuity` source,
+preserve that variant instead of silently replacing it with the canonical form.
 
 For every named character:
 
 1. Resolve the prompt name to exactly one canonical Chinese name in the index below.
 2. List that character's official files before selecting references:
 
-   ```bash
-   find "/Users/jquery/Documents/inuyahsa-official/<角色>设定集" -maxdepth 1 -type f -iname '*.jpg' -print | sort
+   ```powershell
+   Get-ChildItem -LiteralPath "$env:INUYASHA_WORKFLOW_HOME\libraries\inuyahsa-official\<角色>设定集" -File -Filter *.jpg | Sort-Object Name
    ```
 
 3. Inspect one face/expression sheet and one full-body/costume sheet when both exist. Also inspect a weapon, action, form, scar, or scale sheet when the requested scene depends on it. If a required back view or attachment detail is small inside a multi-view sheet, pass a focused task-local crop with recorded coordinates rather than extra whole sheets. Only pass sheets whose indexed form matches the requested character form.
@@ -20,7 +27,9 @@ For every named character:
 5. Translate the ledger into observable prompt details. Keep canonical markers even when pose, camera, or manga period changes.
 6. After generation, compare the output with the same setting sheets. Reject name swaps and borrowed features before judging the drawing style.
 
-For group scenes, inspect `/Users/jquery/Documents/inuyahsa-official/全体人物对比图01.jpg` and preserve the depicted height relationships. This sheet includes only part of the cast; do not extrapolate absent characters from it.
+For group scenes, inspect `全体人物对比图01.jpg` in the configured `official`
+source and preserve the depicted height relationships. This sheet includes only
+part of the cast; do not extrapolate absent characters from it.
 
 ## Canonical index
 

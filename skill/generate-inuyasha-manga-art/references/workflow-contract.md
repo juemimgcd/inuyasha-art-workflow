@@ -1,6 +1,15 @@
 # Local reference workflow contract
 
-Store generated catalogs, task records, attempts, prompts, and outputs under `/Users/jquery/Documents/inuYasha-design/reference-workflow`. Keep the original image libraries read-only.
+Store generated catalogs, task records, attempts, prompts, and outputs under
+`${INUYASHA_WORKFLOW_HOME}/workflow/reference-workflow` by default. The source
+configuration uses `${REPO_ROOT}` tokens and resolves them at runtime. A caller
+may set `INUYASHA_WORKFLOW_ROOT` or pass `--workflow-root` to relocate generated
+workflow data. Keep the original image libraries read-only.
+
+Historical JSON may retain absolute paths from the machine that created it.
+Preserve those records verbatim. Resolve configured legacy prefixes only while
+reading, using `source-library.json.path_aliases`; never rewrite accepted task or
+attempt provenance merely to move between macOS, Windows, or Linux.
 
 ## Catalog contract
 

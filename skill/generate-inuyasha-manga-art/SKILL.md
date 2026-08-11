@@ -27,11 +27,18 @@ cross-medium fallback, migration/archive, final acceptance, or a validation
 failure whose cause is unclear. For an ordinary `new`, `edit`, or `microfix`
 preview, do not load the full contract or `quality-gate.md` before generation.
 
-Use the bundled launcher:
+Use the bundled launcher. From a repository checkout on macOS/Linux:
 
 ```bash
-/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python \
-  /Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/<script>.py <args>
+skill/generate-inuyasha-manga-art/scripts/run-python \
+  skill/generate-inuyasha-manga-art/scripts/<script>.py <args>
+```
+
+From PowerShell after running `setup-windows.ps1`:
+
+```powershell
+& "$HOME\.agents\skills\generate-inuyasha-manga-art\scripts\run-python.ps1" `
+  "$HOME\.agents\skills\generate-inuyasha-manga-art\scripts\<script>.py" <args>
 ```
 
 Check catalog freshness before retrieval and rebuild only when stale:
@@ -40,6 +47,11 @@ Check catalog freshness before retrieval and rebuild only when stale:
 scripts/run-python scripts/build_reference_index.py --check
 scripts/run-python scripts/build_reference_index.py
 ```
+
+On PowerShell, substitute `scripts/run-python.ps1` and invoke it with `&`.
+The setup script defines `INUYASHA_WORKFLOW_HOME`; `INUYASHA_WORKFLOW_ROOT`
+may override only the generated workflow-data directory. Do not rewrite
+historical task paths when moving machines—the compatibility resolver maps them.
 
 ## Minimize controllable preview overhead
 

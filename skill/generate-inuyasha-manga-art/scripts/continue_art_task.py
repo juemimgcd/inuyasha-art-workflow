@@ -19,6 +19,7 @@ from workflow_common import (
     atomic_write_json,
     atomic_write_text,
     load_config,
+    resolve_recorded_path,
     workflow_paths,
     workflow_root,
 )
@@ -97,7 +98,7 @@ def recorded_attempt_source(parent: Path, selector: str) -> tuple[Path, dict]:
     output_text = attempt.get("output")
     if not output_text:
         raise SystemExit("Recorded candidate attempt has no output")
-    target = Path(output_text).expanduser().resolve()
+    target = resolve_recorded_path(output_text)
     if not target.is_file():
         raise SystemExit(f"Recorded candidate output is missing: {target}")
     output_hash = file_hash(target)
@@ -224,11 +225,9 @@ def main() -> int:
     child_brief = read_json(child_brief_path)
     child_brief["prompt_invariants"] = [
         (
-            "来源候选图中未被点名的角色身份、形态、构图和漫画画法"
-            "保持不变"
+            "来源候选图中未被点名的角色身份、形态、构图和漫画画法保持不变"
             if candidate_source
-            else "父任务中已经通过的角色身份、形态、构图和漫画画法"
-            "保持不变"
+            else "父任务中已经通过的角色身份、形态、构图和漫画画法保持不变"
         ),
         f"只处理 {args.change_category} 类问题，不引入其他设计改动",
     ]

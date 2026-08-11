@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from workflow_common import atomic_write_text
+from workflow_common import atomic_write_text, resolve_recorded_path
 
 BRIEF_SCHEMA_VERSION = 5
 RESULT_SCHEMA_VERSION = 3
@@ -48,7 +48,9 @@ def parse_timestamp(value: str) -> datetime:
 
 
 def elapsed_seconds(started_at: str, finished_at: str) -> float:
-    elapsed = (parse_timestamp(finished_at) - parse_timestamp(started_at)).total_seconds()
+    elapsed = (
+        parse_timestamp(finished_at) - parse_timestamp(started_at)
+    ).total_seconds()
     if elapsed < 0:
         raise ValueError("finished timestamp cannot precede started timestamp")
     return round(elapsed, 1)
@@ -87,9 +89,7 @@ def latency_budget(brief: dict[str, Any]) -> dict[str, int]:
             )
         ),
         "max_technical_retries": int(
-            configured.get(
-                "max_technical_retries", DEFAULT_MAX_TECHNICAL_RETRIES
-            )
+            configured.get("max_technical_retries", DEFAULT_MAX_TECHNICAL_RETRIES)
         ),
     }
 
@@ -105,7 +105,7 @@ def read_json(path: Path) -> dict[str, Any]:
 def result_output(result: dict[str, Any]) -> Path | None:
     for key in ("output", "task_output", "accepted_output"):
         if result.get(key):
-            return Path(result[key]).expanduser().resolve()
+            return resolve_recorded_path(result[key])
     return None
 
 
