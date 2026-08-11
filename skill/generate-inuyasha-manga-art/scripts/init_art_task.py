@@ -198,7 +198,9 @@ def main() -> int:
     content_query = args.content_query.strip()
     content_focus = args.content_focus.strip()
     if bool(content_query) != bool(content_focus):
-        raise SystemExit("--content-query and --content-focus must be supplied together")
+        raise SystemExit(
+            "--content-query and --content-focus must be supplied together"
+        )
     if not content_query and args.content_provenance != "observed-content":
         raise SystemExit("--content-provenance requires a planned content query")
     period_mode = (
@@ -363,7 +365,7 @@ Run the required retrieval layers in order and record one of `HIT`, `MISS`, or `
 ## Layer 4: selected original outputs
 
 - Need: explicit accepted-output continuity, otherwise `N/A`
-- Source searched: `/Users/jquery/Documents/inuYasha-design/selected-output`
+- Source searched: `selected-output` (configured source library)
 - Result: `SKIP` unless continuity was requested
 - Selected item IDs:
 - Usable evidence:

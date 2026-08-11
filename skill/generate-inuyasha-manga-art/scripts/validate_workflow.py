@@ -42,6 +42,8 @@ REQUIRED_FILES = (
     "scripts/validate_all_tasks.py",
     "scripts/migrate_art_tasks.py",
     "scripts/archive_art_task.py",
+    "scripts/run-python",
+    "scripts/run-python.ps1",
 )
 EXPECTED_CATALOG_SCHEMA = "5"
 
@@ -189,7 +191,14 @@ def main() -> int:
                     "SELECT item_id, subjects, forms, subject_forms, shot_types, tags "
                     "FROM items WHERE kind = 'image'"
                 ).fetchall()
-                for item_id, subjects_json, forms_json, subject_forms_json, shots_json, tags_json in metadata_rows:
+                for (
+                    item_id,
+                    subjects_json,
+                    forms_json,
+                    subject_forms_json,
+                    shots_json,
+                    tags_json,
+                ) in metadata_rows:
                     subjects = set(json.loads(subjects_json or "[]"))
                     forms = set(json.loads(forms_json or "[]"))
                     subject_forms = json.loads(subject_forms_json or "{}")
@@ -208,10 +217,10 @@ def main() -> int:
                         )
                     tags = set(json.loads(tags_json or "[]"))
                     shots = set(json.loads(shots_json or "[]"))
-                    if (
-                        {"view-angle:back", "suitable-for:back-view"} & tags
-                        and "back-view" not in shots
-                    ):
+                    if {
+                        "view-angle:back",
+                        "suitable-for:back-view",
+                    } & tags and "back-view" not in shots:
                         failures.append(
                             f"back-view annotation was not promoted to shot facet: {item_id}"
                         )

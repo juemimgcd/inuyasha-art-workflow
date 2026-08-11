@@ -1,11 +1,37 @@
 {
   "schema_version": 1,
-  "workflow_root": "/Users/jquery/Documents/inuYasha-design/reference-workflow",
+  "workflow_root": "${REPO_ROOT}/workflow/reference-workflow",
+  "path_aliases": [
+    {
+      "from": "/Users/jquery/Documents/inuYasha-design/reference-workflow",
+      "to": "${REPO_ROOT}/workflow/reference-workflow"
+    },
+    {
+      "from": "/Users/jquery/Documents/inuyahsa-official",
+      "to": "${REPO_ROOT}/libraries/inuyahsa-official"
+    },
+    {
+      "from": "/Users/jquery/Documents/inuYasha-design/origin-photos",
+      "to": "${REPO_ROOT}/libraries/origin-photos"
+    },
+    {
+      "from": "/Users/jquery/Documents/inuyasha-mine",
+      "to": "${REPO_ROOT}/libraries/inuyasha-mine"
+    },
+    {
+      "from": "/Users/jquery/Documents/inuYasha-design/selected-output",
+      "to": "${REPO_ROOT}/libraries/selected-output"
+    },
+    {
+      "from": "/Users/jquery/.codex/skills/generate-inuyasha-manga-art",
+      "to": "${SKILL_DIR}"
+    }
+  ],
   "sources": [
     {
       "id": "official",
       "label": "官方角色设定集",
-      "path": "/Users/jquery/Documents/inuyahsa-official",
+      "path": "${REPO_ROOT}/libraries/inuyahsa-official",
       "source_type": "image-directory",
       "medium": "identity",
       "authority": "canonical-identity",
@@ -41,7 +67,7 @@
     {
       "id": "manga-curated",
       "label": "持续扩充的精选漫画原图",
-      "path": "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos",
+      "path": "${REPO_ROOT}/libraries/origin-photos/manga-photos",
       "source_type": "image-directory",
       "medium": "manga",
       "authority": "selected-medium-original",
@@ -63,7 +89,7 @@
     {
       "id": "user-continuity",
       "label": "用户原创与连续性参考",
-      "path": "/Users/jquery/Documents/inuyasha-mine",
+      "path": "${REPO_ROOT}/libraries/inuyasha-mine",
       "source_type": "image-directory",
       "medium": "user-original",
       "authority": "user-continuity",
@@ -73,7 +99,7 @@
     {
       "id": "tv-curated",
       "label": "精选 TV 动画截图",
-      "path": "/Users/jquery/Documents/inuYasha-design/origin-photos/TV-photos",
+      "path": "${REPO_ROOT}/libraries/origin-photos/TV-photos",
       "source_type": "image-directory",
       "medium": "tv",
       "authority": "selected-medium-original",
@@ -95,7 +121,7 @@
     {
       "id": "selected-output",
       "label": "精选原创成图",
-      "path": "/Users/jquery/Documents/inuYasha-design/selected-output",
+      "path": "${REPO_ROOT}/libraries/selected-output",
       "source_type": "image-directory",
       "medium": "user-original",
       "authority": "selected-user-original",

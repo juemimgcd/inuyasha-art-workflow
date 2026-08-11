@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import json
 import io
+import json
+import os
 import sys
 import tempfile
 import unittest
@@ -54,10 +55,72 @@ from validate_art_task import (
     unchanged_consecutive_errors,
 )
 from workflow_common import (
+    CONFIG_PATH,
     annotation_shot_types,
     infer_structured_metadata,
     infer_subjects,
+    load_config,
+    repository_root,
+    resolve_recorded_path,
 )
+
+
+class PortabilityTests(unittest.TestCase):
+    def test_config_resolves_bundled_sources_from_repository_root(self) -> None:
+        config = load_config()
+        root = repository_root()
+        self.assertEqual(
+            Path(config["workflow_root"]), root / "workflow" / "reference-workflow"
+        )
+        for source in config["sources"]:
+            self.assertTrue(Path(source["path"]).is_absolute())
+            self.assertTrue(Path(source["path"]).is_dir(), source["id"])
+
+    def test_config_keeps_repository_tokens_in_source_file(self) -> None:
+        raw = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(
+            raw["workflow_root"], "${REPO_ROOT}/workflow/reference-workflow"
+        )
+        self.assertTrue(
+            all(source["path"].startswith("${REPO_ROOT}/") for source in raw["sources"])
+        )
+
+    def test_historical_path_alias_accepts_windows_separators(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            target_root = Path(temp) / "workflow"
+            expected = target_root / "tasks" / "sample" / "result.png"
+            config = {
+                "path_aliases": [{"from": "C:/legacy/workflow", "to": str(target_root)}]
+            }
+            actual = resolve_recorded_path(
+                r"C:\legacy\workflow\tasks\sample\result.png", config
+            )
+            self.assertEqual(actual, expected.resolve())
+
+    def test_historical_alias_wins_when_original_machine_path_still_exists(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            legacy_root = root / "legacy"
+            portable_root = root / "portable"
+            legacy_file = legacy_root / "tasks" / "sample.json"
+            legacy_file.parent.mkdir(parents=True)
+            legacy_file.write_text("legacy", encoding="utf-8")
+            config = {
+                "path_aliases": [{"from": str(legacy_root), "to": str(portable_root)}]
+            }
+            self.assertEqual(
+                resolve_recorded_path(legacy_file, config),
+                (portable_root / "tasks" / "sample.json").resolve(),
+            )
+
+    def test_workflow_home_environment_overrides_copied_skill_location(self) -> None:
+        with (
+            tempfile.TemporaryDirectory() as temp,
+            patch.dict(os.environ, {"INUYASHA_WORKFLOW_HOME": temp}),
+        ):
+            self.assertEqual(repository_root(), Path(temp).resolve())
 
 
 class MetadataTests(unittest.TestCase):
@@ -148,9 +211,7 @@ class ReferenceValidationTests(unittest.TestCase):
             forms=["child-form"],
             subject_forms={"犬夜叉": ["child-form"]},
         )
-        validate_reference(
-            row, "form", "manga:test", "manga", {"犬夜叉": "child-form"}
-        )
+        validate_reference(row, "form", "manga:test", "manga", {"犬夜叉": "child-form"})
         self.assertIn("exact requested form", instruction_for("form", "manga"))
         with self.assertRaises(SystemExit):
             validate_reference(
@@ -500,7 +561,9 @@ class ReferenceValidationTests(unittest.TestCase):
             (task / "prompt.md").write_text("changed prompt", encoding="utf-8")
             self.assertEqual(unchanged_consecutive_errors(task), 0)
 
-    def test_retry_stop_survives_prompt_changes_after_two_technical_errors(self) -> None:
+    def test_retry_stop_survives_prompt_changes_after_two_technical_errors(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             task = Path(directory)
             for number in ("001", "002"):
@@ -535,9 +598,7 @@ class ReferenceValidationTests(unittest.TestCase):
                 json.dumps(
                     {
                         "status": "rejected",
-                        "failures": [
-                            {"category": "composition", "note": "wrong crop"}
-                        ],
+                        "failures": [{"category": "composition", "note": "wrong crop"}],
                     }
                 ),
                 encoding="utf-8",
@@ -627,9 +688,7 @@ class IntentWorkflowTests(unittest.TestCase):
 
     def test_elapsed_seconds_requires_ordered_timezone_timestamps(self) -> None:
         self.assertEqual(
-            elapsed_seconds(
-                "2026-08-10T20:00:00+08:00", "2026-08-10T20:07:00+08:00"
-            ),
+            elapsed_seconds("2026-08-10T20:00:00+08:00", "2026-08-10T20:07:00+08:00"),
             420.0,
         )
         with self.assertRaises(ValueError):
@@ -696,9 +755,7 @@ class IntentWorkflowTests(unittest.TestCase):
             ):
                 self.assertEqual(record_attempt_main(), 0)
             attempt = json.loads(
-                (task / "attempts" / "001" / "attempt.json").read_text(
-                    encoding="utf-8"
-                )
+                (task / "attempts" / "001" / "attempt.json").read_text(encoding="utf-8")
             )
             self.assertEqual(attempt["response_started_at"], started_at)
             self.assertEqual(attempt["generation_seconds"], 10.0)
@@ -768,7 +825,9 @@ class IntentWorkflowTests(unittest.TestCase):
         }
         prompt = compile_prompt(self.brief("new"), manifest)
         self.assertIn("Cross-medium content conversion", prompt)
-        self.assertIn("translate only `只参考妖怪张口的阶段` from tv into manga", prompt)
+        self.assertIn(
+            "translate only `只参考妖怪张口的阶段` from tv into manga", prompt
+        )
         self.assertIn("exact-focus content evidence fourth", prompt)
 
     def test_local_microfix_prompt_uses_compact_prompt_invariants(self) -> None:
@@ -862,9 +921,7 @@ class IntentWorkflowTests(unittest.TestCase):
                     "source_attempt": source,
                 }
             ]
-            self.assertEqual(
-                candidate_source_failures(child, brief, references), []
-            )
+            self.assertEqual(candidate_source_failures(child, brief, references), [])
 
     def test_identity_ledger_expands_human_form_exclusions(self) -> None:
         brief = self.brief("new")

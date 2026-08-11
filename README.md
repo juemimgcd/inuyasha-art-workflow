@@ -13,27 +13,54 @@ Private snapshot of the local Codex skill, its reference workflow, source librar
 
 The snapshot intentionally omits only rebuildable Python bytecode caches and macOS `.DS_Store` files.
 
-## Restore to the original macOS layout
+## Windows 11 and PowerShell setup
 
-The current workflow records absolute paths. To reproduce the existing installation without editing those records, restore the directories to their original locations:
+Native Windows is supported. Clone the repository to a short local path such as
+`C:\src\inuyasha-art-workflow` (avoid OneDrive-synced folders), open PowerShell
+in the clone, and run:
 
-```zsh
-rsync -a skill/generate-inuyasha-manga-art/ ~/.codex/skills/generate-inuyasha-manga-art/
-rsync -a workflow/reference-workflow/ ~/Documents/inuYasha-design/reference-workflow/
-rsync -a libraries/inuyahsa-official/ ~/Documents/inuyahsa-official/
-rsync -a libraries/origin-photos/ ~/Documents/inuYasha-design/origin-photos/
-rsync -a libraries/inuyasha-mine/ ~/Documents/inuyasha-mine/
-rsync -a libraries/selected-output/ ~/Documents/inuYasha-design/selected-output/
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\setup-windows.ps1
 ```
 
-After restoring, check the catalog before using it:
+The setup script:
 
-```zsh
-~/.codex/skills/generate-inuyasha-manga-art/scripts/run-python \
-  ~/.codex/skills/generate-inuyasha-manga-art/scripts/build_reference_index.py --check
+- creates `.venv` and installs Pillow;
+- copies the skill to `$HOME\.agents\skills\generate-inuyasha-manga-art`;
+- stores `INUYASHA_WORKFLOW_HOME` for the current user;
+- enables long paths for this Git checkout;
+- rebuilds the machine-local SQLite catalog and validates the workflow.
+
+Restart Codex after setup. The catalog must be rebuilt on Windows because it
+contains machine-local filesystem paths. Existing task and attempt JSON remains
+unchanged: runtime path aliases map the original macOS prefixes to this clone.
+
+Run an individual workflow command from PowerShell with:
+
+```powershell
+$skill = "$HOME\.agents\skills\generate-inuyasha-manga-art"
+& "$skill\scripts\run-python.ps1" "$skill\scripts\build_reference_index.py" --check
 ```
 
-Exit code `0` means the catalog is fresh. Exit code `3` means it should be rebuilt by running the same command without `--check`.
+Exit code `0` means the catalog is fresh; exit code `3` means it should be
+rebuilt by running the same command without `--check`. `pdftoppm`/Poppler is
+optional and needed only when preparing a page directly from a PDF; the bundled
+image libraries work without it.
+
+## macOS and Linux checkout
+
+The checked-in launcher discovers Python 3 or the repository `.venv`:
+
+```sh
+skill/generate-inuyasha-manga-art/scripts/run-python \
+  skill/generate-inuyasha-manga-art/scripts/build_reference_index.py --check
+```
+
+Configuration is repository-relative on every platform. Set
+`INUYASHA_WORKFLOW_HOME` only when the skill is copied outside the clone, and
+set `INUYASHA_WORKFLOW_ROOT` only when generated workflow data should live in a
+different directory.
 
 ## Privacy and rights notice
 

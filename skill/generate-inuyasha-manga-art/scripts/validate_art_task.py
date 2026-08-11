@@ -37,6 +37,7 @@ from workflow_common import (
     load_config,
     now_iso,
     open_database,
+    resolve_recorded_path,
     workflow_paths,
     workflow_root,
 )
@@ -77,7 +78,7 @@ def crop_derives_from_source(
 def output_path(result: dict) -> Path | None:
     for key in ("output", "task_output", "accepted_output"):
         if result.get(key):
-            return Path(result[key]).expanduser()
+            return resolve_recorded_path(result[key])
     return None
 
 
@@ -108,7 +109,7 @@ def candidate_source_failures(
     if attempt.get("status") not in {"accepted", "rejected"}:
         failures.append("candidate source attempt must contain an image output")
     output_text = attempt.get("output")
-    output = Path(output_text).expanduser().resolve() if output_text else None
+    output = resolve_recorded_path(output_text) if output_text else None
     if output is None or not output.is_file():
         failures.append("candidate source output is missing")
         return failures
@@ -117,7 +118,7 @@ def candidate_source_failures(
         failures.append("candidate source attempt number does not match its directory")
     if source.get("status") != attempt.get("status"):
         failures.append("brief.candidate_source status does not match attempt.json")
-    if Path(source.get("output", "")).expanduser().resolve() != output:
+    if resolve_recorded_path(source.get("output", "")) != output:
         failures.append("brief.candidate_source output does not match attempt.json")
     if attempt.get("output_sha256") != output_hash:
         failures.append("candidate source output hash changed after attempt recording")
@@ -127,7 +128,7 @@ def candidate_source_failures(
     if target.get("role") != "target":
         failures.append("candidate edit must place its source attempt target first")
     else:
-        original = Path(target.get("original_path", "")).expanduser().resolve()
+        original = resolve_recorded_path(target.get("original_path", ""))
         if original != output:
             failures.append(
                 "candidate edit target does not match the source attempt output"
@@ -143,7 +144,7 @@ def candidate_source_failures(
     local_edit = brief.get("local_edit") or {}
     if local_edit.get("mode") != "crop-composite":
         failures.append("candidate edits require crop-composite local_edit metadata")
-    elif Path(local_edit.get("target", "")).expanduser().resolve() != output:
+    elif resolve_recorded_path(local_edit.get("target", "")) != output:
         failures.append("candidate local_edit target does not match the source attempt")
     return failures
 
@@ -334,9 +335,7 @@ def main() -> int:
             ) or response_window.get("started_at")
             try:
                 parse_timestamp(response_started_at)
-                pre_generation_elapsed = elapsed_seconds(
-                    response_started_at, now_iso()
-                )
+                pre_generation_elapsed = elapsed_seconds(response_started_at, now_iso())
             except (TypeError, ValueError) as exc:
                 failures.append(f"invalid response-window.json: {exc}")
         if pre_generation_elapsed is not None:
@@ -372,8 +371,7 @@ def main() -> int:
             )
         elif (
             response_started_at is None
-            and unchanged_consecutive_errors(task_dir)
-            > budget["max_technical_retries"]
+            and unchanged_consecutive_errors(task_dir) > budget["max_technical_retries"]
         ):
             failures.append(
                 "retry stop: two consecutive errors used the unchanged prompt and "
@@ -402,7 +400,7 @@ def main() -> int:
             failures.append(
                 f"manifest order is not sequential at {item_id or expected_order}"
             )
-        rendered = Path(entry.get("rendered_path", "")).expanduser()
+        rendered = resolve_recorded_path(entry.get("rendered_path", ""))
         if entry.get("source_id") == "user-supplied":
             if role not in {"target", "composition"}:
                 failures.append(f"unsupported user-supplied role: {role}")
@@ -413,7 +411,7 @@ def main() -> int:
                 if crop_box is None:
                     transport = entry.get("transport")
                     if transport:
-                        source = Path(entry.get("original_path", "")).expanduser()
+                        source = resolve_recorded_path(entry.get("original_path", ""))
                         try:
                             if not isinstance(transport, dict):
                                 raise ValueError("transport must be an object")
@@ -447,9 +445,7 @@ def main() -> int:
                                     rendered_image.width,
                                     rendered_image.height,
                                 ]
-                            if source_dimensions != transport.get(
-                                "source_dimensions"
-                            ):
+                            if source_dimensions != transport.get("source_dimensions"):
                                 failures.append(
                                     f"external transport source dimensions changed: {source}"
                                 )
@@ -486,7 +482,7 @@ def main() -> int:
                             f"prepared reference content changed: {rendered}"
                         )
                 else:
-                    source = Path(entry.get("original_path", "")).expanduser()
+                    source = resolve_recorded_path(entry.get("original_path", ""))
                     normalized_crop = None
                     try:
                         normalized_crop = tuple(crop_box)
@@ -601,7 +597,10 @@ def main() -> int:
                     "fallback-medium-original provenance requires cross-medium content"
                 )
             instructions = entry.get("instructions") or ""
-            if "Control only the exact visible content named by Exact focus" not in instructions:
+            if (
+                "Control only the exact visible content named by Exact focus"
+                not in instructions
+            ):
                 failures.append(f"content authority instruction is missing: {item_id}")
             if expected_cross_medium and "This is cross-medium" not in instructions:
                 failures.append(
@@ -717,7 +716,10 @@ def main() -> int:
         planned_focus = (brief.get("content_need") or {}).get("focus") or ""
         if planned_focus and planned_focus not in prompt:
             failures.append("compiled prompt does not name the exact content focus")
-        if content_entry.get("cross_medium") and "Cross-medium content conversion" not in prompt:
+        if (
+            content_entry.get("cross_medium")
+            and "Cross-medium content conversion" not in prompt
+        ):
             failures.append(
                 "compiled prompt is missing the cross-medium conversion clause"
             )
@@ -728,13 +730,9 @@ def main() -> int:
             failures.append(
                 "compiled prompt does not label fallback-medium-original provenance"
             )
-        selected_content_source = (
-            "manga-curated" if medium == "manga" else "tv-curated"
-        )
+        selected_content_source = "manga-curated" if medium == "manga" else "tv-curated"
         selected_result = retrieval_result(evidence, "Selected-medium result")
-        fallback_result = retrieval_result(
-            evidence, "Cross-medium fallback result"
-        )
+        fallback_result = retrieval_result(evidence, "Cross-medium fallback result")
         if content_entry.get("source_id") == selected_content_source:
             if selected_result != "HIT":
                 failures.append(
@@ -746,9 +744,7 @@ def main() -> int:
                     "cross-medium content requires selected-medium MISS or INSUFFICIENT"
                 )
             if fallback_result != "HIT":
-                failures.append(
-                    "cross-medium content requires a recorded fallback HIT"
-                )
+                failures.append("cross-medium content requires a recorded fallback HIT")
 
     if intent in {"edit", "microfix"} and (not resolved or resolved[0][0] != "target"):
         failures.append("edit tasks require a target reference first")
@@ -808,7 +804,7 @@ def main() -> int:
             and output.is_file()
             and local_edit.get("mode") == "crop-composite"
         ):
-            source_target = Path(local_edit.get("target", "")).expanduser()
+            source_target = resolve_recorded_path(local_edit.get("target", ""))
             edit_box = tuple(local_edit.get("edit_box") or ())
             if not source_target.is_file():
                 failures.append(f"local-edit source target is missing: {source_target}")

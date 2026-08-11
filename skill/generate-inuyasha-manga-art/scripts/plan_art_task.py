@@ -70,7 +70,9 @@ def main() -> int:
     args.content_query = args.content_query.strip()
     args.content_focus = args.content_focus.strip()
     if bool(args.content_query) != bool(args.content_focus):
-        raise SystemExit("--content-query and --content-focus must be supplied together")
+        raise SystemExit(
+            "--content-query and --content-focus must be supplied together"
+        )
     if not args.content_query and args.content_provenance != "observed-content":
         raise SystemExit("--content-provenance requires a planned content query")
     config = load_config()
@@ -130,9 +132,9 @@ def main() -> int:
     completed = subprocess.run(command, check=True, capture_output=True, text=True)
     task_dir = Path(completed.stdout.strip().splitlines()[-1]).resolve()
 
-    launcher = (
-        "/Users/jquery/.codex/skills/generate-inuyasha-manga-art/scripts/run-python"
-    )
+    # Record the interpreter already running the planner. This keeps generated
+    # command arrays directly executable on macOS, Linux, and Windows.
+    launcher = sys.executable
     official_commands = []
     official_fallback_commands = []
     for character, form in args.identity_form:
@@ -214,9 +216,7 @@ def main() -> int:
             ]
             if include_shot and args.shot:
                 parts.extend(["--shot", args.shot])
-            parts.extend(
-                ["--limit", str(args.candidate_limit), "--columns", "3"]
-            )
+            parts.extend(["--limit", str(args.candidate_limit), "--columns", "3"])
             return parts
 
         layers.append(

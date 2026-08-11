@@ -17,9 +17,8 @@ from typing import Any
 SKILL_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = SKILL_DIR / "references" / "source-library.json"
 LEGACY_ALIASES_PATH = SKILL_DIR / "references" / "legacy-item-aliases.json"
-DEFAULT_WORKFLOW_ROOT = Path(
-    "/Users/jquery/Documents/inuYasha-design/reference-workflow"
-)
+WORKFLOW_HOME_ENV = "INUYASHA_WORKFLOW_HOME"
+WORKFLOW_ROOT_ENV = "INUYASHA_WORKFLOW_ROOT"
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".bmp"}
 FORM_VALUES = (
     "default-form",
@@ -126,20 +125,93 @@ def load_json(path: Path) -> Any:
         return json.load(handle)
 
 
+def repository_root() -> Path:
+    """Return the portable repository root used by bundled libraries.
+
+    A copied user-level skill cannot infer the clone location, so the Windows
+    setup script persists ``INUYASHA_WORKFLOW_HOME``. A repo-local checkout can
+    infer it from the checked-in ``skill/`` directory without configuration.
+    """
+    configured = os.environ.get(WORKFLOW_HOME_ENV)
+    if configured:
+        return Path(configured).expanduser().resolve()
+    candidate = SKILL_DIR.parent.parent
+    if (candidate / "workflow" / "reference-workflow").is_dir():
+        return candidate.resolve()
+    for candidate in (Path.cwd(), *Path.cwd().parents):
+        if (candidate / "workflow" / "reference-workflow").is_dir() and (
+            candidate / "libraries"
+        ).is_dir():
+            return candidate.resolve()
+    return SKILL_DIR.parent.parent.resolve()
+
+
+def expand_config_path(value: str | Path) -> Path:
+    """Expand workflow tokens and environment variables into an absolute path."""
+    text = str(value)
+    replacements = {
+        "${REPO_ROOT}": str(repository_root()),
+        "${SKILL_DIR}": str(SKILL_DIR),
+        "${HOME}": str(Path.home()),
+    }
+    for token, replacement in replacements.items():
+        text = text.replace(token, replacement)
+    expanded = Path(os.path.expandvars(text)).expanduser()
+    if not expanded.is_absolute():
+        expanded = repository_root() / expanded
+    return expanded.resolve()
+
+
 def load_config(path: Path = CONFIG_PATH) -> dict[str, Any]:
     config = load_json(path)
     if config.get("schema_version") != 1:
         raise ValueError(f"Unsupported source-library schema in {path}")
+    if config.get("workflow_root"):
+        config["workflow_root"] = str(expand_config_path(config["workflow_root"]))
+    for source in config.get("sources", []):
+        source["path"] = str(expand_config_path(source["path"]))
+    for alias in config.get("path_aliases", []):
+        alias["to"] = str(expand_config_path(alias["to"]))
     return config
 
 
 def workflow_root(config: dict[str, Any], override: Path | None = None) -> Path:
     if override is not None:
         return override.expanduser().resolve()
+    environment_root = os.environ.get(WORKFLOW_ROOT_ENV)
+    if environment_root:
+        return Path(environment_root).expanduser().resolve()
     configured = config.get("workflow_root")
-    return (
-        Path(configured).expanduser().resolve() if configured else DEFAULT_WORKFLOW_ROOT
-    )
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return (repository_root() / "workflow" / "reference-workflow").resolve()
+
+
+def resolve_recorded_path(
+    value: str | Path, config: dict[str, Any] | None = None
+) -> Path:
+    """Resolve a current or historical recorded path without rewriting records.
+
+    Task and attempt JSON remains append-only. On a different machine, configured
+    aliases translate the old absolute prefix to the repository snapshot.
+    """
+    normalized = str(value).replace("\\", "/").rstrip("/")
+    active_config = config if config is not None else load_config()
+    for alias in active_config.get("path_aliases", []):
+        source = str(alias.get("from", "")).replace("\\", "/").rstrip("/")
+        if not source or not (
+            normalized == source or normalized.startswith(source + "/")
+        ):
+            continue
+        suffix = normalized[len(source) :].lstrip("/")
+        target = Path(alias["to"])
+        if suffix:
+            target = target.joinpath(*suffix.split("/"))
+        return target.expanduser().resolve()
+    candidate = Path(value).expanduser()
+    if candidate.exists():
+        return candidate.resolve()
+    return candidate.resolve()
 
 
 def workflow_paths(root: Path) -> dict[str, Path]:
@@ -240,16 +312,12 @@ def slugify(value: str, fallback: str = "art-task") -> str:
 
 
 def find_executable(name: str) -> str | None:
+    environment_name = f"INUYASHA_{name.upper().replace('-', '_')}"
+    configured = os.environ.get(environment_name)
+    if configured and Path(configured).expanduser().is_file():
+        return str(Path(configured).expanduser().resolve())
     found = shutil.which(name)
-    if found:
-        return found
-    runtime = (
-        Path(
-            "/Users/jquery/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override"
-        )
-        / name
-    )
-    return str(runtime) if runtime.is_file() and os.access(runtime, os.X_OK) else None
+    return found
 
 
 def stable_file_item_id(source_id: str, content_hash: str) -> str:
@@ -348,7 +416,9 @@ def infer_subject_forms(
         }
 
     filename_parts = [part.strip() for part in re.split(r"__+", path.stem)]
-    subject_sequence = infer_subject_sequence(filename_parts[0] if filename_parts else "")
+    subject_sequence = infer_subject_sequence(
+        filename_parts[0] if filename_parts else ""
+    )
     subject_sequence = [subject for subject in subject_sequence if subject in subjects]
     form_tokens = []
     if len(filename_parts) > 1:
@@ -388,7 +458,9 @@ def infer_subject_forms(
 
     return {
         subject: sorted(forms, key=str.casefold)
-        for subject, forms in sorted(assignments.items(), key=lambda item: item[0].casefold())
+        for subject, forms in sorted(
+            assignments.items(), key=lambda item: item[0].casefold()
+        )
     }
 
 
@@ -396,9 +468,7 @@ def annotation_shot_types(tags: Iterable[str]) -> set[str]:
     return {ANNOTATION_SHOT_MAP[tag] for tag in tags if tag in ANNOTATION_SHOT_MAP}
 
 
-def infer_structured_metadata(
-    path: Path, source: dict[str, Any]
-) -> dict[str, Any]:
+def infer_structured_metadata(path: Path, source: dict[str, Any]) -> dict[str, Any]:
     """Extract stable retrieval facets from folders and a lightweight filename grammar."""
     _, _, folder_tags = folder_metadata(path)
     searchable = " ".join([*folder_tags, path.stem])

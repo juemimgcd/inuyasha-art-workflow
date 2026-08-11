@@ -20,3 +20,19 @@ Validation performed before the initial private GitHub upload on 2026-08-11.
 - 1 task failed final validation: `20260810-kagome-to-sesshomaru-panel-edit`. Its QA checklist is incomplete even though the task is marked final.
 
 The failing and archived historical records are preserved unchanged. This repository is a faithful backup, not a migration that rewrites prior evidence.
+
+## Windows PowerShell adaptation
+
+Validation performed on 2026-08-11 for branch `agent/windows-powershell`:
+
+- Codex skill quick validation: `Skill is valid!`
+- Unit tests: 62 passed, including repository-token expansion and legacy path
+  mapping with Windows separators.
+- A clean temporary workflow root rebuilt successfully from all bundled source
+  libraries: 248 unique images, 277 image locations, and 282 legacy aliases.
+- The rebuilt catalog passed `--check` and `validate_workflow.py` with `ok: true`.
+- The historical task audit against the rebuilt portable catalog kept the same
+  baseline: 11 passed, 2 archived, and the one incomplete-QA task listed above
+  failed. No historical task, attempt, or acceptance record was rewritten.
+- GitHub Actions exercises Python 3.12 on Windows, macOS, and Ubuntu and invokes
+  the native PowerShell launcher on `windows-latest`.
