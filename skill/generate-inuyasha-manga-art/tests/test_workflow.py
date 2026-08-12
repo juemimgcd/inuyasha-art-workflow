@@ -15,6 +15,7 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from annotate_reference import parse_trait
+from benchmark_reference_retrieval import first_relevant_rank, metric_summary
 from composite_local_microfix import composite_local_edit, outside_edit_box_equal
 from continue_art_task import (
     context_box_for,
@@ -57,27 +58,37 @@ from validate_art_task import (
 from workflow_common import (
     CONFIG_PATH,
     annotation_shot_types,
+    eligible_reference_roles,
+    infer_retrieval_traits,
     infer_structured_metadata,
     infer_subjects,
     load_config,
     repository_root,
     resolve_recorded_path,
+    retrieval_relevance,
+    visible_files,
 )
 
 
 class PortabilityTests(unittest.TestCase):
     def test_config_resolves_bundled_sources_from_repository_root(self) -> None:
+        raw = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
         config = load_config()
         root = repository_root()
-        self.assertEqual(
-            Path(config["workflow_root"]), root / "workflow" / "reference-workflow"
+        expected_workflow_root = (
+            root / "workflow" / "reference-workflow"
+            if raw["workflow_root"].startswith("${REPO_ROOT}/")
+            else Path(raw["workflow_root"]).resolve()
         )
+        self.assertEqual(Path(config["workflow_root"]), expected_workflow_root)
         for source in config["sources"]:
             self.assertTrue(Path(source["path"]).is_absolute())
             self.assertTrue(Path(source["path"]).is_dir(), source["id"])
 
     def test_config_keeps_repository_tokens_in_source_file(self) -> None:
         raw = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        if not raw["workflow_root"].startswith("${REPO_ROOT}/"):
+            self.skipTest("installed configuration intentionally uses absolute paths")
         self.assertEqual(
             raw["workflow_root"], "${REPO_ROOT}/workflow/reference-workflow"
         )
@@ -124,6 +135,94 @@ class PortabilityTests(unittest.TestCase):
 
 
 class MetadataTests(unittest.TestCase):
+    def test_intent_traits_map_specific_high_frequency_phrases(self) -> None:
+        self.assertEqual(
+            infer_retrieval_traits("犬夜叉从背后拥抱戈薇"),
+            ["action:embrace-from-behind", "interaction:body-contact"],
+        )
+        self.assertEqual(
+            infer_retrieval_traits("幼年犬夜叉蹲坐抱球"),
+            [
+                "action:hold",
+                "action:crouch",
+                "interaction:hand-prop",
+                "content-object:ball",
+            ],
+        )
+
+    def test_intent_traits_do_not_confuse_names_or_style_with_weather(self) -> None:
+        traits = infer_retrieval_traits("十六夜的黑白漫画画风人物设定")
+        self.assertNotIn("background:night", traits)
+        self.assertNotIn("effect-type:wind", traits)
+
+    def test_intent_traits_cover_sleeves_weapons_and_grave_scenes(self) -> None:
+        traits = infer_retrieval_traits(
+            "犬夜叉把双手藏在袖中，在墓碑前挥动铁碎牙"
+        )
+        self.assertIn("action:sleeve-hidden-hands", traits)
+        self.assertIn("action:swing-weapon", traits)
+        self.assertIn("content-object:grave", traits)
+        self.assertIn("content-object:tessaiga", traits)
+        self.assertIn("content-object:robe-sleeve", traits)
+
+    def test_source_exclude_globs_skip_derived_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "official").mkdir()
+            (root / "output").mkdir()
+            (root / "official" / "sheet.png").write_bytes(b"sheet")
+            (root / "output" / "candidate.png").write_bytes(b"candidate")
+            relative = {
+                path.relative_to(root).as_posix()
+                for path in visible_files(root, ["output/**"])
+            }
+            self.assertEqual(relative, {"official/sheet.png"})
+
+    def test_item_role_tag_can_remove_identity_authority(self) -> None:
+        self.assertEqual(
+            eligible_reference_roles(
+                ["identity"], ["reference-role:content-only"]
+            ),
+            [],
+        )
+        self.assertEqual(
+            eligible_reference_roles(["rendering", "content"], []),
+            ["content", "rendering"],
+        )
+
+    def test_field_aware_ranking_explains_exact_action(self) -> None:
+        exact_item = {
+            "tags": ["action:embrace-from-behind"],
+            "filename_terms": ["人物参考"],
+            "subjects": ["犬夜叉", "戈薇"],
+            "subject_forms": {
+                "犬夜叉": ["half-demon-form"],
+                "戈薇": ["default-form"],
+            },
+            "shot_types": ["two-shot"],
+            "folder_tags": ["犬夜叉"],
+            "eligible_roles": ["content", "rendering"],
+            "relative_path": "犬夜叉/reference.png",
+        }
+        loose_item = {**exact_item, "tags": [], "relative_path": "犬夜叉/拥抱参考.png"}
+        exact_score, reasons = retrieval_relevance(
+            exact_item,
+            query_terms=["action:embrace-from-behind"],
+            subject_forms=[("犬夜叉", "half-demon-form")],
+            shots=["two-shot"],
+            role="content",
+        )
+        loose_score, _ = retrieval_relevance(
+            loose_item,
+            query_terms=["embrace"],
+            subject_forms=[("犬夜叉", "half-demon-form")],
+            shots=["two-shot"],
+            role="content",
+        )
+        self.assertGreater(exact_score, loose_score)
+        self.assertIn("tag exact: action:embrace-from-behind", reasons)
+        self.assertIn("subject-form exact: 犬夜叉=half-demon-form", reasons)
+
     def test_long_subject_does_not_leak_short_subject(self) -> None:
         self.assertEqual(infer_subjects("戈薇爷爷全身表情图"), {"戈薇爷爷"})
 
@@ -177,8 +276,25 @@ class MetadataTests(unittest.TestCase):
 
     def test_visual_trait_values_are_controlled(self) -> None:
         self.assertEqual(parse_trait("view-angle=back"), "view-angle:back")
+        self.assertEqual(parse_trait("action=pass-ball"), "action:pass-ball")
+        self.assertEqual(parse_trait("content-object=mirror"), "content-object:mirror")
         with self.assertRaises(ArgumentTypeError):
             parse_trait("view-angle=backwards")
+
+
+class RetrievalBenchmarkTests(unittest.TestCase):
+    def test_first_relevant_rank_accepts_multiple_truth_items(self) -> None:
+        self.assertEqual(
+            first_relevant_rank(["wrong", "right-b"], {"right-a", "right-b"}),
+            2,
+        )
+        self.assertIsNone(first_relevant_rank(["wrong"], {"right"}))
+
+    def test_metric_summary_reports_top_k_and_mrr(self) -> None:
+        self.assertEqual(
+            metric_summary([1, 2, None, 1], [1, 3]),
+            {"recall_at_1": 0.5, "recall_at_3": 0.75, "mrr": 0.625},
+        )
 
 
 class ReferenceValidationTests(unittest.TestCase):
@@ -189,12 +305,25 @@ class ReferenceValidationTests(unittest.TestCase):
         subjects: list[str],
         forms: list[str],
         subject_forms: dict[str, list[str]] | None = None,
+        eligible_roles: list[str] | None = None,
     ) -> dict:
+        default_roles = {
+            "official": ["identity"],
+            "manga-curated": ["rendering", "composition", "content"],
+            "tv-curated": ["rendering", "composition", "content", "palette"],
+            "selected-output": ["continuity"],
+            "user-continuity": ["continuity", "target"],
+        }
         return {
             "source_id": source,
             "subjects": json.dumps(subjects, ensure_ascii=False),
             "forms": json.dumps(forms),
             "subject_forms": json.dumps(subject_forms or {}, ensure_ascii=False),
+            "eligible_roles": json.dumps(
+                default_roles.get(source, [])
+                if eligible_roles is None
+                else eligible_roles
+            ),
         }
 
     def test_reference_order(self) -> None:
@@ -225,6 +354,39 @@ class ReferenceValidationTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             validate_reference(
                 row, "identity", "official:test", "manga", {"犬夜叉": "human-form"}
+            )
+
+    def test_item_level_role_blocks_content_only_identity(self) -> None:
+        row = self.row(
+            source="official",
+            subjects=["十六夜"],
+            forms=["default-form"],
+            subject_forms={"十六夜": ["default-form"]},
+            eligible_roles=["content"],
+        )
+        with self.assertRaises(SystemExit):
+            validate_reference(
+                row,
+                "identity",
+                "official:content-only",
+                "manga",
+                {"十六夜": "default-form"},
+            )
+
+    def test_item_with_no_eligible_roles_is_rejected(self) -> None:
+        row = self.row(
+            source="official",
+            subjects=["十六夜"],
+            forms=["default-form"],
+            eligible_roles=[],
+        )
+        with self.assertRaises(SystemExit):
+            validate_reference(
+                row,
+                "identity",
+                "official:excluded-item",
+                "manga",
+                {"十六夜": "default-form"},
             )
 
     def test_style_source_must_match_medium(self) -> None:

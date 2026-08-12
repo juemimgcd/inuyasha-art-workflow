@@ -15,9 +15,11 @@ from workflow_common import (
     FORM_VALUES,
     KNOWN_SUBJECTS,
     SHOT_VALUES,
+    infer_retrieval_traits,
     library_signature,
     load_config,
     open_database,
+    retrieval_relevance,
     workflow_paths,
     workflow_root,
 )
@@ -68,6 +70,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--kind", choices=("image", "pdf", "pdf_page"))
     parser.add_argument(
         "--query", default="", help="Whitespace-separated terms; all match by default."
+    )
+    parser.add_argument(
+        "--intent-text",
+        default="",
+        help=(
+            "Natural-language request used only to boost controlled trait matches; "
+            "it never hard-filters candidates or changes evidence authority."
+        ),
     )
     parser.add_argument("--match", choices=("all", "any"), default="all")
     parser.add_argument(
@@ -129,15 +139,6 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def source_ids_for_role(connection: Any, role: str) -> list[str]:
-    rows = connection.execute(
-        "SELECT source_id, evidence_roles FROM sources"
-    ).fetchall()
-    return [
-        row["source_id"] for row in rows if role in json.loads(row["evidence_roles"])
-    ]
-
-
 def main() -> int:
     args = parse_args()
     if args.limit < 1 or args.limit > 200:
@@ -168,12 +169,11 @@ def main() -> int:
         clauses.append("sources.medium = ?")
         parameters.append(args.medium)
     if args.role:
-        allowed = source_ids_for_role(connection, args.role)
-        if not allowed:
-            print("No sources support that evidence role.")
-            return 1
-        clauses.append(f"items.source_id IN ({', '.join('?' for _ in allowed)})")
-        parameters.extend(allowed)
+        clauses.append(
+            "EXISTS (SELECT 1 FROM json_each(items.eligible_roles) AS eligible_role "
+            "WHERE eligible_role.value = ? COLLATE NOCASE)"
+        )
+        parameters.append(args.role)
     if args.kind:
         clauses.append("items.kind = ?")
         parameters.append(args.kind)
@@ -273,6 +273,8 @@ def main() -> int:
     add_json_facet("shot_types", args.shot, "any")
 
     terms = [term.casefold() for term in args.query.split() if term.strip()]
+    intent_traits = infer_retrieval_traits(args.intent_text)
+    scoring_terms = list(dict.fromkeys([*terms, *intent_traits]))
     if terms:
         term_clauses = ["items.search_text LIKE ?" for _ in terms]
         joiner = " AND " if args.match == "all" else " OR "
@@ -288,26 +290,17 @@ def main() -> int:
     ):
         clauses.append("NOT (items.kind = 'pdf_page' AND items.curated = 0)")
 
-    score_sql = "0"
-    if terms:
-        score_sql = " + ".join(
-            "CASE WHEN items.search_text LIKE ? THEN 1 ELSE 0 END" for _ in terms
-        )
-        score_parameters = [f"%{term}%" for term in terms]
-    else:
-        score_parameters = []
-
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     query = f"""
         SELECT items.*, sources.label AS source_label, sources.medium,
-               sources.authority, ({score_sql}) AS score
+               sources.authority
         FROM items
         JOIN sources ON sources.source_id = items.source_id
         {where}
-        ORDER BY score DESC, items.curated DESC, items.source_id,
+        ORDER BY items.curated DESC, items.source_id,
                  COALESCE(items.volume, 0), COALESCE(items.pdf_page, 0), items.relative_path
     """
-    rows = connection.execute(query, [*score_parameters, *parameters]).fetchall()
+    rows = connection.execute(query, parameters).fetchall()
     connection.close()
 
     performance = reference_performance(workflow_paths(root)["tasks"])
@@ -322,9 +315,24 @@ def main() -> int:
             "subject_forms",
             "shot_types",
             "filename_terms",
+            "eligible_roles",
         ):
             item[field] = json.loads(item[field])
         item.pop("search_text", None)
+        item["score"], item["match_reasons"] = retrieval_relevance(
+            item,
+            query_terms=scoring_terms,
+            subjects=args.subject,
+            subject_forms=[
+                (subject, form)
+                for subject, forms in paired_forms.items()
+                for form in forms
+            ],
+            shots=args.shot,
+            folders=args.folder,
+            contents=args.content,
+            role=args.role,
+        )
         item["feedback"] = performance.get(
             item["item_id"],
             {
@@ -335,6 +343,7 @@ def main() -> int:
             },
         )
         item["feedback_rank"] = round(feedback_rank(item["feedback"]), 4)
+        item["inferred_traits"] = intent_traits
         output.append(item)
     output.sort(
         key=lambda item: (
@@ -352,6 +361,8 @@ def main() -> int:
     if not output:
         print("No matching references.")
         return 1
+    if intent_traits:
+        print(f"Inferred traits: {' '.join(intent_traits)}")
     for item in output:
         locator = item["path"]
         if item["kind"] == "pdf_page":
@@ -380,6 +391,8 @@ def main() -> int:
             f"shots={','.join(item['shot_types']) or '-'}"
         )
         print(f"  subject forms: {json.dumps(item['subject_forms'], ensure_ascii=False)}")
+        if item["match_reasons"]:
+            print(f"  matched: {'; '.join(item['match_reasons'])}")
         print(f"  tags: {' '.join(item['tags'])}")
     return 0
 

@@ -17,6 +17,35 @@ Run `build_reference_index.py --check` before retrieval. Exit `0` means fresh; e
 
 The catalog indexes images only. Folder names provide inherited metadata, the leaf folder provides a content label, and structured filenames provide exact subject, form, and shot facets. Store `subject_forms` as a character-to-compatible-forms mapping; retain the flat `forms` list only as a compatibility union. A subject and form query must match the same mapping entry. Structured multi-character filenames may use `character-character__form-form__...`. Use annotations only for visual distinctions absent from paths and filenames.
 
+Source configuration may declare `exclude_globs` for derived outputs or work files
+that live below a source root but must never gain that source's authority. Each
+catalog item stores `eligible_roles`. An explicit annotation such as
+`reference-role:content-only` can only narrow the source roles; it can never add
+authority that the source itself does not possess. Retrieval and preparation
+must enforce item eligibility, not only the source ID.
+
+Free-text retrieval remains a fallback filter. Rank candidates by explainable
+field matches: exact content/action/object first, then interaction/contact,
+subject-form and shot/view compatibility, then conservative accepted-attempt
+feedback as a tie-breaker. Return `match_reasons` so the inspected candidate set
+shows why each item ranked. Do not let a loose path or note substring outrank an
+exact controlled tag.
+
+`--intent-text` may translate explicit natural-language phrases into controlled
+traits for ranking. Inferred traits are boost-only: they do not hard-filter the
+catalog, add evidence authority, create a content layer, or override serial
+retrieval. Avoid ambiguous one-character aliases such as `夜` or `风` that also
+occur in character names or `画风`; prefer concrete phrases such as `深夜`,
+`微风`, `背后拥抱`, `袖中藏手`, and `挥动铁碎牙`. Record the inferred traits in
+new retrieval plans so the ranking decision can be reproduced.
+
+Maintain `references/retrieval-benchmark.json` as a small inspected truth set of
+high-frequency intents. Run `benchmark_reference_retrieval.py --check` after
+changing trait aliases, annotations, ranking weights, or catalog metadata. The
+benchmark must exercise the real search CLI and report Recall@1, Recall@3, MRR,
+per-case ranks, and latency. Relevant item IDs must resolve in the current
+catalog; do not lower thresholds merely to hide a regression.
+
 Promote controlled `view-angle:back` and `suitable-for:back-view` annotations to
 the structured `back-view` shot facet during rebuild. Keep other visual traits
 as search tags unless an explicit promotion rule is documented.

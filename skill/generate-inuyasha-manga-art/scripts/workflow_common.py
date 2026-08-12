@@ -9,6 +9,7 @@ import os
 import re
 import shutil
 import sqlite3
+from fnmatch import fnmatchcase
 from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
@@ -245,14 +246,21 @@ def atomic_write_json(path: Path, value: Any) -> None:
     atomic_write_text(path, json.dumps(value, ensure_ascii=False, indent=2) + "\n")
 
 
-def visible_files(root: Path) -> Iterable[Path]:
+def visible_files(
+    root: Path, exclude_globs: Iterable[str] = ()
+) -> Iterable[Path]:
     if not root.is_dir():
         return []
+    patterns = tuple(pattern.replace("\\", "/") for pattern in exclude_globs)
     return (
         path
         for path in root.rglob("*")
         if path.is_file()
         and not any(part.startswith(".") for part in path.relative_to(root).parts)
+        and not any(
+            fnmatchcase(path.relative_to(root).as_posix(), pattern)
+            for pattern in patterns
+        )
     )
 
 
@@ -266,7 +274,8 @@ def library_signature(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
         inventory_digest = hashlib.sha256()
         if root.is_dir():
             for path in sorted(
-                visible_files(root), key=lambda item: str(item).casefold()
+                visible_files(root, source.get("exclude_globs", [])),
+                key=lambda item: str(item).casefold(),
             ):
                 extension = path.suffix.lower()
                 if (
@@ -466,6 +475,253 @@ def infer_subject_forms(
 
 def annotation_shot_types(tags: Iterable[str]) -> set[str]:
     return {ANNOTATION_SHOT_MAP[tag] for tag in tags if tag in ANNOTATION_SHOT_MAP}
+
+
+REFERENCE_ROLE_TAGS = {
+    "reference-role:identity-only": {"identity"},
+    "reference-role:rendering-only": {"rendering"},
+    "reference-role:composition-only": {"composition"},
+    "reference-role:content-only": {"content"},
+    "reference-role:continuity-only": {"continuity"},
+    "reference-role:target-only": {"target"},
+    "reference-role:palette-only": {"palette"},
+}
+
+
+INTENT_TRAIT_RULES = (
+    ("action:embrace-from-behind", ("背后拥抱", "从背后抱", "从身后抱")),
+    ("action:embrace", ("拥抱", "相拥", "抱住对方")),
+    ("action:carry", ("抱在怀里", "抱着孩子", "怀抱孩子", "抱起")),
+    ("action:reach", ("伸手", "伸向", "伸出双手", "双臂伸出")),
+    ("action:hold", ("手持", "握住", "托住", "抱球", "持刀", "扶住", "承托")),
+    ("action:cut", ("切大根", "切萝卜", "切菜", "用刀切")),
+    ("action:turn-head", ("回头", "转头")),
+    (
+        "action:sleeve-hidden-hands",
+        ("藏在袖中", "袖中藏手", "双手藏袖", "藏进宽袖", "袖手", "揣手"),
+    ),
+    ("action:face-off", ("正面对峙", "迎面对峙")),
+    ("action:draw-weapon", ("拔刀", "拔剑", "出鞘")),
+    ("action:swing-weapon", ("挥刀", "挥剑", "挥动铁碎牙", "挥出铁碎牙")),
+    ("action:jump", ("跳起", "跃起", "腾空")),
+    ("action:run", ("奔跑", "跑向", "冲向")),
+    ("action:sit", ("坐姿", "坐在", "并排坐", "相对而坐")),
+    ("action:kneel", ("跪坐", "跪在", "屈膝")),
+    ("action:crouch", ("蹲坐", "蹲下", "半蹲")),
+    ("action:pass-ball", ("传球", "把球传给", "向前递球")),
+    ("action:catch-ball", ("接球", "准备接球", "双手接球")),
+    ("action:kick-ball", ("踢球", "传踢", "蹴鞠")),
+    ("action:comb-hair", ("梳头", "梳理头发", "用梳子")),
+    ("action:touch-ears", ("把玩犬耳", "揉弄犬耳", "捏犬耳", "摸犬耳")),
+    ("action:adjust-clothing", ("整理衣领", "抚平衣领", "扶正衣领", "整理宽袖")),
+    (
+        "interaction:mother-child",
+        ("母子", "母亲与孩子", "十六夜与幼年犬夜叉", "十六夜和幼年犬夜叉"),
+    ),
+    ("interaction:romantic", ("恋人", "浪漫", "爱意", "恋慕")),
+    ("interaction:face-to-face", ("面对面", "相对站立", "相对而坐")),
+    (
+        "interaction:body-contact",
+        ("身体接触", "相依", "靠在", "倚靠", "抱在怀里", "拥抱"),
+    ),
+    ("interaction:hand-prop", ("手持", "握住", "托住", "抱球", "抓住刀柄", "用梳子")),
+    (
+        "interaction:hand-clothing",
+        ("抓住衣领", "衣领", "整理衣领", "抚平衣领", "袖口"),
+    ),
+    ("interaction:shoulder-rest", ("靠在肩", "倚靠肩", "靠肩")),
+    ("interaction:shared-gaze", ("对视", "四目相对", "目光交汇", "看向彼此")),
+    ("interaction:confrontation", ("对峙", "揪住", "抓住衣领")),
+    ("interaction:caregiving", ("照顾", "抚摸", "梳头", "整理衣领", "扶抱", "承托")),
+    ("interaction:teaching", ("教他", "亲身示范", "礼仪教学", "示范给")),
+    ("interaction:ear-touch", ("把玩犬耳", "揉弄犬耳", "捏犬耳", "摸犬耳")),
+    ("expression:alert-sad", ("清醒而忧伤", "清醒且悲伤", "睁眼忧伤", "倔强悲伤")),
+    ("expression:shy", ("害羞", "羞涩")),
+    ("expression:surprised", ("惊讶", "吃惊", "惊呼", "愕然")),
+    ("expression:gentle", ("温柔", "柔和", "慈爱")),
+    ("expression:restrained", ("克制", "隐忍", "压抑")),
+    ("expression:angry", ("愤怒", "生气", "恼怒")),
+    ("expression:determined", ("坚定", "决然", "专注")),
+    ("expression:crying", ("哭泣", "泪水", "泪痕", "含泪", "落泪")),
+    ("content-object:knife", ("菜刀", "短刀", "小刀")),
+    ("content-object:daikon", ("大根", "萝卜")),
+    ("content-object:grave", ("墓碑", "墓地", "坟墓", "墓前")),
+    ("content-object:tessaiga", ("铁碎牙",)),
+    ("content-object:tenseiga", ("天生牙",)),
+    ("content-object:ball", ("玩球", "传球", "接球", "抱球", "球仍", "蹴鞠", "鹿革鞠")),
+    ("content-object:shopping-bag", ("购物袋", "杂货袋", "采购袋")),
+    ("content-object:bow", ("弓箭", "长弓", "持弓")),
+    ("content-object:well", ("食骨之井", "井边", "井沿")),
+    ("content-object:tree", ("御神木", "神木", "巨树")),
+    ("content-object:comb", ("梳子", "木梳", "细齿梳")),
+    ("content-object:mirror", ("梳妆镜", "铜镜", "镜中倒影", "镜面")),
+    ("content-object:hair-ribbon", ("发绳", "束发结")),
+    ("content-object:robe-sleeve", ("宽袖", "袖口", "衣袖", "袖中")),
+    ("content-object:shrine", ("神社", "鸟居")),
+    ("scene-energy:quiet", ("安静", "幽静", "寂静", "沉默")),
+    ("scene-energy:dialogue", ("交谈", "对话", "说话")),
+    ("scene-energy:action", ("追逐", "奔跑", "战斗", "攻击")),
+    ("scene-energy:impact", ("冲击", "爆发", "猛力挥刀")),
+    ("background:nature", ("森林", "草地", "树林", "湖边", "野外")),
+    ("background:architecture", ("宅邸", "内室", "缘侧", "木廊", "寺庙")),
+    ("background:night", ("夜景", "夜晚", "夜间", "深夜", "雨夜", "夜空")),
+    ("background:interior", ("室内", "内室", "房间", "榻榻米")),
+    ("background:courtyard", ("庭院", "院落")),
+    ("background:shrine", ("神社", "鸟居")),
+    ("background:graveyard", ("墓地", "墓园", "墓碑群")),
+    ("effect-type:wind", ("微风", "风中", "迎风", "随风", "风吹")),
+    ("effect-type:rain", ("下雨", "雨夜", "雨中", "降雨")),
+    ("effect-type:mist", ("雾气", "薄雾", "迷雾")),
+    ("effect-type:speed-lines", ("速度线", "动势线")),
+    ("effect-type:impact", ("冲击线", "撞击", "爆裂")),
+    ("effect-type:aura", ("灵力", "妖气", "光环")),
+    ("view-angle:front", ("正面", "正视镜头")),
+    ("view-angle:three-quarter-front", ("三分之二侧脸", "四分之三正面")),
+    ("view-angle:profile", ("侧脸", "侧面")),
+    ("view-angle:three-quarter-back", ("三分之二背面", "侧后方")),
+    ("view-angle:back", ("背影", "背面", "背对镜头")),
+    ("view-angle:high-angle", ("俯视", "高机位")),
+    ("view-angle:low-angle", ("仰视", "低机位")),
+    ("perspective-risk:high", ("强透视", "大透视", "夸张透视")),
+    ("suitable-for:close-up", ("近景", "特写", "胸像")),
+    ("suitable-for:two-shot", ("双人构图", "两人同框", "双人关系")),
+    ("suitable-for:full-body", ("全身", "完整站姿")),
+    ("suitable-for:back-view", ("背影", "背面", "背对镜头")),
+    ("suitable-for:weapon-mount", ("佩刀", "佩挂", "刀鞘", "后腰佩带")),
+    ("suitable-for:garment-overlap", ("衣物遮挡", "袖子遮挡", "宽袖结构")),
+    ("suitable-for:ground-contact", ("接地", "双脚站稳", "脚踩地面")),
+)
+
+INTENT_TRAIT_SUPERSEDES = {
+    "action:embrace-from-behind": {"action:embrace"},
+    "action:draw-weapon": {"action:hold"},
+    "action:swing-weapon": {"action:hold"},
+    "action:crouch": {"action:sit", "action:kneel"},
+}
+
+
+def infer_retrieval_traits(text: str) -> list[str]:
+    """Map explicit request phrases to controlled retrieval traits.
+
+    These traits are ranking hints only. They never add evidence authority and
+    must not silently create a content-reference requirement.
+    """
+    normalized = " ".join(text.casefold().split())
+    if not normalized:
+        return []
+    inferred: list[str] = []
+    for trait, aliases in INTENT_TRAIT_RULES:
+        if trait in normalized or any(alias.casefold() in normalized for alias in aliases):
+            inferred.append(trait)
+    inferred_set = set(inferred)
+    for specific, superseded in INTENT_TRAIT_SUPERSEDES.items():
+        if specific in inferred_set:
+            inferred_set.difference_update(superseded)
+    return [trait for trait in inferred if trait in inferred_set]
+
+
+def eligible_reference_roles(
+    source_roles: Iterable[str], tags: Iterable[str]
+) -> list[str]:
+    """Return source roles narrowed by an explicit item-level authority tag."""
+    tagged_roles = [REFERENCE_ROLE_TAGS[tag] for tag in tags if tag in REFERENCE_ROLE_TAGS]
+    if not tagged_roles:
+        return sorted(set(source_roles), key=str.casefold)
+    return sorted(set(source_roles).intersection(*tagged_roles), key=str.casefold)
+
+
+def retrieval_relevance(
+    item: dict[str, Any],
+    *,
+    query_terms: Iterable[str] = (),
+    exact_terms: Iterable[str] = (),
+    subjects: Iterable[str] = (),
+    subject_forms: Iterable[tuple[str, str]] = (),
+    shots: Iterable[str] = (),
+    folders: Iterable[str] = (),
+    contents: Iterable[str] = (),
+    role: str | None = None,
+) -> tuple[int, list[str]]:
+    """Score explicit field matches and explain why a candidate ranked highly."""
+    tags = {str(value).casefold() for value in item.get("tags", [])}
+    filename_terms = {
+        str(value).casefold() for value in item.get("filename_terms", [])
+    }
+    item_subjects = {str(value).casefold() for value in item.get("subjects", [])}
+    item_forms = {
+        str(subject).casefold(): {str(value).casefold() for value in forms}
+        for subject, forms in item.get("subject_forms", {}).items()
+    }
+    item_shots = {str(value).casefold() for value in item.get("shot_types", [])}
+    item_folders = {str(value).casefold() for value in item.get("folder_tags", [])}
+    content_label = str(item.get("content_label", "")).casefold()
+    relative_path = str(item.get("relative_path", "")).casefold()
+    note = str(item.get("note", "")).casefold()
+    eligible_roles = {str(value).casefold() for value in item.get("eligible_roles", [])}
+
+    score = 0
+    reasons: list[str] = []
+
+    if role and role.casefold() in eligible_roles:
+        reasons.append(f"eligible role: {role}")
+    for subject, form in subject_forms:
+        if form.casefold() in item_forms.get(subject.casefold(), set()):
+            score += 12
+            reasons.append(f"subject-form exact: {subject}={form}")
+    for subject in subjects:
+        if subject.casefold() in item_subjects:
+            score += 8
+            reasons.append(f"subject exact: {subject}")
+    for shot in shots:
+        if shot.casefold() in item_shots:
+            score += 4
+            reasons.append(f"shot exact: {shot}")
+    for folder in folders:
+        if folder.casefold() in item_folders:
+            score += 3
+            reasons.append(f"folder exact: {folder}")
+    for content in contents:
+        if content.casefold() == content_label:
+            score += 8
+            reasons.append(f"content exact: {content}")
+
+    def tag_weight(term: str) -> int:
+        if term.startswith(("action:", "content-object:", "subject-object:")):
+            return 8
+        if term.startswith("interaction:"):
+            return 7
+        if term.startswith(("contact-type:", "prop-attachment:")):
+            return 5
+        if term.startswith(("expression:", "view-angle:", "suitable-for:")):
+            return 4
+        if term.startswith(("background:", "effect-type:", "scene-energy:")):
+            return 2
+        return 6
+
+    for raw_term in [*exact_terms, *query_terms]:
+        term = raw_term.casefold().strip()
+        if not term:
+            continue
+        if term in tags:
+            weight = tag_weight(term)
+            score += weight
+            reasons.append(f"tag exact: {raw_term}")
+        elif term in filename_terms:
+            score += 8
+            reasons.append(f"filename term exact: {raw_term}")
+        elif term == content_label:
+            score += 8
+            reasons.append(f"content exact: {raw_term}")
+        elif term in item_folders:
+            score += 3
+            reasons.append(f"folder exact: {raw_term}")
+        elif term in relative_path:
+            score += 1
+            reasons.append(f"path contains: {raw_term}")
+        elif term in note:
+            score += 1
+            reasons.append(f"note contains: {raw_term}")
+    return score, reasons
 
 
 def infer_structured_metadata(path: Path, source: dict[str, Any]) -> dict[str, Any]:

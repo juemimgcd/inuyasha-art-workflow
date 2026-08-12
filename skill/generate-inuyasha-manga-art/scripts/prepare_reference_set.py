@@ -402,6 +402,19 @@ def validate_reference(
         raise SystemExit(f"Unknown reference role in manifest: {role}")
 
     source_id = row["source_id"]
+    manifest_to_evidence_role = {"style": "rendering", "form": "rendering"}
+    required_role = manifest_to_evidence_role.get(role, role)
+    has_eligible_roles = (
+        hasattr(row, "keys") and "eligible_roles" in row.keys()
+    )
+    eligible_roles = (
+        json_values(row, "eligible_roles") if has_eligible_roles else set()
+    )
+    if has_eligible_roles and required_role not in eligible_roles:
+        raise SystemExit(
+            f"Reference is not eligible for role {role}: {item_id}; "
+            f"eligible roles={sorted(eligible_roles)}"
+        )
     if role == "identity" and source_id != "official":
         raise SystemExit(
             f"Identity references must come from official setting sheets: {item_id}"
