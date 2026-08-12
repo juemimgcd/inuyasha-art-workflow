@@ -25,6 +25,7 @@ REQUIRED_FILES = (
     "references/quality-gate.md",
     "references/identity-ledgers.json",
     "references/visual-traits.md",
+    "references/retrieval-benchmark.json",
     "scripts/build_reference_index.py",
     "scripts/search_reference_index.py",
     "scripts/browse_curated_styles.py",
@@ -38,6 +39,7 @@ REQUIRED_FILES = (
     "scripts/record_attempt.py",
     "scripts/coverage_report.py",
     "scripts/reference_feedback_report.py",
+    "scripts/benchmark_reference_retrieval.py",
     "scripts/preference_profile.py",
     "scripts/validate_all_tasks.py",
     "scripts/migrate_art_tasks.py",
@@ -45,7 +47,7 @@ REQUIRED_FILES = (
     "scripts/run-python",
     "scripts/run-python.ps1",
 )
-EXPECTED_CATALOG_SCHEMA = "5"
+EXPECTED_CATALOG_SCHEMA = "6"
 
 
 def main() -> int:
@@ -63,6 +65,26 @@ def main() -> int:
         failures.append("identity-ledgers.json must use schema 1")
     if "犬夜叉" not in identity_ledgers.get("characters", {}):
         failures.append("identity-ledgers.json must include 犬夜叉")
+    benchmark_path = SKILL_DIR / "references/retrieval-benchmark.json"
+    benchmark = {}
+    benchmark_case_count = 0
+    try:
+        benchmark = json.loads(benchmark_path.read_text(encoding="utf-8"))
+        if benchmark.get("schema_version") != 1:
+            failures.append("retrieval-benchmark.json must use schema 1")
+        cases = benchmark.get("cases", [])
+        if not isinstance(cases, list):
+            failures.append("retrieval benchmark cases must be a list")
+            cases = []
+        benchmark_case_count = len(cases)
+        case_ids = [case.get("id") for case in cases if isinstance(case, dict)]
+        if not cases or len(case_ids) != len(set(case_ids)):
+            failures.append("retrieval benchmark cases must be non-empty and unique")
+        for name, threshold in benchmark.get("thresholds", {}).items():
+            if not isinstance(threshold, (int, float)) or not 0 <= threshold <= 1:
+                failures.append(f"invalid retrieval benchmark threshold: {name}")
+    except (OSError, json.JSONDecodeError) as exc:
+        failures.append(f"invalid retrieval benchmark dataset: {exc}")
     for source in config["sources"]:
         path = Path(source["path"])
         if not path.is_dir():
@@ -135,6 +157,7 @@ def main() -> int:
                 "shot_types",
                 "filename_terms",
                 "duplicate_count",
+                "eligible_roles",
             }
             missing_columns = required_columns - item_columns
             if missing_columns:
@@ -187,6 +210,50 @@ def main() -> int:
                 ).fetchone()[0]
                 if leaked_grandpa:
                     failures.append("Kagome leaked into Grandpa Higurashi metadata")
+                excluded_official_outputs = connection.execute(
+                    "SELECT COUNT(*) FROM items WHERE source_id = 'official' "
+                    "AND relative_path LIKE 'output/%'"
+                ).fetchone()[0]
+                if excluded_official_outputs:
+                    failures.append("official output directory leaked into catalog")
+                authority_conflicts = connection.execute(
+                    """
+                    SELECT item_id FROM items
+                    WHERE EXISTS (
+                        SELECT 1 FROM json_each(tags)
+                        WHERE value = 'reference-role:content-only'
+                    ) AND EXISTS (
+                        SELECT 1 FROM json_each(eligible_roles)
+                        WHERE value = 'identity'
+                    )
+                    """
+                ).fetchall()
+                if authority_conflicts:
+                    failures.append(
+                        "content-only references remain eligible for identity: "
+                        + ", ".join(row[0] for row in authority_conflicts)
+                    )
+                benchmark_item_ids = {
+                    item_id
+                    for case in benchmark.get("cases", [])
+                    if isinstance(case, dict)
+                    for item_id in case.get("relevant_item_ids", [])
+                }
+                if benchmark_item_ids:
+                    placeholders = ", ".join("?" for _ in benchmark_item_ids)
+                    known_benchmark_ids = {
+                        row[0]
+                        for row in connection.execute(
+                            f"SELECT item_id FROM items WHERE item_id IN ({placeholders})",
+                            sorted(benchmark_item_ids),
+                        )
+                    }
+                    missing_benchmark_ids = benchmark_item_ids - known_benchmark_ids
+                    if missing_benchmark_ids:
+                        failures.append(
+                            "retrieval benchmark references unknown items: "
+                            + ", ".join(sorted(missing_benchmark_ids))
+                        )
                 metadata_rows = connection.execute(
                     "SELECT item_id, subjects, forms, subject_forms, shot_types, tags "
                     "FROM items WHERE kind = 'image'"
@@ -287,6 +354,7 @@ def main() -> int:
         "curated_image_counts": curated_counts,
         "image_location_count": location_count,
         "legacy_alias_count": alias_count,
+        "retrieval_benchmark_cases": benchmark_case_count,
         "failures": failures,
     }
     print(json.dumps(result, ensure_ascii=False, indent=2))

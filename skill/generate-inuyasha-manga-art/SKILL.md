@@ -112,6 +112,13 @@ The local catalog check, search, prompt compilation, and validation should remai
 sub-second. Use `reference_feedback_report.py` to report generation latency and
 controllable pre/post overhead separately by intent.
 
+For retrieval maintenance, run the inspected Top-K benchmark after changing
+intent aliases, annotations, ranking weights, or catalog metadata:
+
+```bash
+scripts/run-python scripts/benchmark_reference_retrieval.py --check --json
+```
+
 ## Route by intent
 
 - `new`: create a new composition. Start with one official identity image per

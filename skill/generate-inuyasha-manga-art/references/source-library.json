@@ -36,6 +36,7 @@
       "medium": "identity",
       "authority": "canonical-identity",
       "evidence_roles": ["identity"],
+      "exclude_globs": ["output/**"],
       "default_tags": ["official", "setting-sheet", "identity"],
       "folder_form_defaults": {
         "犬夜叉设定集": ["half-demon-form"],

@@ -18,6 +18,7 @@ from workflow_common import (
     LEGACY_ALIASES_PATH,
     atomic_write_json,
     annotation_shot_types,
+    eligible_reference_roles,
     ensure_workflow_dirs,
     folder_metadata,
     infer_structured_metadata,
@@ -34,7 +35,7 @@ from workflow_common import (
     workflow_root,
 )
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 def parse_args() -> argparse.Namespace:
@@ -223,6 +224,7 @@ def create_schema(connection: sqlite3.Connection) -> None:
             pdf_page INTEGER,
             page_count INTEGER,
             curated INTEGER NOT NULL DEFAULT 0,
+            eligible_roles TEXT NOT NULL DEFAULT '[]',
             tags TEXT NOT NULL,
             note TEXT NOT NULL,
             search_text TEXT NOT NULL
@@ -273,6 +275,7 @@ def insert_item(connection: sqlite3.Connection, row: dict[str, Any]) -> None:
         "shot_types": "[]",
         "filename_terms": "[]",
         "duplicate_count": 1,
+        "eligible_roles": "[]",
         **row,
     }
     columns = (
@@ -300,6 +303,7 @@ def insert_item(connection: sqlite3.Connection, row: dict[str, Any]) -> None:
         "pdf_page",
         "page_count",
         "curated",
+        "eligible_roles",
         "tags",
         "note",
         "search_text",
@@ -393,7 +397,8 @@ def build_database(
             continue
 
         source_files = sorted(
-            visible_files(root), key=lambda item: str(item).casefold()
+            visible_files(root, source.get("exclude_globs", [])),
+            key=lambda item: str(item).casefold(),
         )
         if source["source_type"] == "image-directory":
             grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -446,6 +451,9 @@ def build_database(
                     )
                 tags, note, annotated = apply_annotations(
                     annotation_ids, tags, "", annotations
+                )
+                eligible_roles = eligible_reference_roles(
+                    source.get("evidence_roles", []), tags
                 )
                 folder_tags = sorted(
                     {
@@ -524,6 +532,9 @@ def build_database(
                         "width": canonical["width"],
                         "height": canonical["height"],
                         "curated": int(source_id.endswith("curated") or annotated),
+                        "eligible_roles": json.dumps(
+                            eligible_roles, ensure_ascii=False
+                        ),
                         "tags": json.dumps(sorted(tags), ensure_ascii=False),
                         "note": note,
                         "search_text": search_text,

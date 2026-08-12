@@ -1,0 +1,247 @@
+{
+  "schema_version": 1,
+  "description": "Curated high-frequency intent benchmark for item-level Top-K retrieval.",
+  "thresholds": {
+    "recall_at_1": 0.9,
+    "recall_at_3": 1.0,
+    "mrr": 0.95
+  },
+  "cases": [
+    {
+      "id": "kagome-embrace-from-behind",
+      "intent_text": "犬夜叉从背后拥抱戈薇",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=half-demon-form", "戈薇=default-form"],
+        "shot": ["two-shot"]
+      },
+      "relevant_item_ids": ["manga-curated:file:e5150d8d84bfd219d430"]
+    },
+    {
+      "id": "kikyo-gentle-embrace",
+      "intent_text": "桔梗温柔拥抱犬夜叉，安静的身体接触",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=half-demon-form", "桔梗=default-form"],
+        "shot": ["two-shot"]
+      },
+      "relevant_item_ids": ["manga-curated:file:787b991f546bf60f1ac4"]
+    },
+    {
+      "id": "kikyo-supports-injured-inuyasha",
+      "intent_text": "桔梗温柔承托受伤的犬夜叉",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=half-demon-form", "桔梗=default-form"],
+        "shot": ["two-shot"]
+      },
+      "relevant_item_ids": ["manga-curated:file:751957d124b296106277"]
+    },
+    {
+      "id": "izayoi-inuyasha-mother-child-kneel",
+      "intent_text": "十六夜与幼年犬夜叉母子面对面屈膝对视",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=half-demon-form", "十六夜=default-form"],
+        "shot": ["two-shot"]
+      },
+      "relevant_item_ids": ["manga-curated:file:8f7a2ef700f3ecd25058"]
+    },
+    {
+      "id": "kagome-inuyasha-romantic-gaze",
+      "intent_text": "犬夜叉和戈薇浪漫面对面对视，近景双人关系",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=half-demon-form", "戈薇=default-form"],
+        "shot": ["two-shot"]
+      },
+      "relevant_item_ids": ["manga-curated:file:f6cd8c02e6d82581bafe"]
+    },
+    {
+      "id": "human-inuyasha-kagome-gaze",
+      "intent_text": "人类形态犬夜叉与戈薇面对面安静对视",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=human-form", "戈薇=default-form"],
+        "shot": ["two-shot"]
+      },
+      "relevant_item_ids": ["manga-curated:file:932d323504b3fda7ee15"]
+    },
+    {
+      "id": "inuyasha-high-perspective-tessaiga-swing",
+      "intent_text": "犬夜叉强透视挥动铁碎牙，带冲击线",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=half-demon-form"],
+        "shot": ["action"]
+      },
+      "relevant_item_ids": ["manga-curated:file:819e53697f4559b21d3b"]
+    },
+    {
+      "id": "human-inuyasha-holds-tessaiga",
+      "intent_text": "人类形态犬夜叉坚定地手持未变化铁碎牙",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=human-form"],
+        "shot": ["action"]
+      },
+      "relevant_item_ids": ["manga-curated:file:937a64a1a7ada14e33a8"]
+    },
+    {
+      "id": "sesshomaru-draws-tenseiga",
+      "intent_text": "杀生丸拔出天生牙，刀身正在出鞘",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["杀生丸=default-form"],
+        "shot": ["action"]
+      },
+      "relevant_item_ids": ["manga-curated:file:ebd39ebc209cdbd1ce74"]
+    },
+    {
+      "id": "sesshomaru-holds-tenseiga",
+      "intent_text": "杀生丸手持天生牙",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["杀生丸=default-form"],
+        "shot": ["action"]
+      },
+      "relevant_item_ids": ["manga-curated:file:b48ac52f161f261e6dd0"]
+    },
+    {
+      "id": "inuyasha-grabs-sota-clothing",
+      "intent_text": "犬夜叉抓住草太衣领对峙",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=half-demon-form", "草太=default-form"],
+        "shot": ["two-shot"]
+      },
+      "relevant_item_ids": ["manga-curated:file:7235724a119015528c7a"]
+    },
+    {
+      "id": "inuyasha-sits-by-well",
+      "intent_text": "犬夜叉安静坐在食骨之井边",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=half-demon-form"],
+        "shot": ["action"]
+      },
+      "relevant_item_ids": [
+        "manga-curated:file:41443db099c7d3393a85",
+        "manga-curated:file:66888293995b507c50b4"
+      ]
+    },
+    {
+      "id": "inuyasha-carries-shippo",
+      "intent_text": "犬夜叉抱起七宝",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=half-demon-form", "七宝=default-form"],
+        "shot": ["two-shot"]
+      },
+      "relevant_item_ids": ["manga-curated:file:02e6cd132e5e96a7c6df"]
+    },
+    {
+      "id": "manga-quiet-kagome-inuyasha-sitting",
+      "intent_text": "犬夜叉和戈薇浪漫安静地并排坐在草地",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=half-demon-form", "戈薇=default-form"],
+        "shot": ["two-shot"]
+      },
+      "relevant_item_ids": ["manga-curated:file:0664d22f673677b8d7f0"]
+    },
+    {
+      "id": "miroku-sango-face-to-face-dialogue",
+      "intent_text": "弥勒和珊瑚面对面交谈对视",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["弥勒=default-form", "珊瑚=default-form"],
+        "shot": ["two-shot"]
+      },
+      "relevant_item_ids": ["manga-curated:file:04851d6589cb2aa26ba2"]
+    },
+    {
+      "id": "child-inuyasha-crouches-with-ball",
+      "intent_text": "幼年犬夜叉在夜间庭院蹲坐抱球",
+      "query": {
+        "source": "tv-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=child-form"],
+        "shot": ["medium-shot"]
+      },
+      "relevant_item_ids": ["tv-curated:file:353d923b159df60ff9e7"]
+    },
+    {
+      "id": "child-inuyasha-turns-while-running",
+      "intent_text": "幼年犬夜叉奔跑中回头惊呼",
+      "query": {
+        "source": "tv-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=child-form"],
+        "shot": ["action"]
+      },
+      "relevant_item_ids": ["tv-curated:file:9735d99198378d61a28f"]
+    },
+    {
+      "id": "child-inuyasha-front-holds-ball",
+      "intent_text": "幼年犬夜叉正面双手抱球",
+      "query": {
+        "source": "tv-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=child-form"],
+        "shot": ["upper-body"]
+      },
+      "relevant_item_ids": ["tv-curated:file:07dd46c60a75b5f64fc2"]
+    },
+    {
+      "id": "child-inuyasha-back-view-courtyard",
+      "intent_text": "幼年犬夜叉背对镜头站在庭院面对人群",
+      "query": {
+        "source": "tv-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=child-form"],
+        "shot": ["back-view"]
+      },
+      "relevant_item_ids": ["tv-curated:file:c2a5fed65f9629a55ac4"]
+    },
+    {
+      "id": "dog-general-graveyard-establishing",
+      "intent_text": "夜间犬大将墓地入口，安静的巨石门和参道远景",
+      "query": {
+        "source": "tv-curated",
+        "role": "content",
+        "subject": ["场景"]
+      },
+      "relevant_item_ids": ["tv-curated:file:e77a871623bf25681507"]
+    },
+    {
+      "id": "sesshomaru-back-view-weapon-mount",
+      "intent_text": "杀生丸背面后腰佩刀结构和刀鞘斜轴",
+      "query": {
+        "source": "official",
+        "role": "identity",
+        "subject_form": ["杀生丸=default-form"],
+        "shot": ["back-view"]
+      },
+      "relevant_item_ids": [
+        "official:file:feb144894cb1375186a7",
+        "official:file:cc54643e82bb244a2c95"
+      ]
+    }
+  ]
+}

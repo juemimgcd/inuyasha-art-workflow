@@ -14,9 +14,11 @@ from task_workflow import feedback_rank, reference_performance
 from workflow_common import (
     FORM_VALUES,
     SHOT_VALUES,
+    infer_retrieval_traits,
     library_signature,
     load_config,
     open_database,
+    retrieval_relevance,
     workflow_paths,
     workflow_root,
 )
@@ -33,6 +35,14 @@ def parse_args() -> argparse.Namespace:
     source_group.add_argument("--source", choices=SOURCE_CHOICES)
     parser.add_argument(
         "--query", default="", help="Optional filename, tag, or note terms."
+    )
+    parser.add_argument(
+        "--intent-text",
+        default="",
+        help=(
+            "Natural-language request used only to rank controlled trait matches; "
+            "it never hard-filters candidates or changes evidence authority."
+        ),
     )
     parser.add_argument(
         "--exact-term",
@@ -59,6 +69,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--subject", action="append", default=[])
     parser.add_argument("--form", action="append", default=[], choices=FORM_VALUES)
     parser.add_argument("--shot", action="append", default=[], choices=SHOT_VALUES)
+    parser.add_argument(
+        "--role",
+        choices=("rendering", "composition", "content", "continuity"),
+        help="Require item-level eligibility for this evidence role.",
+    )
     parser.add_argument("--offset", type=int, default=0)
     parser.add_argument("--limit", type=int, default=20)
     parser.add_argument("--columns", type=int, default=4)
@@ -91,7 +106,15 @@ def main() -> int:
     source_id = args.source or SOURCE_BY_MEDIUM[args.medium or "manga"]
     clauses = ["source_id = ?", "kind = 'image'"]
     parameters: list[object] = [source_id]
+    if args.role:
+        clauses.append(
+            "EXISTS (SELECT 1 FROM json_each(eligible_roles) AS eligible_role "
+            "WHERE eligible_role.value = ? COLLATE NOCASE)"
+        )
+        parameters.append(args.role)
     terms = [term.casefold() for term in args.query.split() if term.strip()]
+    intent_traits = infer_retrieval_traits(args.intent_text)
+    scoring_terms = list(dict.fromkeys([*terms, *intent_traits]))
     if terms:
         joiner = " AND " if args.match == "all" else " OR "
         clauses.append("(" + joiner.join("search_text LIKE ?" for _ in terms) + ")")
@@ -134,6 +157,7 @@ def main() -> int:
                 + ")"
             )
             parameters.extend(values)
+    pairs: list[tuple[str, str]] = []
     if args.subject and args.form:
         if len(args.subject) > 1 and len(args.form) > 1 and len(args.subject) != len(args.form):
             raise SystemExit(
@@ -171,7 +195,8 @@ def main() -> int:
         f"""
         SELECT item_id, path, relative_path, width, height, tags, note,
                folder_path, content_label, folder_tags, subjects, forms,
-               subject_forms, shot_types, filename_terms, duplicate_count
+               subject_forms, shot_types, filename_terms, duplicate_count,
+               eligible_roles
         FROM items
         WHERE {" AND ".join(clauses)}
         ORDER BY relative_path COLLATE NOCASE
@@ -186,20 +211,8 @@ def main() -> int:
         raise SystemExit(f"No images from {source_id} matched this page or query")
 
     performance = reference_performance(paths["tasks"])
-    ranked_rows = sorted(
-        rows,
-        key=lambda row: (
-            -feedback_rank(performance.get(row["item_id"])),
-            row["relative_path"].casefold(),
-        ),
-    )
-    rows = ranked_rows[args.offset : args.offset + args.limit]
-    if not rows:
-        raise SystemExit(f"No images from {source_id} matched this page or query")
-
     candidates = []
-    entries = []
-    for index, row in enumerate(rows, args.offset + 1):
+    for row in rows:
         candidate = dict(row)
         candidate["tags"] = json.loads(candidate["tags"])
         candidate["folder_tags"] = json.loads(candidate["folder_tags"])
@@ -209,8 +222,20 @@ def main() -> int:
             "subject_forms",
             "shot_types",
             "filename_terms",
+            "eligible_roles",
         ):
             candidate[field] = json.loads(candidate[field])
+        candidate["score"], candidate["match_reasons"] = retrieval_relevance(
+            candidate,
+            query_terms=scoring_terms,
+            exact_terms=args.exact_term,
+            subjects=args.subject,
+            subject_forms=pairs,
+            shots=args.shot,
+            folders=args.folder,
+            contents=args.content,
+            role=args.role,
+        )
         candidate["feedback"] = performance.get(
             row["item_id"],
             {
@@ -221,39 +246,59 @@ def main() -> int:
             },
         )
         candidate["feedback_rank"] = round(feedback_rank(candidate["feedback"]), 4)
-        candidate["position"] = index
+        candidate["inferred_traits"] = intent_traits
         candidates.append(candidate)
-        content = row["content_label"] or Path(row["relative_path"]).stem
+
+    candidates.sort(
+        key=lambda candidate: (
+            -candidate["score"],
+            -candidate["feedback_rank"],
+            candidate["relative_path"].casefold(),
+        )
+    )
+    candidates = candidates[args.offset : args.offset + args.limit]
+    if not candidates:
+        raise SystemExit(f"No images from {source_id} matched this page or query")
+
+    entries = []
+    for index, candidate in enumerate(candidates, args.offset + 1):
+        candidate["position"] = index
+        content = candidate["content_label"] or Path(candidate["relative_path"]).stem
         entries.append(
             (
-                Path(row["path"]),
-                f"{index}. {content} | {Path(row['relative_path']).stem}",
+                Path(candidate["path"]),
+                f"{index}. {content} | {Path(candidate['relative_path']).stem}",
             )
         )
 
-    last = args.offset + len(rows)
+    last = args.offset + len(candidates)
     filter_signature = json.dumps(
         {
             "source": source_id,
             "query": args.query,
+            "intent_text": args.intent_text,
+            "inferred_traits": intent_traits,
             "exact_terms": args.exact_term,
             "folders": args.folder,
             "content": args.content,
             "subjects": args.subject,
             "forms": args.form,
             "shots": args.shot,
+            "role": args.role,
         },
         ensure_ascii=False,
         sort_keys=True,
     )
     has_filters = bool(
         args.query
+        or args.intent_text
         or args.exact_term
         or args.folder
         or args.content
         or args.subject
         or args.form
         or args.shot
+        or args.role
     )
     query_suffix = (
         f"-q{hashlib.sha1(filter_signature.encode('utf-8')).hexdigest()[:8]}"
@@ -272,12 +317,15 @@ def main() -> int:
         "source_id": source_id,
         "medium": args.medium,
         "query": args.query,
+        "intent_text": args.intent_text,
+        "inferred_traits": intent_traits,
         "exact_terms": args.exact_term,
         "folders": args.folder,
         "content": args.content,
         "subjects": args.subject,
         "forms": args.form,
         "shots": args.shot,
+        "role": args.role,
         "offset": args.offset,
         "returned": len(candidates),
         "total_matches": total,
@@ -287,6 +335,8 @@ def main() -> int:
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
+        if intent_traits:
+            print(f"Inferred traits: {' '.join(intent_traits)}")
         for row in candidates:
             print(f"[{row['position']}] {row['item_id']}")
             print(f"  {row['path']}")
@@ -295,6 +345,8 @@ def main() -> int:
                     f"  folders: {' / '.join(row['folder_tags'])}; "
                     f"content: {row['content_label']}"
                 )
+            if row["match_reasons"]:
+                print(f"  matched: {'; '.join(row['match_reasons'])}")
         print(f"Contact sheet: {output}")
         print(f"Showing {args.offset + 1}-{last} of {total} matches")
     return 0

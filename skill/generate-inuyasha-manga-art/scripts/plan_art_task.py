@@ -14,6 +14,7 @@ from workflow_common import (
     FORM_VALUES,
     SHOT_VALUES,
     atomic_write_json,
+    infer_retrieval_traits,
     load_config,
     workflow_root,
 )
@@ -75,6 +76,7 @@ def main() -> int:
         )
     if not args.content_query and args.content_provenance != "observed-content":
         raise SystemExit("--content-provenance requires a planned content query")
+    inferred_traits = infer_retrieval_traits(args.request)
     config = load_config()
     root = workflow_root(config, args.workflow_root)
     check = subprocess.run(
@@ -143,6 +145,8 @@ def main() -> int:
             str(SCRIPTS / "search_reference_index.py"),
             "--source",
             "official",
+            "--role",
+            "identity",
             "--subject",
             character,
             "--form",
@@ -167,6 +171,10 @@ def main() -> int:
         str(SCRIPTS / "browse_curated_styles.py"),
         "--source",
         style_source,
+        "--role",
+        "rendering",
+        "--intent-text",
+        args.request,
         *common,
         "--limit",
         str(args.candidate_limit),
@@ -178,6 +186,10 @@ def main() -> int:
         str(SCRIPTS / "browse_curated_styles.py"),
         "--source",
         style_source,
+        "--role",
+        "rendering",
+        "--intent-text",
+        args.request,
         *fallback_common,
         "--limit",
         str(args.candidate_limit),
@@ -211,8 +223,12 @@ def main() -> int:
                 str(SCRIPTS / "browse_curated_styles.py"),
                 "--source",
                 source,
+                "--role",
+                "content",
                 "--exact-term",
                 args.content_query,
+                "--intent-text",
+                args.content_focus,
             ]
             if include_shot and args.shot:
                 parts.extend(["--shot", args.shot])
@@ -255,6 +271,8 @@ def main() -> int:
             str(SCRIPTS / "browse_curated_styles.py"),
             "--source",
             "selected-output",
+            "--role",
+            "continuity",
             *common,
             "--limit",
             str(args.candidate_limit),
@@ -266,6 +284,8 @@ def main() -> int:
             str(SCRIPTS / "browse_curated_styles.py"),
             "--source",
             "selected-output",
+            "--role",
+            "continuity",
             *fallback_common,
             "--limit",
             str(args.candidate_limit),
@@ -292,6 +312,7 @@ def main() -> int:
             else ("continuity" if args.continuity else "fast-default")
         ),
         "candidate_limit": args.candidate_limit,
+        "inferred_retrieval_traits": inferred_traits,
         "timing_policy": {
             "pre_generation_target_seconds": 90,
             "post_generation_target_seconds": 30,
@@ -317,6 +338,7 @@ def main() -> int:
     }
     brief_path = task_dir / "brief.json"
     brief = json.loads(brief_path.read_text(encoding="utf-8"))
+    brief["retrieval_traits"] = inferred_traits
     if args.content_query:
         brief["style_strategy"] = f"{args.medium}-style-cross-medium-content"
     else:
