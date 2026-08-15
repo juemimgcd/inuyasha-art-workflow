@@ -9,9 +9,9 @@ import os
 import re
 import shutil
 import sqlite3
-from fnmatch import fnmatchcase
 from collections.abc import Iterable
 from datetime import datetime
+from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any
 
@@ -126,23 +126,29 @@ def load_json(path: Path) -> Any:
         return json.load(handle)
 
 
+def is_repository_root(candidate: Path) -> bool:
+    return (
+        (candidate / "workflow" / "reference-workflow").is_dir()
+        and (candidate / "libraries").is_dir()
+        and (candidate / "skill" / SKILL_DIR.name).is_dir()
+    )
+
+
 def repository_root() -> Path:
     """Return the portable repository root used by bundled libraries.
 
-    A copied user-level skill cannot infer the clone location, so the Windows
-    setup script persists ``INUYASHA_WORKFLOW_HOME``. A repo-local checkout can
-    infer it from the checked-in ``skill/`` directory without configuration.
+    A repo-local checkout always owns its bundled workflow data. A copied
+    user-level skill cannot infer the clone location, so the Windows setup script
+    persists ``INUYASHA_WORKFLOW_HOME`` for that installed-copy case.
     """
+    candidate = SKILL_DIR.parent.parent
+    if is_repository_root(candidate):
+        return candidate.resolve()
     configured = os.environ.get(WORKFLOW_HOME_ENV)
     if configured:
         return Path(configured).expanduser().resolve()
-    candidate = SKILL_DIR.parent.parent
-    if (candidate / "workflow" / "reference-workflow").is_dir():
-        return candidate.resolve()
     for candidate in (Path.cwd(), *Path.cwd().parents):
-        if (candidate / "workflow" / "reference-workflow").is_dir() and (
-            candidate / "libraries"
-        ).is_dir():
+        if is_repository_root(candidate):
             return candidate.resolve()
     return SKILL_DIR.parent.parent.resolve()
 

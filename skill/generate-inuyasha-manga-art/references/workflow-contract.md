@@ -243,6 +243,26 @@ Machine-readable identity ledgers may expand canonical observable details. A lea
 
 ## Attempt and feedback contract
 
+Before every tracked generation call, create `generation-submission.json`. It
+must snapshot the exact compiled prompt plus ordered generator input paths,
+roles, byte sizes, and content hashes. Schema-5 tasks may enter the generation
+phase only when this snapshot still matches `prompt.md`, `brief.json`, and the
+reference manifest. A target image may not be hidden behind the `new` role.
+`start_response_window.py --mark-generation-started` changes the snapshot state
+to `submitted`; `record_attempt.py` binds its immutable copy to the attempt.
+
+Candidate output should be persisted into the task before recording so later
+continuations can verify its hash. A candidate-local continuation must choose
+exactly one routing mode: a bounded `--edit-box` for crop-and-composite, or an
+explicit `--full-canvas` edit when the requested change crosses that boundary.
+Full-canvas candidates do not claim outside-box pixel preservation.
+
+Wide-shot manga edits must add both a prompt invariant and QA checks preserving
+framing, camera, character scale, pose, action geometry, background, and all
+unchanged regions. The prompt must explicitly forbid portrait/character-sheet
+reframing. A manga microfix may not introduce extra polish or remove identity
+lines outside the named change.
+
 Record every generated candidate before the next generation. Rejected attempts require at least one structured failure category. Accepted attempts may include explicit feedback and preference tags. A rejected candidate does not automatically discredit every reference used to make it: pass `--reference-blame <item-id>` only when the failure is directly attributable to that manifest item. Generator drift, preservation failure, and prompt failure remain recorded without lowering reference ranking.
 
 Reference outcome ranking is a conservative tie-breaker after exact source, subject, form, shot, and query relevance. Accepted attempts support every reference in the accepted set; rejected attempts count only against explicitly blamed items. New or sparsely observed references stay near a neutral prior so one success or failure cannot dominate retrieval.
@@ -260,6 +280,12 @@ even when the prompt or manifest changed. A visual rejection should reopen only
 its highest-priority failure category; make at most one scoped follow-up call,
 then wait for user feedback instead of restarting all retrieval layers or
 running a third automatic full-canvas revision.
+
+A network or transfer failure recorded after at least 180 seconds is an exhausted
+long-running call. It blocks an outer automatic retry even when the ordinary
+technical retry count has not been exhausted. A later retry is valid only when
+the response window contains explicit long-network authorization and a reason;
+the authorization is single-window evidence, not a permanent task override.
 
 Do not impose a fixed total-response SLO on model generation. Measure three phases
 separately: controllable pre-generation overhead, external generation latency,

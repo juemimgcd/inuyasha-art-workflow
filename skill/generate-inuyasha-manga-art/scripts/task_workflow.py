@@ -169,6 +169,23 @@ def _identity_lines(brief: dict[str, Any]) -> list[str]:
     return lines or ["- No named focal character."]
 
 
+def _manga_wide_edit_lock(medium: str, intent: str, shot: str | None) -> str:
+    if medium != "manga" or intent != "edit" or shot != "wide-shot":
+        return ""
+    return (
+        "\nWide-shot preservation lock: use the target's framing, crop, camera "
+        "distance, character scale and placement, major object positions, "
+        "perspective axes, and overall black-white distribution as fixed "
+        "authority unless the named request explicitly changes one of them. "
+        "Do not enlarge the character, recrop or recompose the scene, add "
+        "large new black areas, or dramatize the staging merely to make the "
+        "manga style more obvious. Economy is not uniform simplification across "
+        "the canvas. Correct the finish locally through tapered or selectively "
+        "broken contours, clustered marks, selective detail density, and "
+        "distance falloff while preserving the target's wide-shot balance."
+    )
+
+
 def compile_prompt(brief: dict[str, Any], manifest: dict[str, Any]) -> str:
     """Compile a bounded prompt whose detail level follows the task intent."""
     intent = task_intent(brief)
@@ -189,6 +206,9 @@ def compile_prompt(brief: dict[str, Any], manifest: dict[str, Any]) -> str:
         else ""
     )
     local_edit = brief.get("local_edit") or {}
+    manga_wide_edit_lock = _manga_wide_edit_lock(
+        medium, intent, brief.get("shot")
+    )
     local_edit_line = ""
     if local_edit.get("mode") == "crop-composite":
         edit_box = local_edit.get("edit_box")
@@ -240,6 +260,7 @@ Preserve:
 
 Use the target as the exact continuity and composition authority. Change only what the request requires. Keep official references limited to identity, selected-medium style screenshots limited to rendering, and content references limited to their exact focus. No unrequested text, balloons, borders, signature, logo, or watermark.{preference_line}
 {construction_line}
+{manga_wide_edit_lock}
 """
     else:
         scene = brief.get("scene") or request

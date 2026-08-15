@@ -21,6 +21,7 @@ from task_workflow import (
 )
 from workflow_common import (
     FORM_VALUES,
+    SHOT_VALUES,
     atomic_write_json,
     atomic_write_text,
     ensure_workflow_dirs,
@@ -47,15 +48,33 @@ BASE_QA_ITEMS = [
 
 
 def qa_items(
-    medium: str, intent: str = "new", change_category: str | None = None
+    medium: str,
+    intent: str = "new",
+    change_category: str | None = None,
+    shot: str | None = None,
 ) -> list[tuple[str, str]]:
     source_check = (
         "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情"
         if medium == "manga"
         else "TV 截图只控制配色与动画画法，没有复制其构图、人物或剧情"
     )
+    wide_edit_preservation_checks = (
+        [
+            (
+                "preservation",
+                "远景编辑保持目标图的取景、镜头距离、人物尺度与位置、主要物件、透视轴线和整体黑白分配；除非请求明确点名，否则不得靠放大人物、重新裁切构图、增加大块重黑或强化戏剧性来表现漫画感",
+            ),
+            (
+                "medium",
+                "远景编辑没有把简练误解为全画面均匀变空，而是在原构图内通过线条粗细与断续、局部笔触聚类、选择性细节和距离衰减修正画法",
+            ),
+        ]
+        if medium == "manga" and intent == "edit" and shot == "wide-shot"
+        else []
+    )
     full = [
         *BASE_QA_ITEMS[:-1],
+        *wide_edit_preservation_checks,
         ("process", source_check),
         (
             "process",
@@ -80,6 +99,13 @@ def qa_items(
             (
                 "construction",
                 "修改区域的连接、遮挡、透视和接地关系连续，没有悬浮或穿模",
+            )
+        )
+    if medium == "manga":
+        checks.append(
+            (
+                "preservation",
+                "局部修改没有增加细碎发丝、衣褶、微纹理、平滑阴影或数字精修感，也没有删掉身份关键线条",
             )
         )
     return [
@@ -119,6 +145,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--change-category", choices=CHANGE_CATEGORIES)
     parser.add_argument("--change-request")
     parser.add_argument("--aspect-ratio", default="2:3 portrait")
+    parser.add_argument("--shot", choices=SHOT_VALUES)
     parser.add_argument(
         "--period-mode", choices=("early-rounded", "classic-balanced", "late-action")
     )
@@ -257,6 +284,7 @@ def main() -> int:
         "medium": args.medium,
         "deliverable": args.deliverable,
         "period_mode": period_mode,
+        "shot": args.shot or (parent_brief or {}).get("shot"),
         "style_strategy": f"two-layer-{args.medium}-fast",
         "style_references": [],
         "content_need": content_need,
@@ -289,7 +317,7 @@ def main() -> int:
             "checks": [
                 {"category": category, "check": check, "status": "pending", "note": ""}
                 for category, check in qa_items(
-                    args.medium, intent, args.change_category
+                    args.medium, intent, args.change_category, brief["shot"]
                 )
             ],
         },

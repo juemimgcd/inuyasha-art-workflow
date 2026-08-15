@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import re
+import sqlite3
 from pathlib import Path
 
 from build_reference_index import freshness
@@ -32,6 +33,7 @@ from task_workflow import (
     prompt_limit,
     task_intent,
 )
+from technical_failures import unresolved_exhausted_network_failure
 from workflow_common import (
     library_signature,
     load_config,
@@ -106,7 +108,7 @@ def candidate_source_failures(
         failures.append(f"candidate source attempt is missing: {attempt_path}")
         return failures
     attempt = load_json(attempt_path, failures)
-    if attempt.get("status") not in {"accepted", "rejected"}:
+    if attempt.get("status") not in {"accepted", "rejected", "candidate"}:
         failures.append("candidate source attempt must contain an image output")
     output_text = attempt.get("output")
     output = resolve_recorded_path(output_text) if output_text else None
@@ -142,7 +144,10 @@ def candidate_source_failures(
                 "candidate edit target is missing exact source_attempt provenance"
             )
     local_edit = brief.get("local_edit") or {}
-    if local_edit.get("mode") != "crop-composite":
+    if brief.get("edit_scope") == "full-canvas":
+        if local_edit:
+            failures.append("full-canvas candidate edit cannot include local_edit metadata")
+    elif local_edit.get("mode") != "crop-composite":
         failures.append("candidate edits require crop-composite local_edit metadata")
     elif resolve_recorded_path(local_edit.get("target", "")) != output:
         failures.append("candidate local_edit target does not match the source attempt")
@@ -260,14 +265,18 @@ def main() -> int:
         )
         return 2
 
-    fresh, reason = freshness(
-        paths["database"], config, library_signature(config), paths["annotations"]
-    )
-    if not fresh:
-        failures.append(f"catalog is stale: {reason}")
-
     brief = load_json(task_dir / "brief.json", failures)
     manifest = load_json(task_dir / "reference-manifest.json", failures)
+    catalog_required = any(
+        entry.get("source_id") != "user-supplied"
+        for entry in manifest.get("references", [])
+    )
+    if catalog_required:
+        fresh, reason = freshness(
+            paths["database"], config, library_signature(config), paths["annotations"]
+        )
+        if not fresh:
+            failures.append(f"catalog is stale: {reason}")
     brief_schema = brief.get("schema_version", 0)
     if brief_schema < 4:
         failures.append("brief schema is legacy; migrate or archive this task")
@@ -359,6 +368,39 @@ def main() -> int:
                     "defer non-blocking bookkeeping until after the first preview"
                 )
 
+        submission_path = task_dir / "generation-submission.json"
+        if (
+            int(brief.get("schema_version") or 0) >= 5
+            and response_window.get("phase") == "pre-generation"
+        ):
+            if not submission_path.is_file():
+                failures.append(
+                    "generation submission is missing; run "
+                    "prepare_generation_submission.py before pre-generation validation"
+                )
+            else:
+                from prepare_generation_submission import (
+                    validate_generation_submission,
+                )
+
+                submission = load_json(submission_path, failures)
+                failures.extend(validate_generation_submission(task_dir, submission))
+
+        exhausted = unresolved_exhausted_network_failure(task_dir)
+        if exhausted is not None:
+            _, exhausted_attempt = exhausted
+            authorized_attempt = response_window.get(
+                "network_retry_authorized_attempt"
+            )
+            if not response_window.get("network_retry_authorized") or (
+                authorized_attempt != exhausted_attempt.get("attempt")
+            ):
+                failures.append(
+                    "network retry stop: the latest image call already exhausted "
+                    "the client's internal transport retries; only an explicit "
+                    "user-authorized response window may submit another call"
+                )
+
         technical_error_streak = consecutive_technical_errors(
             task_dir, response_started_at
         )
@@ -388,7 +430,11 @@ def main() -> int:
             f"reference manifest contains more than {reference_limit} images"
         )
 
-    connection = open_database(paths["database"], read_only=True)
+    connection = (
+        open_database(paths["database"], read_only=True)
+        if catalog_required
+        else sqlite3.connect(":memory:")
+    )
     resolved = []
     seen = set()
     identity_coverage = set()
@@ -414,7 +460,7 @@ def main() -> int:
                         source = resolve_recorded_path(entry.get("original_path", ""))
                         try:
                             if not isinstance(transport, dict):
-                                raise ValueError("transport must be an object")
+                                raise TypeError("transport must be an object")
                             if not source.is_file():
                                 raise ValueError(
                                     f"external transport source is missing: {source}"

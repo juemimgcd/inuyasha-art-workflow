@@ -16,6 +16,7 @@ from task_workflow import (
     reference_performance,
     task_intent,
 )
+from technical_failures import is_network_failure, transport_retry_exhausted
 from workflow_common import load_config, workflow_paths, workflow_root
 
 
@@ -34,6 +35,16 @@ def duration_summary(values: list[float]) -> dict:
         "median_seconds": round(median(values), 1) if values else None,
         "p90_seconds": round(percentile(values, 0.9), 1) if values else None,
         "maximum_seconds": round(max(values), 1) if values else None,
+    }
+
+
+def byte_summary(values: list[float]) -> dict:
+    return {
+        "recorded": len(values),
+        "average_bytes": round(mean(values), 1) if values else None,
+        "median_bytes": round(median(values), 1) if values else None,
+        "p90_bytes": round(percentile(values, 0.9), 1) if values else None,
+        "maximum_bytes": round(max(values), 1) if values else None,
     }
 
 
@@ -77,6 +88,12 @@ def main() -> int:
     pre_generation_met = 0
     post_generation_met = 0
     reference_counts: list[int] = []
+    tracked_submissions = 0
+    untracked_remote_attempts = 0
+    exhausted_network_errors = 0
+    input_bytes: list[float] = []
+    semantic_attempts = Counter()
+    semantic_network_errors = Counter()
     for path in tasks_root.glob("*/attempts/*/attempt.json"):
         task_dir = path.parents[2]
         if (task_dir / "archived.json").is_file():
@@ -89,6 +106,31 @@ def main() -> int:
         statuses[status] += 1
         if status == "error":
             error_tasks[path.parents[2].name] += 1
+        actual_inputs = attempt.get("actual_input_images") or []
+        has_submission = bool(attempt.get("generation_submission_sha256"))
+        if has_submission:
+            tracked_submissions += 1
+        generator = str(attempt.get("generator", "")).lower()
+        is_remote_attempt = (
+            "image" in generator
+            and isinstance(attempt.get("duration_seconds"), (int, float))
+            and float(attempt["duration_seconds"]) >= 5
+        ) or status == "error"
+        if is_remote_attempt and not has_submission:
+            untracked_remote_attempts += 1
+        payload = attempt.get("actual_input_bytes")
+        if isinstance(payload, (int, float)) and payload >= 0:
+            input_bytes.append(float(payload))
+        semantic_intent = (
+            "edit"
+            if any(item.get("role") == "target" for item in actual_inputs)
+            else intent
+        )
+        semantic_attempts[semantic_intent] += 1
+        if is_network_failure(attempt):
+            semantic_network_errors[semantic_intent] += 1
+        if transport_retry_exhausted(attempt):
+            exhausted_network_errors += 1
         duration = attempt.get("duration_seconds")
         if isinstance(duration, (int, float)) and duration >= 0:
             durations.append(float(duration))
@@ -180,6 +222,28 @@ def main() -> int:
             if reference_counts
             else 0.0
         ),
+        "generation_transport": {
+            "tracked_submissions": tracked_submissions,
+            "untracked_remote_attempts": untracked_remote_attempts,
+            "transport_retry_exhausted_errors": exhausted_network_errors,
+            "actual_input_bytes": byte_summary(input_bytes),
+            "by_semantic_intent": {
+                intent_name: {
+                    "attempts": semantic_attempts[intent_name],
+                    "network_errors": semantic_network_errors[intent_name],
+                    "network_error_rate": (
+                        round(
+                            semantic_network_errors[intent_name]
+                            / semantic_attempts[intent_name],
+                            4,
+                        )
+                        if semantic_attempts[intent_name]
+                        else 0.0
+                    ),
+                }
+                for intent_name in sorted(semantic_attempts)
+            },
+        },
         "repeated_error_tasks": dict(
             sorted(
                 (
@@ -254,6 +318,13 @@ def main() -> int:
         f"p90={seconds_text(combined_summary['p90_seconds'])}"
     )
     print(f"Average references per attempt: {result['average_reference_count']}")
+    transport = result["generation_transport"]
+    print(
+        "Generation submission tracking: "
+        f"tracked={transport['tracked_submissions']} "
+        f"untracked_remote={transport['untracked_remote_attempts']} "
+        f"transport_exhausted={transport['transport_retry_exhausted_errors']}"
+    )
     if result["repeated_error_tasks"]:
         print(
             "Retry-stop violations: "

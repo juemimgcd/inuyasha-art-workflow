@@ -11,8 +11,8 @@ from build_reference_index import freshness
 from workflow_common import (
     CONFIG_PATH,
     SKILL_DIR,
-    load_config,
     library_signature,
+    load_config,
     workflow_paths,
     workflow_root,
 )
@@ -36,7 +36,11 @@ REQUIRED_FILES = (
     "scripts/plan_art_task.py",
     "scripts/continue_art_task.py",
     "scripts/compile_prompt.py",
+    "scripts/prepare_generation_submission.py",
+    "scripts/prepare_quick_edit.py",
     "scripts/record_attempt.py",
+    "scripts/start_response_window.py",
+    "scripts/technical_failures.py",
     "scripts/coverage_report.py",
     "scripts/reference_feedback_report.py",
     "scripts/benchmark_reference_retrieval.py",
@@ -104,11 +108,13 @@ def main() -> int:
             if not naming_guide.is_file():
                 failures.append(f"missing naming guide: {naming_guide}")
         roles = set(source.get("evidence_roles", []))
-        if source["id"] in {"manga-curated", "tv-curated"}:
-            if not {"rendering", "content"}.issubset(roles):
-                failures.append(
-                    f"{source['id']} must declare rendering and content evidence roles"
-                )
+        if source["id"] in {"manga-curated", "tv-curated"} and not {
+            "rendering",
+            "content",
+        }.issubset(roles):
+            failures.append(
+                f"{source['id']} must declare rendering and content evidence roles"
+            )
         if source["id"] == "official" and "identity" not in roles:
             failures.append("official must declare identity evidence authority")
     source_ids = {source["id"] for source in config["sources"]}
