@@ -8,6 +8,7 @@ import hashlib
 import json
 import re
 import shutil
+import sqlite3
 import subprocess
 import sys
 from pathlib import Path
@@ -390,7 +391,7 @@ def json_values(row, field: str) -> set[str]:
 
 
 def json_object(row, field: str) -> dict[str, list[str]]:
-    if hasattr(row, "keys") and field not in row.keys():
+    if hasattr(row, "keys") and field not in row:
         return {}
     return json.loads(row[field] or "{}")
 
@@ -404,9 +405,7 @@ def validate_reference(
     source_id = row["source_id"]
     manifest_to_evidence_role = {"style": "rendering", "form": "rendering"}
     required_role = manifest_to_evidence_role.get(role, role)
-    has_eligible_roles = (
-        hasattr(row, "keys") and "eligible_roles" in row.keys()
-    )
+    has_eligible_roles = hasattr(row, "keys") and "eligible_roles" in row
     eligible_roles = (
         json_values(row, "eligible_roles") if has_eligible_roles else set()
     )
@@ -495,8 +494,6 @@ def main() -> int:
     config = load_config()
     root = workflow_root(config, args.workflow_root)
     database = workflow_paths(root)["database"]
-    if not database.is_file():
-        raise SystemExit("Catalog missing; run build_reference_index.py first")
 
     task_dir = args.task_dir.expanduser().resolve()
     brief_path = task_dir / "brief.json"
@@ -512,7 +509,22 @@ def main() -> int:
     output.mkdir(exist_ok=True)
     manifest_path = task_dir / "reference-manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    connection = open_database(database, read_only=True)
+    catalog_required = bool(
+        args.select
+        or args.crop
+        or args.focus
+        or any(
+            entry.get("source_id") != "user-supplied"
+            for entry in manifest.get("references", [])
+        )
+    )
+    if catalog_required and not database.is_file():
+        raise SystemExit("Catalog missing; run build_reference_index.py first")
+    connection = (
+        open_database(database, read_only=True)
+        if database.is_file()
+        else sqlite3.connect(":memory:")
+    )
 
     def resolve_item(item_id: str):
         return connection.execute(

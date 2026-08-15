@@ -60,6 +60,10 @@ def context_box_for(
     return left, top, right - left, bottom - top
 
 
+def continuation_intent(candidate_source: dict | None, full_canvas: bool) -> str:
+    return "edit" if candidate_source or full_canvas else "microfix"
+
+
 def recorded_attempt_source(parent: Path, selector: str) -> tuple[Path, dict]:
     """Resolve one immutable candidate output and verify its recorded hash."""
     attempts_root = parent / "attempts"
@@ -127,8 +131,16 @@ def main() -> int:
         metavar="NUMBER|latest",
         help=(
             "Use a recorded candidate from --from-task as a local edit target. "
-            "Requires --edit-box and creates an edit task without accepting the "
-            "candidate."
+            "Requires --edit-box or --full-canvas and creates an edit task without "
+            "accepting the candidate."
+        ),
+    )
+    parser.add_argument(
+        "--full-canvas",
+        action="store_true",
+        help=(
+            "Create a tracked full-canvas edit when the requested change crosses a "
+            "safe crop boundary. Prefer --edit-box for bounded follow-up feedback."
         ),
     )
     parser.add_argument("--inherit-style", action="store_true")
@@ -162,8 +174,10 @@ def main() -> int:
     args = parser.parse_args()
     if args.from_attempt and args.target:
         raise SystemExit("--from-attempt cannot be combined with --target")
-    if args.from_attempt and not args.edit_box:
-        raise SystemExit("--from-attempt requires --edit-box for bounded local editing")
+    if args.edit_box and args.full_canvas:
+        raise SystemExit("--edit-box and --full-canvas are mutually exclusive")
+    if args.from_attempt and not (args.edit_box or args.full_canvas):
+        raise SystemExit("--from-attempt requires --edit-box or --full-canvas")
     if args.context_padding < 0:
         raise SystemExit("--context-padding must be zero or greater")
     if args.target_max_edge < 256:
@@ -192,7 +206,7 @@ def main() -> int:
     if target is None or not target.is_file():
         raise SystemExit("Parent accepted output or --target is missing")
 
-    intent = "edit" if candidate_source else "microfix"
+    intent = continuation_intent(candidate_source, args.full_canvas)
 
     init_command = [
         sys.executable,
@@ -233,6 +247,11 @@ def main() -> int:
     ]
     if candidate_source:
         child_brief["candidate_source"] = candidate_source
+    if args.full_canvas:
+        child_brief["edit_scope"] = "full-canvas"
+        child_brief["prompt_invariants"].append(
+            "整图修改只处理点名问题，未点名的构图、角色和背景关系保持不变"
+        )
     if args.edit_box:
         from PIL import Image
 

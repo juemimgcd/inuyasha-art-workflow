@@ -12,6 +12,7 @@ from task_workflow import (
     latency_budget,
     read_json,
 )
+from technical_failures import unresolved_exhausted_network_failure
 from workflow_common import atomic_write_json, now_iso
 
 
@@ -24,6 +25,18 @@ def main() -> int:
         "--mark-generation-started",
         action="store_true",
         help="Mark the end of controllable preparation without resetting the window.",
+    )
+    parser.add_argument(
+        "--authorize-network-retry",
+        action="store_true",
+        help=(
+            "Open one user-authorized retry after a long network failure already "
+            "exhausted the image client's internal retries."
+        ),
+    )
+    parser.add_argument(
+        "--authorization-note",
+        help="Required audit note describing the user's explicit retry request.",
     )
     parser.add_argument(
         "--response-slo-seconds",
@@ -44,6 +57,19 @@ def main() -> int:
         if not started_at:
             started_at = now_iso()
         generation_started_at = now_iso()
+        submission_path = task_dir / "generation-submission.json"
+        submission = read_json(submission_path) if submission_path.is_file() else None
+        if int(brief.get("schema_version") or 0) >= 5:
+            if submission is None:
+                raise SystemExit(
+                    "prepare_generation_submission.py must snapshot the exact call "
+                    "before generation starts"
+                )
+            from prepare_generation_submission import validate_generation_submission
+
+            submission_failures = validate_generation_submission(task_dir, submission)
+            if submission_failures:
+                raise SystemExit("; ".join(submission_failures))
         window.update(
             {
                 "schema_version": LATENCY_SCHEMA_VERSION,
@@ -63,8 +89,35 @@ def main() -> int:
             }
         )
         atomic_write_json(path, window)
+        if submission is not None:
+            submission.update(
+                {"state": "submitted", "generation_started_at": generation_started_at}
+            )
+            atomic_write_json(submission_path, submission)
         print(path)
         return 0
+
+    if args.authorization_note and not args.authorize_network_retry:
+        raise SystemExit("--authorization-note requires --authorize-network-retry")
+    unresolved = unresolved_exhausted_network_failure(task_dir)
+    if unresolved is not None and not args.authorize_network_retry:
+        attempt_path, _ = unresolved
+        raise SystemExit(
+            "network retry stop: the latest image call already exhausted the "
+            "client's internal transport retries; do not start another call unless "
+            "the user explicitly requests it, then pass --authorize-network-retry "
+            f"and --authorization-note (blocked by {attempt_path})"
+        )
+    if args.authorize_network_retry:
+        if unresolved is None:
+            raise SystemExit(
+                "--authorize-network-retry is valid only after an unresolved "
+                "transport-exhausted network failure"
+            )
+        if not args.authorization_note or not args.authorization_note.strip():
+            raise SystemExit(
+                "--authorize-network-retry requires a non-empty --authorization-note"
+            )
 
     pre_target = (
         args.pre_generation_target_seconds
@@ -86,6 +139,16 @@ def main() -> int:
         "generation_latency_policy": "observe-only",
         "phase": "pre-generation",
     }
+    if unresolved is not None:
+        attempt_path, attempt = unresolved
+        window.update(
+            {
+                "network_retry_authorized": True,
+                "network_retry_authorized_attempt": attempt.get("attempt"),
+                "network_retry_authorization_note": args.authorization_note.strip(),
+                "network_retry_blocking_attempt_path": str(attempt_path),
+            }
+        )
     atomic_write_json(path, window)
     print(path)
     return 0

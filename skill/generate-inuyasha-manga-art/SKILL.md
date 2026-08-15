@@ -72,9 +72,16 @@ Immediately before the image call, mark the phase transition in the same
 execution boundary that launches generation:
 
 ```bash
+scripts/run-python scripts/prepare_generation_submission.py \
+  --task-dir <task-directory>
 scripts/run-python scripts/start_response_window.py \
   --task-dir <task-directory> --mark-generation-started
 ```
+
+The submission snapshot binds the exact compiled prompt and ordered input image
+bytes to the call. For tracked target-only edits, `prepare_quick_edit.py` performs
+task initialization, target preparation, prompt compilation, submission
+snapshotting, and pre-generation validation in one local command.
 
 Optimize only work the agent controls:
 
@@ -102,6 +109,10 @@ Optimize only work the agent controls:
 - A first technical failure may be retried only when the input, wording, or
   transport condition changes. Retry limits depend on consecutive technical
   failures, never on elapsed generation time.
+- A network/transfer error after at least 180 seconds is treated as an exhausted
+  long-running call. Do not make an outer automatic retry unless the current
+  response window was explicitly authorized with
+  `--authorize-network-retry` and an `--authorization-note`.
 - After an image-call failure, record an `error` attempt with
   `technical=NOTE` before commentary or retry. This closes the response window
   and preserves the failure even if the next user message interrupts the turn.
@@ -222,7 +233,12 @@ scripts/run-python scripts/continue_art_task.py \
 output hash, records that candidate as the first `target`, and reuses the same
 crop-and-composite preservation gate. Prefer this route for hands, expressions,
 sleeves, garment overlaps, and other bounded follow-up feedback. Use a tracked
-full-canvas edit only when the requested change truly crosses the local boundary.
+full-canvas edit only when the requested change truly crosses the local boundary;
+pass `--full-canvas` to make that choice explicit.
+
+For wide-shot manga edits, the compiled prompt must preserve framing, camera,
+character scale, pose, action geometry, background, and every unchanged region.
+It must also forbid converting the image into a portrait or character sheet.
 
 ## Attempts and acceptance
 
@@ -233,10 +249,12 @@ the defect:
 ```bash
 scripts/run-python scripts/record_attempt.py \
   --task-dir <task-directory> \
-  --status rejected \
+  --status candidate \
   --output <candidate.png> \
+  --persist-output \
+  --preview-check \
   --duration-seconds 75 \
-  --failure anatomy="左袖和手臂粘连"
+  --json
 ```
 
 After explicit acceptance, record the accepted attempt, complete applicable QA,
@@ -261,3 +279,7 @@ preference profile.
 
 For maintenance, run `reference_feedback_report.py`, `validate_workflow.py`, and
 the relevant task validation. Preserve original libraries and historical attempts.
+When syncing the installed skill back into its packaging repository, use the
+repository sync tool in check/dry-run mode first; it copies only allowlisted
+package files and must not replace catalog, task, library, or generated runtime
+data.

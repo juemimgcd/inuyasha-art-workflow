@@ -76,7 +76,7 @@ class PortabilityTests(unittest.TestCase):
         config = load_config()
         root = repository_root()
         expected_workflow_root = (
-            root / "workflow" / "reference-workflow"
+            (root / "workflow" / "reference-workflow").resolve()
             if raw["workflow_root"].startswith("${REPO_ROOT}/")
             else Path(raw["workflow_root"]).resolve()
         )
@@ -126,12 +126,43 @@ class PortabilityTests(unittest.TestCase):
                 (portable_root / "tasks" / "sample.json").resolve(),
             )
 
-    def test_workflow_home_environment_overrides_copied_skill_location(self) -> None:
+    def test_repo_checkout_ignores_installed_workflow_home(self) -> None:
+        checkout_root = repository_root()
         with (
             tempfile.TemporaryDirectory() as temp,
             patch.dict(os.environ, {"INUYASHA_WORKFLOW_HOME": temp}),
         ):
-            self.assertEqual(repository_root(), Path(temp).resolve())
+            self.assertEqual(repository_root(), checkout_root)
+
+    def test_workflow_home_environment_locates_copied_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            copied_skill = root / ".codex/skills/generate-inuyasha-manga-art"
+            configured_home = root / "portable-package"
+            with (
+                patch("workflow_common.SKILL_DIR", copied_skill),
+                patch.dict(
+                    os.environ,
+                    {"INUYASHA_WORKFLOW_HOME": str(configured_home)},
+                ),
+            ):
+                self.assertEqual(repository_root(), configured_home.resolve())
+
+    def test_incomplete_checkout_does_not_override_workflow_home(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            copied_skill = root / ".agents/skills/generate-inuyasha-manga-art"
+            false_checkout = copied_skill.parent.parent
+            (false_checkout / "workflow/reference-workflow").mkdir(parents=True)
+            configured_home = root / "portable-package"
+            with (
+                patch("workflow_common.SKILL_DIR", copied_skill),
+                patch.dict(
+                    os.environ,
+                    {"INUYASHA_WORKFLOW_HOME": str(configured_home)},
+                ),
+            ):
+                self.assertEqual(repository_root(), configured_home.resolve())
 
 
 class MetadataTests(unittest.TestCase):
@@ -881,6 +912,7 @@ class IntentWorkflowTests(unittest.TestCase):
             (task / "reference-manifest.json").write_text(
                 json.dumps({"references": []}), encoding="utf-8"
             )
+            (task / "prompt.md").write_text("test prompt", encoding="utf-8")
             (task / "response-window.json").write_text(
                 json.dumps(
                     {
