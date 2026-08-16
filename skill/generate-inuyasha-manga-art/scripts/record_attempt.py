@@ -7,8 +7,10 @@ import argparse
 import hashlib
 import json
 import shutil
+import sys
 from pathlib import Path
 
+from preference_profile import write_profile
 from task_workflow import (
     ATTEMPT_SCHEMA_VERSION,
     RESULT_SCHEMA_VERSION,
@@ -89,6 +91,7 @@ def main() -> int:
         ),
     )
     args = parser.parse_args()
+    preference_profile_warning = None
     if args.duration_seconds is not None and args.duration_seconds < 0:
         raise SystemExit("--duration-seconds cannot be negative")
 
@@ -373,6 +376,13 @@ def main() -> int:
             "qa": "pass",
         }
         atomic_write_json(task_dir / "result.json", result)
+        try:
+            write_profile(task_dir.parent.parent)
+        except (OSError, TypeError, ValueError) as exc:
+            preference_profile_warning = (
+                "accepted result was recorded, but the derived preference profile "
+                f"could not be refreshed: {exc}"
+            )
 
     if args.json:
         print(
@@ -386,6 +396,7 @@ def main() -> int:
                     "transport_retry_exhausted": attempt[
                         "transport_retry_exhausted"
                     ],
+                    "preference_profile_warning": preference_profile_warning,
                 },
                 ensure_ascii=False,
                 indent=2,
@@ -393,6 +404,8 @@ def main() -> int:
         )
     else:
         print(attempt_dir / "attempt.json")
+        if preference_profile_warning:
+            print(f"warning: {preference_profile_warning}", file=sys.stderr)
     return 0
 
 

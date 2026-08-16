@@ -16,6 +16,7 @@ from prepare_reference_set import (
     image_pixel_hash,
     source_crop_pixel_hash,
     validate_crop_box,
+    validate_identity_card_reference,
     validate_reference,
     validate_reference_order,
 )
@@ -43,6 +44,15 @@ from workflow_common import (
     workflow_paths,
     workflow_root,
 )
+
+RENDERING_COVERAGE_FIELDS = (
+    "Character mark-making coverage",
+    "Hair and face linework coverage",
+    "Fabric and fold treatment coverage",
+    "Garment value hierarchy coverage",
+    "Scene rendering coverage",
+)
+DOMINANT_MATERIAL_COVERAGE_FIELD = "Dominant material rendering coverage"
 
 
 def parse_args() -> argparse.Namespace:
@@ -217,6 +227,68 @@ def retrieval_result(evidence: str, label: str) -> str:
     return match.group(1) if match else ""
 
 
+def rendering_coverage_failures(
+    evidence: str,
+    references: list[dict],
+    style_count: int,
+    medium: str,
+    dominant_scene_materials: list[str] | None = None,
+) -> list[str]:
+    if not any(f"- {field}:" in evidence for field in RENDERING_COVERAGE_FIELDS):
+        return []
+    failures: list[str] = []
+    expected_coverage = {"HIT"} if style_count else {"N/A", "SKIP"}
+    for field in RENDERING_COVERAGE_FIELDS:
+        match = re.search(
+            rf"^- {re.escape(field)}:\s*(.+?)\s*$",
+            evidence,
+            flags=re.MULTILINE,
+        )
+        value = match.group(1).strip().strip("`") if match else ""
+        status = value.split(maxsplit=1)[0].rstrip(":") if value else ""
+        if status not in expected_coverage:
+            failures.append(
+                f"Layer 2 {field} must record "
+                f"{'HIT' if style_count else 'N/A or SKIP'}"
+            )
+    for entry in references:
+        if entry.get("role") != "style":
+            continue
+        item_id = entry.get("item_id") or "[missing]"
+        if not (entry.get("focus") or "").strip():
+            failures.append(f"style reference has no exact rendering focus: {item_id}")
+        instructions = entry.get("instructions") or ""
+        if medium == "manga" and not all(
+            phrase in instructions
+            for phrase in (
+                "face, hair, fabric, and fold mark-making",
+                "relative paper-white, flat-black",
+                "garment construction",
+            )
+        ):
+            failures.append(
+                f"manga style authority instruction is incomplete: {item_id}"
+            )
+    materials = [
+        str(value).strip()
+        for value in dominant_scene_materials or []
+        if str(value).strip()
+    ]
+    if materials:
+        match = re.search(
+            rf"^- {re.escape(DOMINANT_MATERIAL_COVERAGE_FIELD)}:\s*(.+?)\s*$",
+            evidence,
+            flags=re.MULTILINE,
+        )
+        value = match.group(1).strip().strip("`") if match else ""
+        status = value.split(maxsplit=1)[0].rstrip(":") if value else ""
+        if status != "HIT":
+            failures.append(
+                f"Layer 2 {DOMINANT_MATERIAL_COVERAGE_FIELD} must record HIT"
+            )
+    return failures
+
+
 def technical_retry_limit_reached(
     technical_error_streak: int, max_technical_retries: int
 ) -> bool:
@@ -320,6 +392,13 @@ def main() -> int:
         failures.append(
             "brief.characters and identity_forms must name the same characters"
         )
+    prop_forms = brief.get("prop_forms") or {}
+    props = brief.get("props") or []
+    if set(props) != set(prop_forms):
+        failures.append("brief.props and prop_forms must name the same props")
+    if set(identity_forms) & set(prop_forms):
+        failures.append("brief cannot declare one subject as both character and prop")
+    required_forms = {**identity_forms, **prop_forms}
 
     evidence = (task_dir / "evidence-log.md").read_text(encoding="utf-8")
     if re.search(r"^- [^:\n]+:\s*$", evidence, flags=re.MULTILINE):
@@ -432,12 +511,15 @@ def main() -> int:
 
     connection = (
         open_database(paths["database"], read_only=True)
-        if catalog_required
+        if paths["database"].is_file()
         else sqlite3.connect(":memory:")
     )
     resolved = []
     seen = set()
     identity_coverage = set()
+    identity_card_characters = set()
+    retired_identity_card_reported = False
+    official_identity_characters = set()
     form_coverage = set()
     for expected_order, entry in enumerate(references, 1):
         item_id = entry.get("item_id", "")
@@ -577,9 +659,37 @@ def main() -> int:
             resolved.append((role, item_id))
             continue
 
+        if entry.get("source_id") == "identity-card":
+            if args.stage == "pre-generation" and not retired_identity_card_reported:
+                failures.append(
+                    "identity cards are retired from new generation inputs; use a "
+                    "shot-matched official setting sheet or focused official crop"
+                )
+                retired_identity_card_reported = True
+            try:
+                canonical_id, character = validate_identity_card_reference(
+                    root, entry, identity_forms
+                )
+                if role != "identity":
+                    raise ValueError("identity cards may only use the identity role")
+                instructions = entry.get("instructions") or ""
+                if "provenance-preserving transport bundle" not in instructions:
+                    raise ValueError("identity card authority instruction is missing")
+            except (OSError, TypeError, ValueError) as exc:
+                failures.append(f"invalid identity card {item_id}: {exc}")
+                continue
+            if canonical_id in seen:
+                failures.append(f"duplicate identity card: {canonical_id}")
+                continue
+            seen.add(canonical_id)
+            resolved.append((role, canonical_id))
+            identity_coverage.add(character)
+            identity_card_characters.add(character)
+            continue
+
         row = connection.execute(
             """
-            SELECT items.*, sources.authority, sources.medium
+            SELECT items.*, sources.medium
             FROM items JOIN sources ON sources.source_id = items.source_id
             WHERE items.item_id = ? OR items.item_id = (
                 SELECT item_id FROM item_aliases WHERE alias_id = ?
@@ -595,12 +705,22 @@ def main() -> int:
             continue
         seen.add(row["item_id"])
         try:
-            validate_reference(row, role, item_id, medium, identity_forms)
+            validate_reference(
+                row,
+                role,
+                item_id,
+                medium,
+                required_forms,
+                crop_box=tuple(entry["crop_box"]) if entry.get("crop_box") else None,
+                focus=entry.get("focus", ""),
+            )
         except SystemExit as exc:
             failures.append(str(exc))
         resolved.append((role, row["item_id"]))
         if role == "identity":
-            identity_coverage.update(json.loads(row["subjects"] or "[]"))
+            subjects = set(json.loads(row["subjects"] or "[]"))
+            identity_coverage.update(subjects)
+            official_identity_characters.update(subjects)
         if role == "form":
             form_coverage.update(json.loads(row["subjects"] or "[]"))
         if entry.get("content_hash") != row["content_hash"]:
@@ -711,16 +831,45 @@ def main() -> int:
                 failures.append(f"prepared reference content changed: {rendered}")
     connection.close()
 
+    duplicate_identity_authority = (
+        identity_card_characters & official_identity_characters
+    )
+    if duplicate_identity_authority:
+        failures.append(
+            "use either an identity card or an official identity image, not both: "
+            f"{sorted(duplicate_identity_authority)}"
+        )
+
     try:
         validate_reference_order(resolved)
     except (KeyError, SystemExit) as exc:
         failures.append(str(exc))
     style_count = sum(role == "style" for role, _ in resolved)
     target_count = sum(role == "target" for role, _ in resolved)
+    failures.extend(
+        rendering_coverage_failures(
+            evidence,
+            references,
+            style_count,
+            medium,
+            brief.get("dominant_scene_materials") or [],
+        )
+    )
     if intent == "new" and style_count not in {1, 2}:
-        failures.append("new tasks require one or two selected-medium style references")
+        failures.append(
+            "new tasks require one or two selected-medium style references; the "
+            "bundled guide is a QA baseline, not a substitute for scene-matched evidence"
+        )
     if intent in {"edit", "microfix"} and style_count > 1:
         failures.append(f"{intent} tasks may use at most one style reference")
+    if (
+        intent in {"edit", "microfix"}
+        and brief.get("change_category") == "medium"
+        and style_count != 1
+    ):
+        failures.append(
+            f"{intent} medium replacements require exactly one scene-matched style reference"
+        )
     if intent in {"edit", "microfix"} and target_count != 1:
         failures.append(f"{intent} tasks require exactly one target reference")
     missing_identity = set(characters) - (identity_coverage | form_coverage)
@@ -735,6 +884,12 @@ def main() -> int:
         failures.append(
             "missing official identity or selected-medium exact-form coverage: "
             f"{sorted(missing_identity)}"
+        )
+    missing_props = set(props) - identity_coverage
+    if missing_props:
+        failures.append(
+            "missing exact-form official weapon or prop coverage: "
+            f"{sorted(missing_props)}"
         )
     if form_coverage:
         official_section = evidence.split("## Layer 2:", 1)[0]

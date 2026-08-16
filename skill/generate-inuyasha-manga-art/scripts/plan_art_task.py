@@ -10,16 +10,55 @@ import sys
 from pathlib import Path
 
 from init_art_task import parse_identity_form
+from task_workflow import IDENTITY_LEDGERS_PATH, read_json
 from workflow_common import (
     FORM_VALUES,
     SHOT_VALUES,
     atomic_write_json,
-    infer_retrieval_traits,
     load_config,
+    retrieval_traits_for,
     workflow_root,
 )
 
 SCRIPTS = Path(__file__).resolve().parent
+
+
+def infer_prop_forms(request: str) -> list[tuple[str, str]]:
+    """Infer named prop forms from ledger-owned aliases, without prop branches."""
+    if not IDENTITY_LEDGERS_PATH.is_file():
+        return []
+    profiles = read_json(IDENTITY_LEDGERS_PATH).get("characters", {})
+    inferred: list[tuple[str, str]] = []
+    for prop, profile in profiles.items():
+        inference = profile.get("form_inference") or {}
+        if profile.get("kind") != "prop" or prop not in request or not inference:
+            continue
+        matches_by_strength: dict[str, list[str]] = {"explicit": [], "context": []}
+        for form, rules in inference.items():
+            if isinstance(rules, list):
+                rule_groups = {"context": rules}
+            else:
+                rule_groups = rules
+            for strength, matched_forms in matches_by_strength.items():
+                aliases = rule_groups.get(strength, [])
+                if any(str(alias) in request for alias in aliases):
+                    matched_forms.append(form)
+        resolved_form = None
+        for matches in matches_by_strength.values():
+            if len(matches) == 1:
+                resolved_form = matches[0]
+                break
+            if len(matches) > 1:
+                break
+        if resolved_form is not None:
+            inferred.append((prop, resolved_form))
+            continue
+        choices = ", ".join(inference)
+        raise SystemExit(
+            f"The request names {prop} but its canonical form is ambiguous; "
+            f"pass --prop-form {prop}=FORM using one of: {choices}"
+        )
+    return inferred
 
 
 def main() -> int:
@@ -35,6 +74,19 @@ def main() -> int:
     )
     parser.add_argument(
         "--identity-form", type=parse_identity_form, action="append", required=True
+    )
+    parser.add_argument(
+        "--prop-form",
+        type=parse_identity_form,
+        action="append",
+        default=[],
+        help="Declare a canonical weapon or prop form.",
+    )
+    parser.add_argument(
+        "--scene-material",
+        action="append",
+        default=[],
+        help="Name scene-material scope that inherits the primary style anchor's economy.",
     )
     parser.add_argument("--shot", choices=SHOT_VALUES)
     parser.add_argument("--aspect-ratio", default="2:3 portrait")
@@ -76,7 +128,11 @@ def main() -> int:
         )
     if not args.content_query and args.content_provenance != "observed-content":
         raise SystemExit("--content-provenance requires a planned content query")
-    inferred_traits = infer_retrieval_traits(args.request)
+    prop_forms = args.prop_form or infer_prop_forms(args.request)
+    if len(dict(prop_forms)) != len(prop_forms):
+        raise SystemExit("Each prop may have only one --prop-form")
+    scene_materials = list(dict.fromkeys(args.scene_material))
+    inferred_traits = retrieval_traits_for(args.request, args.shot, medium=args.medium)
     config = load_config()
     root = workflow_root(config, args.workflow_root)
     check = subprocess.run(
@@ -123,10 +179,18 @@ def main() -> int:
         "--aspect-ratio",
         args.aspect_ratio,
     ]
+    if args.shot:
+        command.extend(["--shot", args.shot])
     for character, form in args.identity_form:
         if form not in FORM_VALUES:
             raise SystemExit(f"Unsupported form: {form}")
         command.extend(["--identity-form", f"{character}={form}"])
+    for prop, form in prop_forms:
+        if form not in FORM_VALUES:
+            raise SystemExit(f"Unsupported prop form: {form}")
+        command.extend(["--prop-form", f"{prop}={form}"])
+    for material in scene_materials:
+        command.extend(["--scene-material", material])
     if args.content_query:
         command.extend(["--content-query", args.content_query])
         command.extend(["--content-focus", args.content_focus])
@@ -140,7 +204,7 @@ def main() -> int:
     official_commands = []
     official_fallback_commands = []
     for character, form in args.identity_form:
-        fallback = [
+        primary = [
             launcher,
             str(SCRIPTS / "search_reference_index.py"),
             "--source",
@@ -154,18 +218,41 @@ def main() -> int:
             "--limit",
             str(args.candidate_limit),
         ]
-        parts = list(fallback)
+        parts = list(primary)
         if args.shot:
             parts.extend(["--shot", args.shot])
         official_commands.append(parts)
         if args.shot:
-            official_fallback_commands.append(fallback)
-    focal_character, focal_form = args.identity_form[0]
+            official_fallback_commands.append(primary)
+    for prop, form in prop_forms:
+        official_commands.append(
+            [
+                launcher,
+                str(SCRIPTS / "search_reference_index.py"),
+                "--source",
+                "official",
+                "--role",
+                "identity",
+                "--subject",
+                prop,
+                "--form",
+                form,
+                "--limit",
+                str(args.candidate_limit),
+            ]
+        )
     style_source = "manga-curated" if args.medium == "manga" else "tv-curated"
-    fallback_common = ["--subject", focal_character, "--form", focal_form]
-    common = list(fallback_common)
+    # Rendering evidence is identity-independent. Filtering it by the focal
+    # character or form wrongly turns a scene/shot style search into another
+    # identity lookup and often produces a false MISS.
+    common = []
     if args.shot:
         common.extend(["--shot", args.shot])
+    preferred_subject_forms = [
+        value
+        for character, form in args.identity_form
+        for value in ("--prefer-subject-form", f"{character}={form}")
+    ]
     style_primary = [
         launcher,
         str(SCRIPTS / "browse_curated_styles.py"),
@@ -175,6 +262,7 @@ def main() -> int:
         "rendering",
         "--intent-text",
         args.request,
+        *preferred_subject_forms,
         *common,
         "--limit",
         str(args.candidate_limit),
@@ -190,7 +278,7 @@ def main() -> int:
         "rendering",
         "--intent-text",
         args.request,
-        *fallback_common,
+        *preferred_subject_forms,
         "--limit",
         str(args.candidate_limit),
         "--columns",
@@ -200,16 +288,33 @@ def main() -> int:
         {
             "layer": 1,
             "source": "official",
+            "identity_cards": [],
+            "prepare_arguments": [],
             "primary_commands": official_commands,
             "fallback_without_shot": official_fallback_commands,
-            "selection_budget": "one identity sheet per focal character; add a focused crop only for an unresolved construction detail",
+            "selection_budget": (
+                "inspect at most three official setting-sheet candidates per focal "
+                "character; choose one shot-matched source or the smallest focused "
+                "crop that preserves the required face, form, costume, or construction; "
+                "each declared canonical prop requires exact-form official coverage and "
+                "may not be inferred from a style screenshot"
+            ),
         },
         {
             "layer": 2,
             "source": style_source,
             "primary_commands": [style_primary],
             "fallback_without_shot": [style_fallback] if args.shot else [],
-            "selection_budget": "one style screenshot by default; two only when one cannot resolve the requested rendering grammar",
+            "selection_budget": (
+                "choose from the current scene ranking, never a fixed volume or "
+                "page; scene, interaction, action, and shot relevance stay primary, "
+                "with only a small focal subject-form preference; choose one primary "
+                "rendering anchor that resolves character mark-making, fabric treatment, "
+                "garment value hierarchy, scene economy, and detail falloff together. "
+                "A second style image is allowed only when a core rendering dimension "
+                "is visibly unresolved; scene-material labels describe transfer scope "
+                "and never create separate reference slots"
+            ),
         },
     ]
     if args.content_query:
@@ -286,7 +391,6 @@ def main() -> int:
             "selected-output",
             "--role",
             "continuity",
-            *fallback_common,
             "--limit",
             str(args.candidate_limit),
             "--columns",
@@ -313,6 +417,8 @@ def main() -> int:
         ),
         "candidate_limit": args.candidate_limit,
         "inferred_retrieval_traits": inferred_traits,
+        "prop_forms": dict(prop_forms),
+        "dominant_scene_materials": scene_materials,
         "timing_policy": {
             "pre_generation_target_seconds": 90,
             "post_generation_target_seconds": 30,

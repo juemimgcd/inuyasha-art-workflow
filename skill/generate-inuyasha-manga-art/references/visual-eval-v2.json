@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "inuyasha-workflow-visual-ab-v2",
+  "description": "Three-case, six-image blind A/B gate for workflow changes.",
+  "policy": {
+    "variants": ["baseline", "candidate"],
+    "cases_per_variant": 3,
+    "total_images": 6,
+    "single_generation_per_slot": true,
+    "automatic_retry": false,
+    "blind_pairwise_review": true
+  },
+  "promotion": {
+    "minimum_candidate_wins": 2,
+    "maximum_candidate_critical_failures": 0,
+    "ties_keep_baseline": true
+  },
+  "critical_categories": [
+    "identity",
+    "manga_medium",
+    "request_fidelity",
+    "anatomy_contact",
+    "technical"
+  ],
+  "cases": [
+    {
+      "id": "half-demon-inuyasha-rain-shrine-wide",
+      "title": "雨后废弃神社远景",
+      "intent": "new",
+      "medium": "manga",
+      "request": "雨后的深山废弃神社远景，石阶穿过巨树和倾斜石灯笼通向残破拜殿，半妖形态犬夜叉只是沿石阶上行的小身影；横向黑白原著漫画场景。",
+      "identity_forms": {"犬夜叉": "half-demon-form"},
+      "shot": "wide-shot",
+      "aspect_ratio": "3:2",
+      "criteria": [
+        "环境是主角，犬夜叉虽小仍以犬耳、长发和火鼠裘剪影可辨认",
+        "石阶、巨树、石灯笼与拜殿使用统一的尺度、遮挡和纵深",
+        "大块黑白、主动留白和远近细节衰减形成直接连载漫画场景",
+        "有限信息预算集中于叙事路线，重复形体归组为大形，纸白间隔参与构图",
+        "细节密度从焦点平面到远景清楚递减，各类场景材质共享同一套取舍逻辑"
+      ]
+    },
+    {
+      "id": "child-inuyasha-izayoi-hair-contact",
+      "title": "幼年犬夜叉与十六夜接触链",
+      "intent": "new",
+      "medium": "manga",
+      "request": "雨天缘侧，十六夜跪坐着用布巾替身前的幼年犬夜叉擦拭湿透的长发；双手、布巾、湿发和犬耳的接触与遮挡清楚，母子情绪温柔克制；黑白原著漫画风格。",
+      "identity_forms": {"犬夜叉": "child-form", "十六夜": "default-form"},
+      "shot": "medium-shot",
+      "aspect_ratio": "4:5",
+      "criteria": [
+        "幼年犬夜叉不是通用Q版儿童，十六夜不是桔梗或通用少女",
+        "母子年龄、比例、服装和情绪关系清楚",
+        "十六夜双手、布巾、湿发与犬耳形成连续接触链",
+        "雨景和人物使用统一且经济的连载漫画墨线与网点"
+      ]
+    },
+    {
+      "id": "half-demon-tessaiga-swing",
+      "title": "半妖犬夜叉挥铁碎牙",
+      "intent": "new",
+      "medium": "manga",
+      "request": "半妖形态犬夜叉在森林中双手挥动变化后的铁碎牙，强透视但刀柄、双手、肩臂和刀身受力关系清楚；黑白原著漫画风格。",
+      "identity_forms": {"犬夜叉": "half-demon-form"},
+      "shot": "action",
+      "aspect_ratio": "4:5",
+      "criteria": [
+        "犬夜叉脸、犬耳、长发、念珠与火鼠裘保持角色辨识度",
+        "双手握住同一刀柄，肩肘腕、刀柄、圆形护手和巨大刀身保持一条连续受力主轴",
+        "变化后的铁碎牙遵循设定账本的连续部件序列与数量：一片宽刃、一个刀背轮廓、一个刀刃轮廓和一个刀尖",
+        "强透视动作明确，铁碎牙保持自身官方形态",
+        "冲击线、墨线、黑块、网点和背景使用统一且有主次的原作漫画信息层级"
+      ]
+    }
+  ]
+}

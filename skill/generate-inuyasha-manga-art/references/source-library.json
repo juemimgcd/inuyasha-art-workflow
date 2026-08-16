@@ -44,7 +44,6 @@
         "桔梗设定集": ["default-form"],
         "杀生丸设定集": ["default-form"],
         "弥勒设定集": ["default-form"],
-        "珊瑚设定集": ["default-form"],
         "七宝设定集": ["default-form"],
         "云母设定集": ["tiny-form"],
         "邪见设定集": ["default-form"],
@@ -59,10 +58,36 @@
         "刀刀斋设定集": ["default-form"],
         "哞哞设定集": ["default-form"],
         "戈薇爷爷设定集": ["default-form"],
-        "普通人物设定集": ["default-form"]
+        "普通人物设定集": ["default-form"],
+        "铁碎牙设定集": ["untransformed-form", "transformed-form"]
       },
       "path_form_overrides": {
         "犬夜叉设定集/犬夜叉人类形态图01.jpg": ["human-form"]
+      },
+      "path_subject_form_overrides": {
+        "犬夜叉设定集/犬夜叉全身图带铁碎牙01.jpg": {
+          "犬夜叉": ["half-demon-form"],
+          "铁碎牙": ["untransformed-form"]
+        },
+        "珊瑚设定集/珊瑚战斗服与飞来骨图01.jpg": {
+          "珊瑚": ["battle-armor-form"]
+        },
+        "珊瑚设定集/珊瑚抱云母上身图01.jpg": {
+          "珊瑚": ["demon-slayer-form"],
+          "云母": ["tiny-form"]
+        },
+        "珊瑚设定集/珊瑚退治屋服全身图02.jpg": {
+          "珊瑚": ["demon-slayer-form"]
+        },
+        "珊瑚设定集/珊瑚退治屋服全身细节图01.jpg": {
+          "珊瑚": ["demon-slayer-form"]
+        },
+        "铁碎牙设定集/铁碎牙变化前后形态图01.jpg": {
+          "铁碎牙": ["untransformed-form", "transformed-form"]
+        }
+      },
+      "path_authority_overrides": {
+        "犬夜叉设定集/犬夜叉幼年形态全身图01.png": "user-directed-derived-identity"
       }
     },
     {

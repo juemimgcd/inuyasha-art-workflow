@@ -15,11 +15,12 @@ from workflow_common import (
     FORM_VALUES,
     KNOWN_SUBJECTS,
     SHOT_VALUES,
-    infer_retrieval_traits,
     library_signature,
     load_config,
     open_database,
     retrieval_relevance,
+    retrieval_traits_for,
+    style_conflict_subjects,
     workflow_paths,
     workflow_root,
 )
@@ -250,7 +251,11 @@ def main() -> int:
         for subject, form in args.subject_form:
             paired_forms.setdefault(subject, []).append(form)
     elif args.subject and args.form:
-        if len(args.subject) > 1 and len(args.form) > 1 and len(args.subject) != len(args.form):
+        if (
+            len(args.subject) > 1
+            and len(args.form) > 1
+            and len(args.subject) != len(args.form)
+        ):
             raise SystemExit(
                 "Multiple --subject and --form values must be one shared form or equal-length pairs"
             )
@@ -273,7 +278,22 @@ def main() -> int:
     add_json_facet("shot_types", args.shot, "any")
 
     terms = [term.casefold() for term in args.query.split() if term.strip()]
-    intent_traits = infer_retrieval_traits(args.intent_text)
+    intent_traits = retrieval_traits_for(
+        args.intent_text,
+        args.shot[0] if args.role == "rendering" and len(args.shot) == 1 else None,
+        medium=(
+            "manga"
+            if args.source == "manga-curated" or args.medium == "manga"
+            else "tv"
+            if args.source == "tv-curated" or args.medium == "tv"
+            else None
+        ),
+    )
+    rendering_conflicts = (
+        style_conflict_subjects(args.intent_text)
+        if args.role == "rendering"
+        else set()
+    )
     scoring_terms = list(dict.fromkeys([*terms, *intent_traits]))
     if terms:
         term_clauses = ["items.search_text LIKE ?" for _ in terms]
@@ -292,8 +312,7 @@ def main() -> int:
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     query = f"""
-        SELECT items.*, sources.label AS source_label, sources.medium,
-               sources.authority
+        SELECT items.*, sources.label AS source_label, sources.medium
         FROM items
         JOIN sources ON sources.source_id = items.source_id
         {where}
@@ -331,6 +350,7 @@ def main() -> int:
             shots=args.shot,
             folders=args.folder,
             contents=args.content,
+            penalized_subjects=rendering_conflicts,
             role=args.role,
         )
         item["feedback"] = performance.get(
@@ -344,6 +364,9 @@ def main() -> int:
         )
         item["feedback_rank"] = round(feedback_rank(item["feedback"]), 4)
         item["inferred_traits"] = intent_traits
+        item["style_conflict_subjects"] = sorted(
+            rendering_conflicts, key=str.casefold
+        )
         output.append(item)
     output.sort(
         key=lambda item: (
@@ -390,7 +413,9 @@ def main() -> int:
             f"forms={','.join(item['forms']) or '-'}; "
             f"shots={','.join(item['shot_types']) or '-'}"
         )
-        print(f"  subject forms: {json.dumps(item['subject_forms'], ensure_ascii=False)}")
+        print(
+            f"  subject forms: {json.dumps(item['subject_forms'], ensure_ascii=False)}"
+        )
         if item["match_reasons"]:
             print(f"  matched: {'; '.join(item['match_reasons'])}")
         print(f"  tags: {' '.join(item['tags'])}")

@@ -42,11 +42,21 @@
     },
     {
       "id": "izayoi-inuyasha-mother-child-kneel",
-      "intent_text": "十六夜与幼年犬夜叉母子面对面屈膝对视",
+      "intent_text": "十六夜与成年犬夜叉母子面对面屈膝对视",
       "query": {
         "source": "manga-curated",
         "role": "content",
         "subject_form": ["犬夜叉=half-demon-form", "十六夜=default-form"],
+        "shot": ["two-shot"]
+      },
+      "relevant_item_ids": ["manga-curated:file:8f7a2ef700f3ecd25058"]
+    },
+    {
+      "id": "child-inuyasha-izayoi-first-snow-rendering",
+      "intent_text": "幼年犬夜叉和十六夜在雪天的府邸，刚刚开始下雪；幼年犬夜叉抬头看向天上零星落下的雪花，十六夜在后面温柔地看着幼年犬夜叉",
+      "query": {
+        "source": "manga-curated",
+        "role": "rendering",
         "shot": ["two-shot"]
       },
       "relevant_item_ids": ["manga-curated:file:8f7a2ef700f3ecd25058"]
