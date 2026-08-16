@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 TOOL_PATH = Path(
     os.environ.get(
@@ -101,15 +103,44 @@ class SyncInstalledSkillTests(unittest.TestCase):
     def test_validation_python_preserves_virtualenv_entrypoint(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repository = Path(temporary)
-            real_python = repository / "fake-python"
-            real_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-            real_python.chmod(0o755)
-            entrypoint = repository / ".venv/bin/python"
+            entrypoint = repository / (
+                ".venv/Scripts/python.exe"
+                if os.name == "nt"
+                else ".venv/bin/python"
+            )
             entrypoint.parent.mkdir(parents=True)
-            entrypoint.symlink_to(real_python)
+            entrypoint.symlink_to(Path(sys.executable))
             self.assertEqual(
                 sync_tool.validation_python(repository), entrypoint.absolute()
             )
+
+    def test_validation_python_skips_unlaunchable_candidate(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository = Path(temporary)
+            invalid = repository / (
+                ".venv/Scripts/python.exe"
+                if os.name == "nt"
+                else ".venv/bin/python"
+            )
+            invalid.parent.mkdir(parents=True)
+            invalid.write_text("not an executable", encoding="utf-8")
+            success = sync_tool.subprocess.CompletedProcess([], 0)
+            with (
+                patch.object(
+                    sync_tool,
+                    "REPOSITORY_ROOT",
+                    repository / "missing-tool-root",
+                ),
+                patch.object(
+                    sync_tool.subprocess,
+                    "run",
+                    side_effect=[OSError("invalid executable"), success],
+                ),
+            ):
+                self.assertEqual(
+                    sync_tool.validation_python(repository),
+                    Path(sys.executable).absolute(),
+                )
 
     def test_staged_catalog_config_uses_catalog_owner_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -126,17 +157,20 @@ class SyncInstalledSkillTests(unittest.TestCase):
                 encoding="utf-8",
             )
             sync_tool.normalize_staged_config_for_catalog(staged_skill, workflow)
-            normalized = config.read_text(encoding="utf-8")
-            self.assertIn(str(catalog_repository), normalized)
-            self.assertIn(
-                str(
+            normalized_text = config.read_text(encoding="utf-8")
+            normalized = json.loads(normalized_text)
+            self.assertEqual(
+                Path(normalized["workflow_root"]).resolve(), workflow.resolve()
+            )
+            self.assertEqual(
+                Path(normalized["skill"]).resolve(),
+                (
                     catalog_repository
                     / "skill/generate-inuyasha-manga-art"
-                ),
-                normalized,
+                ).resolve(),
             )
-            self.assertNotIn("${REPO_ROOT}", normalized)
-            self.assertNotIn("${SKILL_DIR}", normalized)
+            self.assertNotIn("${REPO_ROOT}", normalized_text)
+            self.assertNotIn("${SKILL_DIR}", normalized_text)
 
     def test_incompatible_single_file_fails_before_repository_write(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
