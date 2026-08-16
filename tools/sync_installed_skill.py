@@ -221,20 +221,26 @@ def run_validation_command(
 
 def validation_python(repository: Path) -> Path:
     candidates = []
+    virtualenv_entries = (
+        (Path(".venv/Scripts/python.exe"), Path(".venv/bin/python"))
+        if os.name == "nt"
+        else (Path(".venv/bin/python"), Path(".venv/Scripts/python.exe"))
+    )
     for root in (repository, REPOSITORY_ROOT):
-        candidates.extend(
-            (root / ".venv/bin/python", root / ".venv/Scripts/python.exe")
-        )
+        candidates.extend(root / entry for entry in virtualenv_entries)
     candidates.append(Path(sys.executable))
     for candidate in candidates:
         if not candidate.is_file():
             continue
-        process = subprocess.run(
-            [str(candidate), "-c", "import PIL"],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
+        try:
+            process = subprocess.run(
+                [str(candidate), "-c", "import PIL"],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        except OSError:
+            continue
         if process.returncode == 0:
             return candidate.absolute()
     raise StagedValidationError(
@@ -250,11 +256,25 @@ def normalize_staged_config_for_catalog(
         return
     catalog_repository = workflow.resolve().parents[1]
     actual_skill = catalog_repository / "skill" / staged_skill.name
-    config_text = config_path.read_text(encoding="utf-8")
+    replacements = {
+        "${REPO_ROOT}": str(catalog_repository),
+        "${SKILL_DIR}": str(actual_skill),
+    }
+
+    def replace_tokens(value: object) -> object:
+        if isinstance(value, dict):
+            return {key: replace_tokens(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [replace_tokens(item) for item in value]
+        if isinstance(value, str):
+            for token, replacement in replacements.items():
+                value = value.replace(token, replacement)
+        return value
+
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    normalized = replace_tokens(config)
     config_path.write_text(
-        config_text.replace("${REPO_ROOT}", str(catalog_repository)).replace(
-            "${SKILL_DIR}", str(actual_skill)
-        ),
+        json.dumps(normalized, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
 
