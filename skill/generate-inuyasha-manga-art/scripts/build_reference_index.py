@@ -16,8 +16,8 @@ from typing import Any
 from workflow_common import (
     IMAGE_EXTENSIONS,
     LEGACY_ALIASES_PATH,
-    atomic_write_json,
     annotation_shot_types,
+    atomic_write_json,
     eligible_reference_roles,
     ensure_workflow_dirs,
     folder_metadata,
@@ -35,7 +35,7 @@ from workflow_common import (
     workflow_root,
 )
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 
 def parse_args() -> argparse.Namespace:
@@ -202,6 +202,7 @@ def create_schema(connection: sqlite3.Connection) -> None:
         CREATE TABLE items (
             item_id TEXT PRIMARY KEY,
             source_id TEXT NOT NULL REFERENCES sources(source_id),
+            authority TEXT NOT NULL,
             kind TEXT NOT NULL,
             path TEXT NOT NULL,
             relative_path TEXT NOT NULL,
@@ -281,6 +282,7 @@ def insert_item(connection: sqlite3.Connection, row: dict[str, Any]) -> None:
     columns = (
         "item_id",
         "source_id",
+        "authority",
         "kind",
         "path",
         "relative_path",
@@ -441,6 +443,19 @@ def build_database(
                 locations.sort(key=lambda row: row["relative_path"].casefold())
                 canonical = locations[0]
                 item_id = stable_file_item_id(source_id, digest)
+                authority_overrides = source.get("path_authority_overrides", {})
+                item_authorities = {
+                    authority_overrides.get(
+                        location["relative_path"], source["authority"]
+                    )
+                    for location in locations
+                }
+                if len(item_authorities) != 1:
+                    raise ValueError(
+                        "duplicate image locations disagree on authority: "
+                        f"{source_id} {digest} {sorted(item_authorities)}"
+                    )
+                item_authority = item_authorities.pop()
                 tags = set(source.get("default_tags", []))
                 annotation_ids = [item_id]
                 for location in locations:
@@ -511,6 +526,7 @@ def build_database(
                     {
                         "item_id": item_id,
                         "source_id": source_id,
+                        "authority": item_authority,
                         "kind": "image",
                         "path": str(canonical["path"]),
                         "relative_path": canonical["relative_path"],

@@ -29,6 +29,10 @@ FORM_VALUES = (
     "child-form",
     "tiny-form",
     "giant-form",
+    "demon-slayer-form",
+    "battle-armor-form",
+    "untransformed-form",
+    "transformed-form",
     "not-applicable",
 )
 FORM_TOKEN_MAP = {
@@ -42,6 +46,13 @@ FORM_TOKEN_MAP = {
     "幼年": "child-form",
     "小形态": "tiny-form",
     "巨大形态": "giant-form",
+    "退治屋服形态": "demon-slayer-form",
+    "退治屋服": "demon-slayer-form",
+    "战斗服形态": "battle-armor-form",
+    "战斗服": "battle-armor-form",
+    "未变化形态": "untransformed-form",
+    "变化前形态": "untransformed-form",
+    "变化后形态": "transformed-form",
     "不适用": "not-applicable",
 }
 SHOT_VALUES = (
@@ -502,6 +513,7 @@ INTENT_TRAIT_RULES = (
     ("action:hold", ("手持", "握住", "托住", "抱球", "持刀", "扶住", "承托")),
     ("action:cut", ("切大根", "切萝卜", "切菜", "用刀切")),
     ("action:turn-head", ("回头", "转头")),
+    ("action:look-up", ("抬头", "仰头", "看向天空", "看向天上")),
     (
         "action:sleeve-hidden-hands",
         ("藏在袖中", "袖中藏手", "双手藏袖", "藏进宽袖", "袖手", "揣手"),
@@ -522,7 +534,14 @@ INTENT_TRAIT_RULES = (
     ("action:adjust-clothing", ("整理衣领", "抚平衣领", "扶正衣领", "整理宽袖")),
     (
         "interaction:mother-child",
-        ("母子", "母亲与孩子", "十六夜与幼年犬夜叉", "十六夜和幼年犬夜叉"),
+        (
+            "母子",
+            "母亲与孩子",
+            "十六夜与幼年犬夜叉",
+            "十六夜和幼年犬夜叉",
+            "幼年犬夜叉与十六夜",
+            "幼年犬夜叉和十六夜",
+        ),
     ),
     ("interaction:romantic", ("恋人", "浪漫", "爱意", "恋慕")),
     ("interaction:face-to-face", ("面对面", "相对站立", "相对而坐")),
@@ -569,7 +588,10 @@ INTENT_TRAIT_RULES = (
     ("scene-energy:action", ("追逐", "奔跑", "战斗", "攻击")),
     ("scene-energy:impact", ("冲击", "爆发", "猛力挥刀")),
     ("background:nature", ("森林", "草地", "树林", "湖边", "野外")),
-    ("background:architecture", ("宅邸", "内室", "缘侧", "木廊", "寺庙")),
+    (
+        "background:architecture",
+        ("宅邸", "府邸", "内室", "缘侧", "木廊", "寺庙"),
+    ),
     ("background:night", ("夜景", "夜晚", "夜间", "深夜", "雨夜", "夜空")),
     ("background:interior", ("室内", "内室", "房间", "榻榻米")),
     ("background:courtyard", ("庭院", "院落")),
@@ -578,12 +600,18 @@ INTENT_TRAIT_RULES = (
     ("effect-type:wind", ("微风", "风中", "迎风", "随风", "风吹")),
     ("effect-type:rain", ("下雨", "雨夜", "雨中", "降雨")),
     ("effect-type:mist", ("雾气", "薄雾", "迷雾")),
+    ("effect-type:snow", ("下雪", "雪中", "降雪", "落雪")),
+    (
+        "effect-type:snow-light",
+        ("刚刚开始下雪", "刚开始下雪", "初雪", "零星雪花", "稀疏雪花"),
+    ),
+    ("effect-type:snow-heavy", ("暴雪", "大雪", "风雪", "密集雪花")),
     ("effect-type:speed-lines", ("速度线", "动势线")),
     ("effect-type:impact", ("冲击线", "撞击", "爆裂")),
     ("effect-type:aura", ("灵力", "妖气", "光环")),
     ("view-angle:front", ("正面", "正视镜头")),
     ("view-angle:three-quarter-front", ("三分之二侧脸", "四分之三正面")),
-    ("view-angle:profile", ("侧脸", "侧面")),
+    ("view-angle:profile", ("侧脸", "侧面", "侧身")),
     ("view-angle:three-quarter-back", ("三分之二背面", "侧后方")),
     ("view-angle:back", ("背影", "背面", "背对镜头")),
     ("view-angle:high-angle", ("俯视", "高机位")),
@@ -603,7 +631,18 @@ INTENT_TRAIT_SUPERSEDES = {
     "action:draw-weapon": {"action:hold"},
     "action:swing-weapon": {"action:hold"},
     "action:crouch": {"action:sit", "action:kneel"},
+    "effect-type:snow-light": {"effect-type:snow"},
+    "effect-type:snow-heavy": {"effect-type:snow"},
 }
+
+
+STYLE_CONFUSION_GROUPS = (
+    frozenset({"十六夜", "桔梗", "戈薇"}),
+    frozenset({"犬夜叉", "杀生丸"}),
+    frozenset({"神乐", "神无"}),
+    frozenset({"枫婆婆", "幼年枫"}),
+    frozenset({"七宝", "云母", "哞哞"}),
+)
 
 
 def infer_retrieval_traits(text: str) -> list[str]:
@@ -626,6 +665,44 @@ def infer_retrieval_traits(text: str) -> list[str]:
     return [trait for trait in inferred if trait in inferred_set]
 
 
+def style_conflict_subjects(text: str) -> set[str]:
+    """Return high-confusion subjects absent from the rendering request.
+
+    Rendering retrieval stays identity-independent: callers use these only as
+    a soft, explainable ranking penalty, never as a filter or identity boost.
+    """
+    requested = infer_subjects(text)
+    conflicts: set[str] = set()
+    for group in STYLE_CONFUSION_GROUPS:
+        if requested.intersection(group):
+            conflicts.update(group.difference(requested))
+    return conflicts
+
+
+def retrieval_traits_for(
+    text: str,
+    shot: str | None = None,
+    existing: Iterable[str] = (),
+    medium: str | None = None,
+) -> list[str]:
+    """Normalize request text and an explicit shot into one ordered trait list."""
+    traits = list(dict.fromkeys([*existing, *infer_retrieval_traits(text)]))
+    shot_trait = {
+        "profile": "view-angle:profile",
+        "back-view": "view-angle:back",
+    }.get(shot or "")
+    if shot_trait and shot_trait not in traits:
+        traits.append(shot_trait)
+    if shot == "wide-shot" and medium == "manga":
+        for trait in (
+            "scene-economy:authored-negative-space",
+            "detail-falloff:strong",
+        ):
+            if trait not in traits:
+                traits.append(trait)
+    return traits
+
+
 def eligible_reference_roles(
     source_roles: Iterable[str], tags: Iterable[str]
 ) -> list[str]:
@@ -643,9 +720,11 @@ def retrieval_relevance(
     exact_terms: Iterable[str] = (),
     subjects: Iterable[str] = (),
     subject_forms: Iterable[tuple[str, str]] = (),
+    preferred_subject_forms: Iterable[tuple[str, str]] = (),
     shots: Iterable[str] = (),
     folders: Iterable[str] = (),
     contents: Iterable[str] = (),
+    penalized_subjects: Iterable[str] = (),
     role: str | None = None,
 ) -> tuple[int, list[str]]:
     """Score explicit field matches and explain why a candidate ranked highly."""
@@ -678,6 +757,25 @@ def retrieval_relevance(
         if subject.casefold() in item_subjects:
             score += 8
             reasons.append(f"subject exact: {subject}")
+    preferred_exact: list[tuple[str, str]] = []
+    preferred_subjects: list[str] = []
+    for subject, form in preferred_subject_forms:
+        subject_key = subject.casefold()
+        if form.casefold() in item_forms.get(subject_key, set()):
+            preferred_exact.append((subject, form))
+        elif subject_key in item_subjects:
+            preferred_subjects.append(subject)
+    if preferred_exact:
+        score += 3
+        reasons.extend(
+            f"preferred subject-form exact: {subject}={form}"
+            for subject, form in preferred_exact
+        )
+    elif preferred_subjects:
+        score += 1
+        reasons.extend(
+            f"preferred subject present: {subject}" for subject in preferred_subjects
+        )
     for shot in shots:
         if shot.casefold() in item_shots:
             score += 4
@@ -690,6 +788,10 @@ def retrieval_relevance(
         if content.casefold() == content_label:
             score += 8
             reasons.append(f"content exact: {content}")
+    for subject in penalized_subjects:
+        if subject.casefold() in item_subjects:
+            score -= 6
+            reasons.append(f"style identity conflict penalty: {subject}")
 
     def tag_weight(term: str) -> int:
         if term.startswith(("action:", "content-object:", "subject-object:")):
@@ -701,6 +803,8 @@ def retrieval_relevance(
         if term.startswith(("expression:", "view-angle:", "suitable-for:")):
             return 4
         if term.startswith(("background:", "effect-type:", "scene-energy:")):
+            return 2
+        if term.startswith(("scene-economy:", "detail-falloff:")):
             return 2
         return 6
 

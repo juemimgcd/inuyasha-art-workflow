@@ -14,17 +14,29 @@ from task_workflow import feedback_rank, reference_performance
 from workflow_common import (
     FORM_VALUES,
     SHOT_VALUES,
-    infer_retrieval_traits,
     library_signature,
     load_config,
     open_database,
     retrieval_relevance,
+    retrieval_traits_for,
+    style_conflict_subjects,
     workflow_paths,
     workflow_root,
 )
 
 SOURCE_BY_MEDIUM = {"manga": "manga-curated", "tv": "tv-curated"}
 SOURCE_CHOICES = ("manga-curated", "tv-curated", "selected-output")
+
+
+def parse_preferred_subject_form(value: str) -> tuple[str, str]:
+    subject, separator, form = value.partition("=")
+    subject = subject.strip()
+    form = form.strip()
+    if not separator or not subject or form not in FORM_VALUES:
+        raise argparse.ArgumentTypeError(
+            "preferred subject form must look like CHARACTER=FORM"
+        )
+    return subject, form
 
 
 def parse_args() -> argparse.Namespace:
@@ -68,6 +80,16 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--subject", action="append", default=[])
     parser.add_argument("--form", action="append", default=[], choices=FORM_VALUES)
+    parser.add_argument(
+        "--prefer-subject-form",
+        action="append",
+        type=parse_preferred_subject_form,
+        default=[],
+        help=(
+            "Small boost for a rendering candidate that depicts a focal "
+            "character-form; never hard-filters or grants identity authority."
+        ),
+    )
     parser.add_argument("--shot", action="append", default=[], choices=SHOT_VALUES)
     parser.add_argument(
         "--role",
@@ -113,7 +135,22 @@ def main() -> int:
         )
         parameters.append(args.role)
     terms = [term.casefold() for term in args.query.split() if term.strip()]
-    intent_traits = infer_retrieval_traits(args.intent_text)
+    intent_traits = retrieval_traits_for(
+        args.intent_text,
+        args.shot[0] if args.role == "rendering" and len(args.shot) == 1 else None,
+        medium=(
+            "manga"
+            if source_id == "manga-curated"
+            else "tv"
+            if source_id == "tv-curated"
+            else None
+        ),
+    )
+    rendering_conflicts = (
+        style_conflict_subjects(args.intent_text)
+        if args.role == "rendering"
+        else set()
+    )
     scoring_terms = list(dict.fromkeys([*terms, *intent_traits]))
     if terms:
         joiner = " AND " if args.match == "all" else " OR "
@@ -231,9 +268,11 @@ def main() -> int:
             exact_terms=args.exact_term,
             subjects=args.subject,
             subject_forms=pairs,
+            preferred_subject_forms=args.prefer_subject_form,
             shots=args.shot,
             folders=args.folder,
             contents=args.content,
+            penalized_subjects=rendering_conflicts,
             role=args.role,
         )
         candidate["feedback"] = performance.get(
@@ -247,6 +286,9 @@ def main() -> int:
         )
         candidate["feedback_rank"] = round(feedback_rank(candidate["feedback"]), 4)
         candidate["inferred_traits"] = intent_traits
+        candidate["style_conflict_subjects"] = sorted(
+            rendering_conflicts, key=str.casefold
+        )
         candidates.append(candidate)
 
     candidates.sort(
@@ -283,6 +325,7 @@ def main() -> int:
             "content": args.content,
             "subjects": args.subject,
             "forms": args.form,
+            "preferred_subject_forms": args.prefer_subject_form,
             "shots": args.shot,
             "role": args.role,
         },
@@ -319,11 +362,13 @@ def main() -> int:
         "query": args.query,
         "intent_text": args.intent_text,
         "inferred_traits": intent_traits,
+        "style_conflict_subjects": sorted(rendering_conflicts, key=str.casefold),
         "exact_terms": args.exact_term,
         "folders": args.folder,
         "content": args.content,
         "subjects": args.subject,
         "forms": args.form,
+        "preferred_subject_forms": args.prefer_subject_form,
         "shots": args.shot,
         "role": args.role,
         "offset": args.offset,

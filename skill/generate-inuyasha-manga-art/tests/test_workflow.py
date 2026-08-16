@@ -15,14 +15,27 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from annotate_reference import parse_trait
-from benchmark_reference_retrieval import first_relevant_rank, metric_summary
+from benchmark_reference_retrieval import (
+    first_relevant_rank,
+    load_dataset,
+    metric_summary,
+)
 from composite_local_microfix import composite_local_edit, outside_edit_box_equal
 from continue_art_task import (
     context_box_for,
+    continuation_intent,
     inherited_reference_arguments,
     recorded_attempt_source,
 )
+from init_art_task import main as init_art_task_main
 from init_art_task import qa_items
+from plan_art_task import infer_prop_forms
+from plan_art_task import main as plan_art_task_main
+from preference_profile import write_profile
+from prepare_generation_submission import (
+    image_record,
+    validate_generation_submission,
+)
 from prepare_reference_set import (
     file_hash,
     image_pixel_hash,
@@ -38,6 +51,7 @@ from prepare_reference_set import (
 )
 from record_attempt import main as record_attempt_main
 from reference_feedback_report import duration_summary
+from start_response_window import main as start_response_window_main
 from task_workflow import (
     CHANGE_CATEGORIES,
     compile_prompt,
@@ -47,14 +61,17 @@ from task_workflow import (
     prompt_limit,
     reference_performance,
 )
+from technical_failures import transport_retry_exhausted
 from validate_art_task import (
     candidate_source_failures,
     consecutive_technical_errors,
     crop_derives_from_source,
+    rendering_coverage_failures,
     retrieval_result,
     technical_retry_limit_reached,
     unchanged_consecutive_errors,
 )
+from validate_workflow import identity_ledger_failures
 from workflow_common import (
     CONFIG_PATH,
     annotation_shot_types,
@@ -66,6 +83,8 @@ from workflow_common import (
     repository_root,
     resolve_recorded_path,
     retrieval_relevance,
+    retrieval_traits_for,
+    style_conflict_subjects,
     visible_files,
 )
 
@@ -126,19 +145,10 @@ class PortabilityTests(unittest.TestCase):
                 (portable_root / "tasks" / "sample.json").resolve(),
             )
 
-    def test_repo_checkout_ignores_installed_workflow_home(self) -> None:
-        checkout_root = repository_root()
-        with (
-            tempfile.TemporaryDirectory() as temp,
-            patch.dict(os.environ, {"INUYASHA_WORKFLOW_HOME": temp}),
-        ):
-            self.assertEqual(repository_root(), checkout_root)
-
-    def test_workflow_home_environment_locates_copied_skill(self) -> None:
+    def test_workflow_home_environment_overrides_copied_skill_location(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            copied_skill = root / ".codex/skills/generate-inuyasha-manga-art"
-            configured_home = root / "portable-package"
+            copied_skill = Path(temp) / ".agents/skills/generate-inuyasha-manga-art"
+            configured_home = Path(temp) / "portable-package"
             with (
                 patch("workflow_common.SKILL_DIR", copied_skill),
                 patch.dict(
@@ -195,6 +205,92 @@ class MetadataTests(unittest.TestCase):
         self.assertIn("content-object:grave", traits)
         self.assertIn("content-object:tessaiga", traits)
         self.assertIn("content-object:robe-sleeve", traits)
+
+    def test_intent_traits_cover_reversed_mother_child_estate_and_first_snow(self) -> None:
+        traits = infer_retrieval_traits(
+            "幼年犬夜叉和十六夜在雪天的府邸，刚刚开始下雪；"
+            "幼年犬夜叉抬头看向天上零星落下的雪花，"
+            "十六夜在后面温柔地看着幼年犬夜叉"
+        )
+        self.assertIn("interaction:mother-child", traits)
+        self.assertIn("expression:gentle", traits)
+        self.assertIn("background:architecture", traits)
+        self.assertIn("effect-type:snow-light", traits)
+        self.assertNotIn("effect-type:snow", traits)
+        self.assertIn("action:look-up", traits)
+
+    def test_style_conflict_subjects_are_soft_and_request_aware(self) -> None:
+        conflicts = style_conflict_subjects("幼年犬夜叉和十六夜在府邸")
+        self.assertIn("桔梗", conflicts)
+        self.assertIn("戈薇", conflicts)
+        self.assertIn("杀生丸", conflicts)
+        self.assertNotIn("十六夜", conflicts)
+        self.assertNotIn("犬夜叉", conflicts)
+
+    def test_rendering_conflict_penalty_is_explained(self) -> None:
+        item = {
+            "tags": ["expression:gentle"],
+            "filename_terms": [],
+            "subjects": ["桔梗", "犬夜叉"],
+            "subject_forms": {},
+            "shot_types": ["two-shot"],
+            "folder_tags": ["桔梗"],
+            "eligible_roles": ["rendering"],
+            "relative_path": "桔梗/reference.png",
+        }
+        score, reasons = retrieval_relevance(
+            item,
+            query_terms=["expression:gentle"],
+            shots=["two-shot"],
+            penalized_subjects=["桔梗", "戈薇"],
+            role="rendering",
+        )
+        self.assertEqual(score, 2)
+        self.assertIn("style identity conflict penalty: 桔梗", reasons)
+
+    def test_rendering_subject_form_preference_is_soft_and_capped(self) -> None:
+        item = {
+            "tags": [],
+            "filename_terms": [],
+            "subjects": ["犬夜叉", "十六夜"],
+            "subject_forms": {
+                "犬夜叉": ["child-form"],
+                "十六夜": ["default-form"],
+            },
+            "shot_types": [],
+            "folder_tags": [],
+            "eligible_roles": ["rendering"],
+            "relative_path": "犬夜叉/mother-child.png",
+        }
+        score, reasons = retrieval_relevance(
+            item,
+            preferred_subject_forms=[
+                ("犬夜叉", "child-form"),
+                ("十六夜", "default-form"),
+            ],
+            role="rendering",
+        )
+        self.assertEqual(score, 3)
+        self.assertLess(score, 4)
+        self.assertIn(
+            "preferred subject-form exact: 犬夜叉=child-form", reasons
+        )
+
+    def test_benchmark_covers_real_reversed_mother_child_rendering_path(self) -> None:
+        dataset = load_dataset(
+            Path(__file__).resolve().parents[1]
+            / "references"
+            / "retrieval-benchmark.json"
+        )
+        case = next(
+            case
+            for case in dataset["cases"]
+            if case["id"] == "child-inuyasha-izayoi-first-snow-rendering"
+        )
+        self.assertEqual(case["query"]["role"], "rendering")
+        self.assertNotIn("subject", case["query"])
+        self.assertNotIn("subject_form", case["query"])
+        self.assertIn("幼年犬夜叉和十六夜", case["intent_text"])
 
     def test_source_exclude_globs_skip_derived_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -387,6 +483,23 @@ class ReferenceValidationTests(unittest.TestCase):
                 row, "identity", "official:test", "manga", {"犬夜叉": "human-form"}
             )
 
+    def test_prop_only_official_sheet_satisfies_exact_prop_form(self) -> None:
+        row = self.row(
+            source="official",
+            subjects=["铁碎牙"],
+            forms=["transformed-form", "untransformed-form"],
+            subject_forms={
+                "铁碎牙": ["transformed-form", "untransformed-form"]
+            },
+        )
+        validate_reference(
+            row,
+            "identity",
+            "official:tessaiga",
+            "manga",
+            {"犬夜叉": "half-demon-form", "铁碎牙": "transformed-form"},
+        )
+
     def test_item_level_role_blocks_content_only_identity(self) -> None:
         row = self.row(
             source="official",
@@ -424,6 +537,24 @@ class ReferenceValidationTests(unittest.TestCase):
         row = self.row(source="tv-curated", subjects=["犬夜叉"], forms=[])
         with self.assertRaises(SystemExit):
             validate_reference(row, "style", "tv:test", "manga", {})
+
+    def test_style_reference_does_not_inherit_visible_character_form(self) -> None:
+        row = self.row(
+            source="manga-curated",
+            subjects=["犬夜叉", "十六夜"],
+            forms=["default-form", "half-demon-form"],
+            subject_forms={
+                "犬夜叉": ["half-demon-form"],
+                "十六夜": ["default-form"],
+            },
+        )
+        validate_reference(
+            row,
+            "style",
+            "manga:mother-child-two-shot",
+            "manga",
+            {"犬夜叉": "child-form", "十六夜": "default-form"},
+        )
 
     def test_tv_content_is_allowed_for_manga_without_style_authority(self) -> None:
         row = self.row(
@@ -820,6 +951,251 @@ class ReferenceValidationTests(unittest.TestCase):
             self.assertEqual(consecutive_technical_errors(task, old_window), 1)
             self.assertEqual(consecutive_technical_errors(task, new_window), 0)
 
+    def test_long_network_error_exhausts_outer_retry(self) -> None:
+        attempt = {
+            "status": "error",
+            "generation_seconds": 240.0,
+            "failures": [
+                {
+                    "category": "technical",
+                    "note": "network error: error sending request to images/edits",
+                }
+            ],
+        }
+        self.assertTrue(transport_retry_exhausted(attempt))
+        attempt["generation_seconds"] = 30.0
+        self.assertFalse(transport_retry_exhausted(attempt))
+
+    def test_start_window_requires_explicit_authorization_after_exhausted_network(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory)
+            (task / "attempts" / "001").mkdir(parents=True)
+            (task / "brief.json").write_text(
+                json.dumps({"intent": "edit"}), encoding="utf-8"
+            )
+            (task / "attempts" / "001" / "attempt.json").write_text(
+                json.dumps(
+                    {
+                        "attempt": 1,
+                        "status": "error",
+                        "generation_seconds": 240.0,
+                        "failures": [
+                            {"category": "technical", "note": "network error"}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with (
+                patch(
+                    "sys.argv",
+                    ["start_response_window.py", "--task-dir", str(task)],
+                ),
+                self.assertRaises(SystemExit),
+            ):
+                start_response_window_main()
+            with (
+                patch(
+                    "sys.argv",
+                    [
+                        "start_response_window.py",
+                        "--task-dir",
+                        str(task),
+                        "--authorize-network-retry",
+                        "--authorization-note",
+                        "用户明确要求稍后再试一次",
+                    ],
+                ),
+                patch(
+                    "start_response_window.now_iso",
+                    return_value="2026-08-15T21:00:00+08:00",
+                ),
+                redirect_stdout(io.StringIO()),
+            ):
+                self.assertEqual(start_response_window_main(), 0)
+            window = json.loads(
+                (task / "response-window.json").read_text(encoding="utf-8")
+            )
+            self.assertTrue(window["network_retry_authorized"])
+            self.assertEqual(window["network_retry_authorized_attempt"], 1)
+
+    def test_submission_rejects_target_hidden_under_new_intent(self) -> None:
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory)
+            target = task / "target.png"
+            Image.new("RGB", (8, 8), "white").save(target)
+            started_at = "2026-08-15T21:00:00+08:00"
+            (task / "brief.json").write_text(
+                json.dumps({"schema_version": 5, "intent": "new"}),
+                encoding="utf-8",
+            )
+            (task / "reference-manifest.json").write_text(
+                json.dumps(
+                    {
+                        "references": [
+                            {"role": "target", "rendered_path": str(target)}
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            prompt = task / "prompt.md"
+            prompt.write_text("edit", encoding="utf-8")
+            (task / "response-window.json").write_text(
+                json.dumps(
+                    {
+                        "phase": "pre-generation",
+                        "started_at": started_at,
+                        "pre_generation_started_at": started_at,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            submission = {
+                "schema_version": 1,
+                "state": "prepared",
+                "response_started_at": started_at,
+                "prompt": str(prompt),
+                "prompt_sha256": file_hash(prompt),
+                "brief_sha256": file_hash(task / "brief.json"),
+                "reference_manifest_sha256": file_hash(
+                    task / "reference-manifest.json"
+                ),
+                "images": [image_record(1, "target", target)],
+            }
+            failures = validate_generation_submission(task, submission)
+            self.assertTrue(any("child edit task" in failure for failure in failures))
+
+    def test_submission_snapshot_is_bound_to_persisted_candidate(self) -> None:
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory)
+            target = task / "target.png"
+            generated = task / "generated.png"
+            Image.new("RGB", (8, 8), "white").save(target)
+            Image.new("RGB", (8, 8), "black").save(generated)
+            started_at = "2026-08-15T21:00:00+08:00"
+            (task / "brief.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 5,
+                        "intent": "edit",
+                        "medium": "manga",
+                        "created_at": started_at,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (task / "reference-manifest.json").write_text(
+                json.dumps(
+                    {
+                        "references": [
+                            {"role": "target", "rendered_path": str(target)}
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            prompt = task / "prompt.md"
+            prompt.write_text("edit target only", encoding="utf-8")
+            (task / "response-window.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 2,
+                        "phase": "pre-generation",
+                        "started_at": started_at,
+                        "pre_generation_started_at": started_at,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            submission = {
+                "schema_version": 1,
+                "state": "prepared",
+                "response_started_at": started_at,
+                "prompt": str(prompt),
+                "prompt_sha256": file_hash(prompt),
+                "brief_sha256": file_hash(task / "brief.json"),
+                "reference_manifest_sha256": file_hash(
+                    task / "reference-manifest.json"
+                ),
+                "endpoint": "https://chatgpt.com/backend-api/codex/images/edits",
+                "transport": "manifest-tracked",
+                "images": [image_record(1, "target", target)],
+                "input_bytes": target.stat().st_size,
+            }
+            (task / "generation-submission.json").write_text(
+                json.dumps(submission), encoding="utf-8"
+            )
+            with (
+                patch(
+                    "sys.argv",
+                    [
+                        "start_response_window.py",
+                        "--task-dir",
+                        str(task),
+                        "--mark-generation-started",
+                    ],
+                ),
+                patch(
+                    "start_response_window.now_iso",
+                    return_value="2026-08-15T21:00:05+08:00",
+                ),
+                redirect_stdout(io.StringIO()),
+            ):
+                self.assertEqual(start_response_window_main(), 0)
+            with (
+                patch(
+                    "sys.argv",
+                    [
+                        "record_attempt.py",
+                        "--task-dir",
+                        str(task),
+                        "--status",
+                        "candidate",
+                        "--output",
+                        str(generated),
+                        "--duration-seconds",
+                        "10",
+                        "--persist-output",
+                        "--preview-check",
+                        "identity=pass",
+                        "--json",
+                    ],
+                ),
+                patch(
+                    "record_attempt.now_iso",
+                    return_value="2026-08-15T21:00:20+08:00",
+                ),
+                redirect_stdout(io.StringIO()),
+            ):
+                self.assertEqual(record_attempt_main(), 0)
+            attempt_dir = task / "attempts" / "001"
+            attempt = json.loads(
+                (attempt_dir / "attempt.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(attempt["actual_input_images"][0]["role"], "target")
+            self.assertEqual(attempt["actual_input_bytes"], target.stat().st_size)
+            self.assertEqual(attempt["preview_checks"][0]["category"], "identity")
+            self.assertTrue(
+                Path(attempt["output"]).is_relative_to((task / "outputs").resolve())
+            )
+            self.assertTrue((attempt_dir / "generation-submission.json").is_file())
+            current = json.loads(
+                (task / "generation-submission.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(current["state"], "recorded")
+
+    def test_continuation_routes_bounded_and_full_canvas_changes(self) -> None:
+        self.assertEqual(continuation_intent(None, False), "microfix")
+        self.assertEqual(continuation_intent(None, True), "edit")
+        self.assertEqual(continuation_intent({"attempt": 1}, False), "edit")
+
 
 class IntentWorkflowTests(unittest.TestCase):
     def brief(self, intent: str) -> dict:
@@ -851,6 +1227,8 @@ class IntentWorkflowTests(unittest.TestCase):
         prompt = compile_prompt(self.brief("microfix"), manifest)
         self.assertIn("Change only `anatomy`", prompt)
         self.assertIn("Do not redesign the whole image", prompt)
+        self.assertIn("Do not drift toward extra", prompt)
+        self.assertIn("strip away identity-critical", prompt)
         self.assertLess(len(prompt), prompt_limit("microfix"))
 
     def test_default_latency_budget_targets_only_controllable_phases(self) -> None:
@@ -912,7 +1290,9 @@ class IntentWorkflowTests(unittest.TestCase):
             (task / "reference-manifest.json").write_text(
                 json.dumps({"references": []}), encoding="utf-8"
             )
-            (task / "prompt.md").write_text("test prompt", encoding="utf-8")
+            (task / "prompt.md").write_text("compiled prompt", encoding="utf-8")
+            submitted = task / "submitted.md"
+            submitted.write_text("exact generator prompt", encoding="utf-8")
             (task / "response-window.json").write_text(
                 json.dumps(
                     {
@@ -934,11 +1314,11 @@ class IntentWorkflowTests(unittest.TestCase):
                 "--task-dir",
                 str(task),
                 "--status",
-                "rejected",
+                "candidate",
                 "--output",
                 str(output),
-                "--failure",
-                "composition=test",
+                "--submitted-prompt",
+                str(submitted),
                 "--duration-seconds",
                 "10",
             ]
@@ -960,12 +1340,28 @@ class IntentWorkflowTests(unittest.TestCase):
             self.assertTrue(attempt["post_generation_target_met"])
             self.assertIsNone(attempt["response_slo_seconds"])
             self.assertIsNone(attempt["response_slo_met"])
+            self.assertEqual(attempt["status"], "candidate")
+            self.assertEqual(attempt["submitted_prompt_source"], "explicit")
+            self.assertTrue(attempt["submitted_prompt_differs_from_compiled"])
+            attempt_dir = task / "attempts" / "001"
+            self.assertEqual(
+                attempt["brief_sha256"],
+                file_hash(attempt_dir / "brief.json"),
+            )
+            self.assertEqual(
+                attempt["reference_manifest_sha256"],
+                file_hash(attempt_dir / "reference-manifest.json"),
+            )
+            self.assertEqual(
+                (attempt_dir / "submitted-prompt.md").read_text(encoding="utf-8"),
+                "exact generator prompt",
+            )
             closed_window = json.loads(
                 (task / "response-window.json").read_text(encoding="utf-8")
             )
             self.assertEqual(closed_window["phase"], "recorded")
             self.assertEqual(closed_window["last_attempt"], 1)
-            self.assertEqual(closed_window["last_status"], "rejected")
+            self.assertEqual(closed_window["last_status"], "candidate")
 
     def test_response_report_includes_average_and_p90(self) -> None:
         summary = duration_summary([60.0, 120.0, 420.0])
@@ -991,6 +1387,385 @@ class IntentWorkflowTests(unittest.TestCase):
         prompt = compile_prompt(self.brief("new"), manifest)
         self.assertIn("Input 1 (style)", prompt)
         self.assertNotIn("opaquehash", prompt)
+
+    def test_new_manga_prompt_rejects_polished_illustration_finish(self) -> None:
+        prompt = compile_prompt(self.brief("new"), {"references": []})
+        self.assertIn("late-1990s serialized black-and-white manga", prompt)
+        self.assertIn("not a polished monochrome illustration", prompt)
+        self.assertIn("Avoid both strand-by-strand hair", prompt)
+        self.assertIn("under-rendered coloring-book outline", prompt)
+        self.assertIn("identity-bearing eye shape", prompt)
+        self.assertIn("generic anime faces", prompt)
+        self.assertIn("Economy means selecting the right marks", prompt)
+
+    def test_wide_manga_prompt_uses_scene_economy_instead_of_generic_guard(self) -> None:
+        brief = self.brief("new")
+        brief["shot"] = "wide-shot"
+        prompt = compile_prompt(brief, {"references": []})
+        self.assertIn("serialized manga establishing shot", prompt)
+        self.assertIn("single borderless serialized-manga panel", prompt)
+        self.assertNotIn("; illustration;", prompt)
+        self.assertIn("authored white-paper intervals", prompt)
+        self.assertIn("finite narrative budget", prompt)
+        self.assertIn("detail fall away clearly", prompt)
+        self.assertIn("same economy consistently", prompt)
+        self.assertNotIn("empty architecture", prompt)
+        self.assertNotIn("Economy means selecting the right marks", prompt)
+
+    def test_wide_manga_qa_checks_economy_and_spatial_structure(self) -> None:
+        checks = qa_items("manga", "new", shot="wide-shot")
+        self.assertTrue(
+            any(category == "medium" and "主动留白" in check for category, check in checks)
+        )
+        self.assertTrue(
+            any(category == "composition" and "未绘区域" in check for category, check in checks)
+        )
+
+    def test_manga_style_authority_includes_scene_simplification(self) -> None:
+        instruction = instruction_for(
+            "style", "manga", focus="脸、头发、衣褶与服装深浅层级"
+        )
+        self.assertIn("background omission", instruction)
+        self.assertIn("material simplification", instruction)
+        self.assertIn("distance-based detail falloff", instruction)
+        self.assertIn("face, hair, fabric, and fold mark-making", instruction)
+        self.assertIn("relative paper-white, flat-black", instruction)
+        self.assertIn("garment construction", instruction)
+        self.assertIn("Exact focus: 脸、头发、衣褶与服装深浅层级", instruction)
+
+    def test_manga_prompt_bridges_official_garment_to_style_values(self) -> None:
+        prompt = compile_prompt(self.brief("new"), {"references": []})
+        self.assertIn("canonical garment component", prompt)
+        self.assertIn("paper-white, flat-black", prompt)
+        self.assertIn("Never copy the style source's costume design", prompt)
+
+    def test_manga_qa_checks_character_marks_and_garment_values(self) -> None:
+        checks = qa_items("manga", "new")
+        self.assertTrue(any("origin-photos" in check for _, check in checks))
+        self.assertTrue(any("纸白、整块黑" in check for _, check in checks))
+
+    def test_new_task_persists_explicit_shot(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            arguments = [
+                "init_art_task.py",
+                "--workflow-root",
+                directory,
+                "--slug",
+                "wide-scene-test",
+                "--medium",
+                "manga",
+                "--request",
+                "废弃神社远景",
+                "--identity-form",
+                "犬夜叉=half-demon-form",
+                "--shot",
+                "wide-shot",
+            ]
+            output = io.StringIO()
+            with patch("sys.argv", arguments), redirect_stdout(output):
+                self.assertEqual(init_art_task_main(), 0)
+            task_dir = Path(output.getvalue().strip().splitlines()[-1])
+            brief = json.loads((task_dir / "brief.json").read_text(encoding="utf-8"))
+            self.assertEqual(brief["shot"], "wide-shot")
+            self.assertIn("serialized manga establishing shot", (task_dir / "prompt.md").read_text(encoding="utf-8"))
+            evidence = (task_dir / "evidence-log.md").read_text(encoding="utf-8")
+            self.assertIn("- Character mark-making coverage:", evidence)
+            self.assertIn("- Garment value hierarchy coverage:", evidence)
+
+    def test_new_task_persists_prop_topology_and_material_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            arguments = [
+                "init_art_task.py",
+                "--workflow-root",
+                directory,
+                "--slug",
+                "tessaiga-material-test",
+                "--medium",
+                "manga",
+                "--request",
+                "犬夜叉在森林挥动变化后的铁碎牙",
+                "--identity-form",
+                "犬夜叉=half-demon-form",
+                "--prop-form",
+                "铁碎牙=transformed-form",
+                "--scene-material",
+                "树干树皮与聚类树叶",
+                "--shot",
+                "action",
+            ]
+            output = io.StringIO()
+            with patch("sys.argv", arguments), redirect_stdout(output):
+                self.assertEqual(init_art_task_main(), 0)
+            task_dir = Path(output.getvalue().strip().splitlines()[-1])
+            brief = json.loads((task_dir / "brief.json").read_text(encoding="utf-8"))
+            self.assertEqual(brief["props"], ["铁碎牙"])
+            self.assertEqual(brief["prop_forms"]["铁碎牙"], "transformed-form")
+            self.assertEqual(
+                brief["dominant_scene_materials"], ["树干树皮与聚类树叶"]
+            )
+            prompt = (task_dir / "prompt.md").read_text(encoding="utf-8")
+            self.assertIn("Canonical prop requirements", prompt)
+            self.assertIn("缠绕刀柄 → 圆形护手 → 单一连续宽刃 → 刀尖", prompt)
+            self.assertIn("刀身×1", prompt)
+            self.assertIn("树干树皮与聚类树叶", prompt)
+            self.assertIn("not separate detailing targets", prompt)
+            evidence = (task_dir / "evidence-log.md").read_text(encoding="utf-8")
+            self.assertIn("Dominant material rendering coverage", evidence)
+
+    def test_planner_infers_prop_form_from_ledger_data(self) -> None:
+        self.assertEqual(
+            infer_prop_forms("犬夜叉在森林中挥动变化后的铁碎牙"),
+            [("铁碎牙", "transformed-form")],
+        )
+        with self.assertRaises(SystemExit):
+            infer_prop_forms("犬夜叉看着铁碎牙")
+        self.assertEqual(
+            infer_prop_forms("犬夜叉挥动未变化的铁碎牙"),
+            [("铁碎牙", "untransformed-form")],
+        )
+        self.assertEqual(
+            infer_prop_forms("犬夜叉拿着破刀形态的铁碎牙战斗"),
+            [("铁碎牙", "untransformed-form")],
+        )
+
+    def test_continuity_plan_has_shotless_fallback_without_identity_filter(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            arguments = [
+                "plan_art_task.py",
+                "--workflow-root",
+                directory,
+                "--slug",
+                "continuity-fallback-test",
+                "--request",
+                "犬夜叉走进森林远景",
+                "--identity-form",
+                "犬夜叉=half-demon-form",
+                "--shot",
+                "wide-shot",
+                "--continuity",
+            ]
+            output = io.StringIO()
+            with patch("sys.argv", arguments), redirect_stdout(output):
+                self.assertEqual(plan_art_task_main(), 0)
+            result = json.loads(output.getvalue())
+            plan = json.loads(Path(result["retrieval_plan"]).read_text(encoding="utf-8"))
+            continuity = next(
+                layer
+                for layer in plan["layers"]
+                if layer.get("source") == "selected-output"
+            )
+            primary = continuity["primary_commands"][0]
+            fallback = continuity["fallback_without_shot"][0]
+            self.assertIn("--shot", primary)
+            self.assertNotIn("--shot", fallback)
+            self.assertNotIn("--subject", fallback)
+            self.assertNotIn("--form", fallback)
+
+    def test_wide_shot_adds_positive_scene_economy_traits(self) -> None:
+        traits = retrieval_traits_for("雨夜神社", "wide-shot", medium="manga")
+        self.assertIn("scene-economy:authored-negative-space", traits)
+        self.assertIn("detail-falloff:strong", traits)
+        self.assertEqual(
+            parse_trait("scene-economy=authored-negative-space"),
+            "scene-economy:authored-negative-space",
+        )
+        self.assertNotIn(
+            "scene-economy:authored-negative-space",
+            retrieval_traits_for("雨夜神社", "wide-shot", medium="tv"),
+        )
+
+    def test_scene_economy_is_a_weak_boost_below_exact_action(self) -> None:
+        base = {
+            "filename_terms": [],
+            "subjects": [],
+            "subject_forms": {},
+            "folder_tags": [],
+            "content_label": "",
+            "relative_path": "",
+            "note": "",
+            "eligible_roles": ["rendering"],
+            "shot_types": ["wide-shot"],
+        }
+        terms = [
+            "action:swing-weapon",
+            "scene-economy:authored-negative-space",
+            "detail-falloff:strong",
+        ]
+        economy_score, _ = retrieval_relevance(
+            {
+                **base,
+                "tags": [
+                    "scene-economy:authored-negative-space",
+                    "detail-falloff:strong",
+                ],
+            },
+            query_terms=terms,
+            shots=["wide-shot"],
+            role="rendering",
+        )
+        action_score, _ = retrieval_relevance(
+            {**base, "tags": ["action:swing-weapon"]},
+            query_terms=terms,
+            shots=["wide-shot"],
+            role="rendering",
+        )
+        self.assertGreater(action_score, economy_score)
+
+    def test_prop_qa_uses_ledger_topology_without_failure_examples(self) -> None:
+        checks = qa_items(
+            "manga",
+            "new",
+            shot="action",
+            prop_forms={"铁碎牙": "transformed-form"},
+        )
+        text = "\n".join(check for _, check in checks)
+        self.assertIn("单一连续宽刃", text)
+        self.assertIn("刀身×1", text)
+        self.assertNotIn("两根并行獠牙", text)
+
+    def test_planner_forwards_explicit_shot_to_initializer(self) -> None:
+        source = (SCRIPTS / "plan_art_task.py").read_text(encoding="utf-8")
+        initializer = source.split("command = [", 1)[1].split("completed =", 1)[0]
+        self.assertIn('command.extend(["--shot", args.shot])', initializer)
+        self.assertIn('"--prefer-subject-form"', source)
+
+    def test_manga_edit_preserves_two_sided_finish_band(self) -> None:
+        prompt = compile_prompt(self.brief("edit"), {"references": []})
+        self.assertIn("Do not drift toward extra", prompt)
+        self.assertIn("digital polish", prompt)
+        self.assertIn("strip away identity-critical", prompt)
+
+    def test_manga_medium_edit_requires_actual_simplification(self) -> None:
+        brief = self.brief("edit")
+        brief["change_category"] = "medium"
+        brief["change_request"] = "改成简练的连载漫画画法"
+        brief["invariants"] = []
+        prompt = compile_prompt(brief, {"references": []})
+        self.assertIn("selected style reference's scene-appropriate density band", prompt)
+        self.assertIn("Preserve identity-bearing eye and bang shapes", prompt)
+        self.assertIn("open white paper", prompt)
+        self.assertIn("decisive flat blacks", prompt)
+        self.assertIn("simplifying into generic sparse line art", prompt)
+        self.assertIn("Do not impose numeric", prompt)
+        self.assertIn("replace the current rendering finish", prompt)
+
+    def test_wide_manga_medium_edit_locks_target_staging(self) -> None:
+        brief = self.brief("edit")
+        brief["shot"] = "wide-shot"
+        brief["change_category"] = "medium"
+        brief["change_request"] = "继续贴近原作漫画的场景画法"
+        brief["invariants"] = []
+        prompt = compile_prompt(brief, {"references": []})
+        self.assertIn("Wide-shot preservation lock", prompt)
+        self.assertIn("character scale and placement", prompt)
+        self.assertIn("overall black-white distribution", prompt)
+        self.assertIn("Do not enlarge the character", prompt)
+        self.assertIn("recrop or recompose the scene", prompt)
+        self.assertIn("Economy is not uniform simplification", prompt)
+        self.assertIn("Correct the finish locally", prompt)
+
+    def test_wide_manga_edit_qa_rejects_dramatic_reauthoring(self) -> None:
+        checks = qa_items("manga", "edit", "medium", shot="wide-shot")
+        self.assertTrue(
+            any(
+                category == "preservation"
+                and "人物尺度与位置" in check
+                and "增加大块重黑" in check
+                for category, check in checks
+            )
+        )
+        self.assertTrue(
+            any(
+                category == "medium" and "全画面均匀变空" in check
+                for category, check in checks
+            )
+        )
+
+    def test_manga_medium_edit_qa_rejects_tone_only_conversion(self) -> None:
+        checks = qa_items("manga", "edit", "medium")
+        self.assertTrue(
+            any(
+                category == "medium" and "不只是去掉灰阶" in check
+                for category, check in checks
+            )
+        )
+
+    def test_runtime_contract_does_not_pin_a_manga_volume_or_page(self) -> None:
+        skill_root = Path(__file__).resolve().parents[1]
+        runtime_contracts = [
+            skill_root / "SKILL.md",
+            skill_root / "references" / "workflow-contract.md",
+        ]
+        for path in runtime_contracts:
+            text = path.read_text(encoding="utf-8")
+            self.assertNotIn("Volume 13", text)
+            self.assertNotIn("Volume-13", text)
+
+    def test_rendering_layer_result_can_be_read_without_fixed_style_input(self) -> None:
+        evidence = """## Layer 1: official identity
+- Result: `HIT`
+## Layer 2: Manga or TV screenshots
+- Result: `INSUFFICIENT`
+## Layer 3: exact content evidence
+- Selected-medium result: `SKIP`
+"""
+        section = evidence.split("## Layer 2:", 1)[-1].split("## Layer 3:", 1)[0]
+        self.assertEqual(retrieval_result(section, "Result"), "INSUFFICIENT")
+
+    def test_rendering_coverage_gate_requires_focus_and_all_five_hits(self) -> None:
+        evidence = """- Character mark-making coverage: HIT
+- Hair and face linework coverage: HIT
+- Fabric and fold treatment coverage: HIT
+- Garment value hierarchy coverage:
+- Scene rendering coverage: HIT
+"""
+        failures = rendering_coverage_failures(
+            evidence,
+            [
+                {
+                    "role": "style",
+                    "item_id": "manga-curated:file:test",
+                    "focus": "",
+                    "instructions": "Control manga mark-making only.",
+                }
+            ],
+            1,
+            "manga",
+        )
+        self.assertTrue(any("Garment value hierarchy" in item for item in failures))
+        self.assertTrue(any("no exact rendering focus" in item for item in failures))
+        self.assertTrue(any("authority instruction is incomplete" in item for item in failures))
+
+    def test_scene_material_scope_allows_second_core_style_anchor(self) -> None:
+        instruction = instruction_for(
+            "style",
+            "manga",
+            focus="树干树皮与聚类树叶",
+            source_medium="manga",
+        )
+        evidence = """- Character mark-making coverage: HIT
+- Hair and face linework coverage: HIT
+- Fabric and fold treatment coverage: HIT
+- Garment value hierarchy coverage: HIT
+- Scene rendering coverage: HIT
+- Dominant material rendering coverage: HIT — 树干树皮与聚类树叶
+"""
+        failures = rendering_coverage_failures(
+            evidence,
+            [
+                {
+                    "role": "style",
+                    "item_id": "manga-curated:file:test",
+                    "focus": "树干树皮与聚类树叶",
+                    "instructions": instruction,
+                }
+            ],
+            2,
+            "manga",
+            ["树干树皮与聚类树叶", "石阶石灯笼与岩石表面"],
+        )
+        self.assertFalse(any("one primary style anchor" in item for item in failures))
+        self.assertFalse(any("石阶石灯笼与岩石表面" in item for item in failures))
 
     def test_child_inuyasha_ledger_does_not_inherit_adult_props(self) -> None:
         brief = self.brief("new")
@@ -1083,7 +1858,7 @@ class IntentWorkflowTests(unittest.TestCase):
             source = {
                 "task_id": "parent-task",
                 "attempt": 1,
-                "status": "rejected",
+                "status": "candidate",
                 "output": str(output.resolve()),
                 "output_sha256": digest,
             }
@@ -1091,7 +1866,7 @@ class IntentWorkflowTests(unittest.TestCase):
                 json.dumps(
                     {
                         "attempt": 1,
-                        "status": "rejected",
+                        "status": "candidate",
                         "output": str(output.resolve()),
                         "output_sha256": digest,
                     }
@@ -1158,6 +1933,54 @@ class IntentWorkflowTests(unittest.TestCase):
             )
         )
 
+    def test_new_manga_qa_rejects_over_refined_illustration_finish(self) -> None:
+        checks = qa_items("manga", "new")
+        self.assertTrue(
+            any(
+                category == "medium"
+                and "场景完成度区间" in check
+                and "精修黑白插画" in check
+                for category, check in checks
+            )
+        )
+        self.assertTrue(
+            any(
+                category == "medium"
+                and "通用动漫脸" in check
+                and "简陋线稿" in check
+                and "身份关键" in check
+                for category, check in checks
+            )
+        )
+
+    def test_manga_microfix_qa_preserves_finish_level(self) -> None:
+        checks = qa_items("manga", "microfix", "anatomy")
+        self.assertTrue(
+            any(
+                category == "preservation"
+                and "数字精修" in check
+                and "身份关键线条" in check
+                for category, check in checks
+            )
+        )
+
+    def test_style_planning_does_not_filter_rendering_by_identity(self) -> None:
+        plan_source = (SCRIPTS / "plan_art_task.py").read_text(encoding="utf-8")
+        style_block = plan_source.split("style_primary =", 1)[1].split(
+            "layers =", 1
+        )[0]
+        self.assertNotIn('"--subject"', style_block)
+        self.assertNotIn('"--form"', style_block)
+
+    def test_new_task_planner_does_not_route_identity_cards(self) -> None:
+        plan_source = (SCRIPTS / "plan_art_task.py").read_text(encoding="utf-8")
+        self.assertNotIn("resolve_identity_card", plan_source)
+        identity_block = plan_source.split("official_commands =", 1)[1].split(
+            "style_source =", 1
+        )[0]
+        self.assertIn('"--source",\n            "official"', identity_block)
+        self.assertNotIn('"--identity-card"', identity_block)
+
     def test_retrieval_result_parses_serial_content_gate(self) -> None:
         evidence = """- Selected-medium result: `INSUFFICIENT`
 - Cross-medium fallback result: HIT
@@ -1179,6 +2002,118 @@ class IntentWorkflowTests(unittest.TestCase):
         )
         self.assertGreater(accepted, 0.5)
         self.assertLess(rejected, 0.5)
+
+    def test_preference_profile_uses_only_repeated_accepted_feedback(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            task = root / "tasks" / "accepted-style"
+            task.mkdir(parents=True)
+            (task / "brief.json").write_text(
+                json.dumps({"medium": "manga"}), encoding="utf-8"
+            )
+            events = [
+                {"status": "accepted", "tags": ["selective-detail"]},
+                {"status": "accepted", "tags": ["selective-detail"]},
+                {"status": "rejected", "tags": ["selective-detail", "failed-case"]},
+            ]
+            (task / "preference-events.jsonl").write_text(
+                "\n".join(json.dumps(row) for row in events) + "\n",
+                encoding="utf-8",
+            )
+            output = write_profile(root)
+            profile = json.loads(output.read_text(encoding="utf-8"))
+            traits = {row["tag"]: row["count"] for row in profile["manga"]["traits"]}
+            self.assertEqual(traits, {"selective-detail": 2})
+            self.assertEqual(profile["minimum_support"], 2)
+
+    def test_acceptance_survives_derived_preference_refresh_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory) / "tasks" / "accepted-task"
+            task.mkdir(parents=True)
+            created_at = "2026-08-16T12:00:00+08:00"
+            (task / "brief.json").write_text(
+                json.dumps(
+                    {
+                        "medium": "manga",
+                        "intent": "new",
+                        "created_at": created_at,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (task / "reference-manifest.json").write_text(
+                json.dumps({"references": []}), encoding="utf-8"
+            )
+            (task / "prompt.md").write_text("compiled prompt", encoding="utf-8")
+            generated = task / "accepted.png"
+            generated.write_bytes(b"accepted image")
+            arguments = [
+                "record_attempt.py",
+                "--task-dir",
+                str(task),
+                "--status",
+                "accepted",
+                "--output",
+                str(generated),
+                "--json",
+            ]
+            output = io.StringIO()
+            with (
+                patch("sys.argv", arguments),
+                patch(
+                    "record_attempt.write_profile",
+                    side_effect=ValueError("broken preference event"),
+                ),
+                redirect_stdout(output),
+            ):
+                self.assertEqual(record_attempt_main(), 0)
+            payload = json.loads(output.getvalue())
+            result = json.loads((task / "result.json").read_text(encoding="utf-8"))
+            self.assertEqual(result["status"], "accepted")
+            self.assertTrue((task / "attempts" / "001" / "attempt.json").is_file())
+            self.assertIn("broken preference event", payload["preference_profile_warning"])
+
+    def test_identity_ledger_validator_checks_topology_and_inference(self) -> None:
+        ledger = {
+            "schema_version": 1,
+            "characters": {
+                "犬夜叉": {
+                    "common": [],
+                    "forms": {"half-demon-form": []},
+                    "exclusions": [],
+                },
+                "测试刀": {
+                    "kind": "prop",
+                    "common": [],
+                    "forms": {
+                        "transformed-form": {
+                            "features": ["宽刃"],
+                            "topology": {
+                                "connected_sequence": ["刀柄", "刀身", "刀尖"],
+                                "counts": {"刀身": 1, "刀尖": 1},
+                            },
+                        }
+                    },
+                    "form_inference": {
+                        "transformed-form": {
+                            "explicit": ["变化后"],
+                            "context": ["挥动"],
+                        }
+                    },
+                    "exclusions": [],
+                },
+            },
+        }
+        self.assertEqual(identity_ledger_failures(ledger), [])
+        ledger["characters"]["测试刀"]["forms"]["transformed-form"]["topology"][
+            "counts"
+        ]["刀尖"] = 0
+        ledger["characters"]["测试刀"]["form_inference"]["missing-form"] = [
+            "未知"
+        ]
+        failures = identity_ledger_failures(ledger)
+        self.assertTrue(any("positive integers" in failure for failure in failures))
+        self.assertTrue(any("unknown form" in failure for failure in failures))
 
     def test_archived_attempts_do_not_affect_reference_ranking(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

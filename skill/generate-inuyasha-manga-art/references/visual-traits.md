@@ -4,7 +4,7 @@ Annotate only distinctions that filenames and folders cannot express. Keep ident
 
 Allowed trait keys:
 
-- `action`: `embrace`, `embrace-from-behind`, `look-down`, `reach`, `hold`, `cut`, `turn-head`, `sleeve-hidden-hands`, `face-off`, `draw-weapon`, `swing-weapon`, `jump`, `run`, `sit`, `kneel`, `carry`, `crouch`, `pass-ball`, `catch-ball`, `kick-ball`, `comb-hair`, `touch-ears`, `adjust-clothing`
+- `action`: `embrace`, `embrace-from-behind`, `look-down`, `look-up`, `reach`, `hold`, `cut`, `turn-head`, `sleeve-hidden-hands`, `face-off`, `draw-weapon`, `swing-weapon`, `jump`, `run`, `sit`, `kneel`, `carry`, `crouch`, `pass-ball`, `catch-ball`, `kick-ball`, `comb-hair`, `touch-ears`, `adjust-clothing`
 - `interaction`: `mother-child`, `romantic`, `face-to-face`, `body-contact`, `hand-prop`, `hand-clothing`, `shoulder-rest`, `shared-gaze`, `confrontation`, `caregiving`, `teaching`, `ear-touch`
 - `expression`: `alert-sad`, `shy`, `surprised`, `gentle`, `restrained`, `angry`, `determined`, `crying`, `neutral`
 - `content-object`: `knife`, `daikon`, `grave`, `tessaiga`, `tenseiga`, `ball`, `shopping-bag`, `bow`, `well`, `tree`, `comb`, `mirror`, `hair-ribbon`, `robe-sleeve`, `shrine`
@@ -14,7 +14,7 @@ Allowed trait keys:
 - `tone-density`: `light`, `balanced`, `dense`
 - `black-mass`: `hair-dominant`, `effect-dominant`, `background-dominant`, `balanced`
 - `background`: `minimal`, `nature`, `architecture`, `night`, `interior`, `courtyard`, `shrine`, `graveyard`
-- `effect-type`: `none`, `wind`, `rain`, `mist`, `speed-lines`, `impact`, `aura`
+- `effect-type`: `none`, `wind`, `rain`, `mist`, `snow`, `snow-light`, `snow-heavy`, `speed-lines`, `impact`, `aura`
 - `suitable-for`: `close-up`, `two-shot`, `full-body`, `back-view`, `quiet-scene`, `combat`, `establishing`, `weapon-mount`, `garment-overlap`, `footwear`, `ground-contact`
 - `view-angle`: `front`, `three-quarter-front`, `profile`, `three-quarter-back`, `back`, `high-angle`, `low-angle`, `multi-view`
 - `depth-layout`: `same-plane`, `foreground-midground`, `foreground-background`, `layered`
@@ -22,6 +22,8 @@ Allowed trait keys:
 - `contact-type`: `none`, `ground`, `body`, `prop`, `clothing`
 - `prop-attachment`: `none`, `waist`, `back`, `hand`, `shoulder`, `clothing`
 - `perspective-risk`: `low`, `medium`, `high`
+- `scene-economy`: `authored-negative-space`, `selective-detail`, `dense-functional`
+- `detail-falloff`: `strong`, `moderate`, `flat`
 
 Example:
 
@@ -43,6 +45,9 @@ For natural-language requests, use `--intent-text`. It maps only explicit phrase
 such as `背后拥抱`, `蹲坐抱球`, `袖中藏手`, `挥动铁碎牙`, or `雨夜神社` to
 controlled traits and uses them as ranking hints. It does not hard-filter the
 catalog, grant a source new authority, or automatically require content evidence.
+An explicit `wide-shot` also contributes `scene-economy:authored-negative-space`
+and `detail-falloff:strong`; these are observable rendering traits, not names of
+past failures or fixed reference IDs.
 
 Trait keys and values are controlled; `annotate_reference.py` rejects typos or
 unsupported values. During rebuild, `view-angle:back` and

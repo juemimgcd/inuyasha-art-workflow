@@ -17,6 +17,7 @@ from task_workflow import (
     INTENT_VALUES,
     LATENCY_SCHEMA_VERSION,
     compile_prompt,
+    identity_requirements,
     read_json,
 )
 from workflow_common import (
@@ -52,12 +53,75 @@ def qa_items(
     intent: str = "new",
     change_category: str | None = None,
     shot: str | None = None,
+    prop_forms: dict[str, str] | None = None,
 ) -> list[tuple[str, str]]:
     source_check = (
-        "漫画风格截图只控制画法，没有复制其人物、文字、分镜或剧情"
+        "若使用漫画风格截图，它只控制画法，没有复制其人物、文字、分镜或剧情"
         if medium == "manga"
-        else "TV 截图只控制配色与动画画法，没有复制其构图、人物或剧情"
+        else "若使用 TV 截图，它只控制配色与动画画法，没有复制其构图、人物或剧情"
     )
+    medium_specific_checks = (
+        [
+            (
+                "medium",
+                "整体处于所选风格参考对应的场景完成度区间：既不是发丝、碎衣褶、微纹理和平滑体积光堆叠的精修黑白插画，也不是通用动漫脸、均匀矢量轮廓、空洞场景或缺少结构关系的简陋线稿；身份关键的眼型、刘海分束、下颌、发型轮廓、服装层次和接触关系完整",
+            ),
+            (
+                "medium",
+                "角色轮廓粗细、脸部简化、头发分束与布料衣褶使用所选 origin-photos 风格参考的笔触逻辑，同时没有复制参考图中的人物身份、姿势或构图",
+            ),
+            (
+                "medium",
+                "official 规定的服装部件、层叠、纹样和附件保持不变；这些部件之间的纸白、整块黑与克制中间网点深浅关系来自所选 origin-photos 风格参考且层级清楚",
+            ),
+        ]
+        if medium == "manga"
+        else []
+    )
+    medium_edit_checks = (
+        [
+            (
+                "medium",
+                "媒介修改把画面移入所选风格参考的场景完成度区间，而不只是去掉灰阶或换成网点；多余精修被削弱，但身份关键脸型、刘海、发型轮廓、服装结构、手部接触与必要场景线索没有被删成通用简陋线稿",
+            )
+        ]
+        if medium == "manga" and change_category == "medium"
+        else []
+    )
+    wide_scene_checks = (
+        [
+            (
+                "medium",
+                "远景以有限的信息预算组织大轮廓、主动留白、整块黑和克制中间调；笔触集中于叙事焦点，重复形体被归组，细节随距离明确衰减",
+            ),
+            (
+                "composition",
+                "远景的主要轴线、遮挡、尺度、路线和接地关系连续，未绘区域也是清楚的构图决定",
+            ),
+        ]
+        if medium == "manga" and shot == "wide-shot"
+        else []
+    )
+    prop_checks = []
+    for prop, form in (prop_forms or {}).items():
+        construction = [
+            value
+            for value in identity_requirements(prop, form)
+            if value.startswith(("连续结构：", "明确数量："))
+        ]
+        prop_checks.append(
+            (
+                "identity",
+                f"{prop} 使用官方 {form} 形态，风格与动作参考不改变其规范轮廓",
+            )
+        )
+        if construction:
+            prop_checks.append(
+                (
+                    "construction",
+                    f"{prop} 的" + "；".join(construction),
+                )
+            )
     wide_edit_preservation_checks = (
         [
             (
@@ -74,6 +138,10 @@ def qa_items(
     )
     full = [
         *BASE_QA_ITEMS[:-1],
+        *medium_specific_checks,
+        *medium_edit_checks,
+        *wide_scene_checks,
+        *prop_checks,
         *wide_edit_preservation_checks,
         ("process", source_check),
         (
@@ -91,7 +159,10 @@ def qa_items(
     category = change_category or "polish"
     checks = [
         (category, f"仅修改指定的 {category} 问题，修改结果符合请求"),
-        ("preservation", "目标区域以外的人物、构图、画法和背景保持不变"),
+        (
+            "preservation",
+            "目标区域以外的人物、构图、画法和背景保持不变；没有额外数字精修，也没有删掉身份关键线条或必要场景线索",
+        ),
         ("identity", "局部编辑没有造成角色身份、形态或服装漂移"),
     ]
     if category in {"construction", "costume", "anatomy", "composition"}:
@@ -105,7 +176,7 @@ def qa_items(
         checks.append(
             (
                 "preservation",
-                "局部修改没有增加细碎发丝、衣褶、微纹理、平滑阴影或数字精修感，也没有删掉身份关键线条",
+                "局部修改没有增加细碎发丝、衣褶、微纹理、平滑阴影或数字精修感",
             )
         )
     return [
@@ -156,6 +227,21 @@ def parse_args() -> argparse.Namespace:
         default=[],
         metavar="CHARACTER=FORM",
         help="Declare a required form for identity-reference compatibility.",
+    )
+    parser.add_argument(
+        "--prop-form",
+        type=parse_identity_form,
+        action="append",
+        default=[],
+        metavar="PROP=FORM",
+        help="Declare the exact canonical form of a named weapon or prop.",
+    )
+    parser.add_argument(
+        "--scene-material",
+        action="append",
+        default=[],
+        metavar="VISIBLE_MATERIAL",
+        help="Name scene-material scope that inherits the primary style anchor's economy.",
     )
     parser.add_argument(
         "--content-query",
@@ -225,9 +311,7 @@ def main() -> int:
     content_query = args.content_query.strip()
     content_focus = args.content_focus.strip()
     if bool(content_query) != bool(content_focus):
-        raise SystemExit(
-            "--content-query and --content-focus must be supplied together"
-        )
+        raise SystemExit("--content-query and --content-focus must be supplied together")
     if not content_query and args.content_provenance != "observed-content":
         raise SystemExit("--content-provenance requires a planned content query")
     period_mode = (
@@ -235,6 +319,9 @@ def main() -> int:
         or (parent_brief or {}).get("period_mode")
         or ("classic-balanced" if args.medium == "manga" else None)
     )
+    shot = (parent_brief or {}).get("shot") or args.shot
+    if parent_brief and args.shot and args.shot != shot:
+        raise SystemExit("A continuation cannot silently change the parent shot")
     root = workflow_root(config, args.workflow_root)
     paths = ensure_workflow_dirs(root)
     date_prefix = datetime.now(timezone.utc).astimezone().strftime("%Y%m%d")
@@ -252,6 +339,25 @@ def main() -> int:
     identity_forms = supplied_forms or dict(inherited_forms)
     if parent_brief and supplied_forms and identity_forms != inherited_forms:
         raise SystemExit("A continuation cannot silently change parent identity forms")
+    inherited_prop_forms = (parent_brief or {}).get("prop_forms") or {}
+    supplied_prop_forms = dict(args.prop_form)
+    if len(supplied_prop_forms) != len(args.prop_form):
+        raise SystemExit("Each prop may have only one --prop-form")
+    prop_forms = supplied_prop_forms or dict(inherited_prop_forms)
+    if parent_brief and supplied_prop_forms and prop_forms != inherited_prop_forms:
+        raise SystemExit("A continuation cannot silently change parent prop forms")
+    if set(identity_forms) & set(prop_forms):
+        raise SystemExit("A subject cannot be declared as both a character and a prop")
+    inherited_materials = list(
+        (parent_brief or {}).get("dominant_scene_materials") or []
+    )
+    dominant_scene_materials = list(
+        dict.fromkeys(
+            value.strip()
+            for value in (args.scene_material or inherited_materials)
+            if value.strip()
+        )
+    )
     inherited_invariants = list((parent_brief or {}).get("invariants") or [])
     supplied_content_need = (
         {
@@ -284,17 +390,20 @@ def main() -> int:
         "medium": args.medium,
         "deliverable": args.deliverable,
         "period_mode": period_mode,
-        "shot": args.shot or (parent_brief or {}).get("shot"),
         "style_strategy": f"two-layer-{args.medium}-fast",
         "style_references": [],
         "content_need": content_need,
         "content_references": [],
         "characters": list(identity_forms),
         "identity_forms": identity_forms,
+        "props": list(prop_forms),
+        "prop_forms": prop_forms,
         "forms_and_costumes": [
             f"{character}: {form}" for character, form in identity_forms.items()
         ],
         "scene": (parent_brief or {}).get("scene", ""),
+        "dominant_scene_materials": dominant_scene_materials,
+        "shot": shot,
         "aspect_ratio": ((parent_brief or {}).get("aspect_ratio") or args.aspect_ratio),
         "invariants": inherited_invariants,
         "latency_budget": {
@@ -317,7 +426,7 @@ def main() -> int:
             "checks": [
                 {"category": category, "check": check, "status": "pending", "note": ""}
                 for category, check in qa_items(
-                    args.medium, intent, args.change_category, brief["shot"]
+                    args.medium, intent, args.change_category, shot, prop_forms
                 )
             ],
         },
@@ -359,7 +468,7 @@ The parent task's inspected identity and manga evidence remain authoritative whi
 
 Task: `{task_id}`
 
-Run the required retrieval layers in order and record one of `HIT`, `MISS`, or `INSUFFICIENT` before advancing: official identity -> selected-medium rendering -> optional exact content -> optional continuity. For exact content, search the selected medium first; open the cross-medium fallback only after a recorded `MISS` or `INSUFFICIENT`. Never substitute cross-medium content for selected-medium style or official identity.
+Run the required retrieval layers in order and record one of `HIT`, `MISS`, `INSUFFICIENT`, or `SKIP` before advancing: official identity -> selected-medium rendering -> optional exact content -> optional continuity. Use `SKIP` for selected-medium rendering only when the bundled generalized guide fully resolves the rendering need. Never turn that guide's offline source provenance into a fixed volume/page query. For exact content, search the selected medium first; open the cross-medium fallback only after a recorded `MISS` or `INSUFFICIENT`. Never substitute cross-medium content for selected-medium style or official identity.
 
 ## Layer 1: official identity
 
@@ -375,6 +484,12 @@ Run the required retrieval layers in order and record one of `HIT`, `MISS`, or `
 - Source browsed:
 - Selected item IDs:
 - Result:
+- Character mark-making coverage:
+- Hair and face linework coverage:
+- Fabric and fold treatment coverage:
+- Garment value hierarchy coverage:
+- Scene rendering coverage:
+- Dominant material rendering coverage: record whether the primary style anchor's information budget transfers across the listed scene scope; do not add one reference per material
 - Controls:
 - Must not control:
 
@@ -393,7 +508,7 @@ Run the required retrieval layers in order and record one of `HIT`, `MISS`, or `
 ## Layer 4: selected original outputs
 
 - Need: explicit accepted-output continuity, otherwise `N/A`
-- Source searched: `selected-output` (configured source library)
+- Source searched: `/Users/jquery/Documents/inuYasha-design/selected-output`
 - Result: `SKIP` unless continuity was requested
 - Selected item IDs:
 - Usable evidence:

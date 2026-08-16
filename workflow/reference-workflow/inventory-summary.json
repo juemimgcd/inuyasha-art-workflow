@@ -1,9 +1,9 @@
 {
-  "built_at": "2026-08-12T17:02:49+08:00",
-  "database": "/Users/jquery/Documents/inuyasha-art-workflow/workflow/reference-workflow/catalog.sqlite3",
+  "built_at": "2026-08-16T17:35:31+08:00",
+  "database": "/private/tmp/inuyasha-sync-worktree.BQKQq9/workflow/reference-workflow/catalog.sqlite3",
   "counts": {
-    "image": 217,
-    "image_file": 243,
+    "image": 218,
+    "image_file": 244,
     "duplicate_image_file": 26
   },
   "sources": {
@@ -13,8 +13,8 @@
       "duplicate_image_file": 0
     },
     "manga-curated": {
-      "image": 100,
-      "image_file": 120,
+      "image": 101,
+      "image_file": 121,
       "duplicate_image_file": 20
     },
     "user-continuity": {
@@ -38,42 +38,42 @@
       "exists": true,
       "file_count": 88,
       "total_size": 15020559,
-      "latest_mtime_ns": 1786354667000000000,
-      "inventory_hash": "b6ed14982786d0e2bb33818c7fc1b99184f6354ec3e66c64a49a9ba73f690ea5"
+      "latest_mtime_ns": 1786871468437403723,
+      "inventory_hash": "69e66709058b00cfc415f2052cc0ebd60de3fe3fdd421cac1f2d7747fc1080a3"
     },
     "manga-curated": {
       "exists": true,
-      "file_count": 120,
-      "total_size": 13794211,
-      "latest_mtime_ns": 1786277398000000000,
-      "inventory_hash": "50d2e2f2417bac15f5e3fb1c17e24b0028bc847756be521d30458b9fce6c19bc"
+      "file_count": 121,
+      "total_size": 13906864,
+      "latest_mtime_ns": 1786872787589784420,
+      "inventory_hash": "4e85a55b150399332fcd463473261a6a98b2f8df14f0c8a336000cf3855fbab6"
     },
     "user-continuity": {
       "exists": true,
       "file_count": 9,
       "total_size": 22545698,
-      "latest_mtime_ns": 1786085918000000000,
-      "inventory_hash": "765991bc56adcb1ae65f9988d0f345482dcac8450ccfb600269f7dc4dbfa2fa7"
+      "latest_mtime_ns": 1786871468536183622,
+      "inventory_hash": "25285f5f8d8ed3412f1a69d39e256ef05f8c6b05917ab336f051eb493cb6c909"
     },
     "tv-curated": {
       "exists": true,
       "file_count": 11,
       "total_size": 6689855,
-      "latest_mtime_ns": 1786337982000000000,
-      "inventory_hash": "34bfa616f2c10b714792e86fed9e681fd542110ce8425fc90802876389606391"
+      "latest_mtime_ns": 1786871468573878352,
+      "inventory_hash": "23719e15acd21a43e3897a083473f6a05bf14bdca7fdeed1f95cc4822f44f188"
     },
     "selected-output": {
       "exists": true,
       "file_count": 15,
       "total_size": 42590281,
-      "latest_mtime_ns": 1786170669000000000,
-      "inventory_hash": "595edf9542a4cd7cc4fad0f88621356d007bbee1fd503e7ecdc7a8e7a5f96dd1"
+      "latest_mtime_ns": 1786871468751042511,
+      "inventory_hash": "dd429773cef4aa08e23bf90ebcf027525e2373ce3bf4605ff9528dd6ae751157"
     }
   },
-  "annotation_count": 33,
+  "annotation_count": 35,
   "incremental_cache": {
     "hash_cache_hits": 243,
-    "hash_computations": 0,
+    "hash_computations": 1,
     "rehash_requested": false
   }
 }

@@ -8,6 +8,7 @@ import sqlite3
 from pathlib import Path
 
 from build_reference_index import freshness
+from visual_ab_eval import load_dataset as load_visual_eval_dataset
 from workflow_common import (
     CONFIG_PATH,
     SKILL_DIR,
@@ -26,6 +27,7 @@ REQUIRED_FILES = (
     "references/identity-ledgers.json",
     "references/visual-traits.md",
     "references/retrieval-benchmark.json",
+    "references/visual-eval-v2.json",
     "scripts/build_reference_index.py",
     "scripts/search_reference_index.py",
     "scripts/browse_curated_styles.py",
@@ -36,14 +38,11 @@ REQUIRED_FILES = (
     "scripts/plan_art_task.py",
     "scripts/continue_art_task.py",
     "scripts/compile_prompt.py",
-    "scripts/prepare_generation_submission.py",
-    "scripts/prepare_quick_edit.py",
     "scripts/record_attempt.py",
-    "scripts/start_response_window.py",
-    "scripts/technical_failures.py",
     "scripts/coverage_report.py",
     "scripts/reference_feedback_report.py",
     "scripts/benchmark_reference_retrieval.py",
+    "scripts/visual_ab_eval.py",
     "scripts/preference_profile.py",
     "scripts/validate_all_tasks.py",
     "scripts/migrate_art_tasks.py",
@@ -51,7 +50,102 @@ REQUIRED_FILES = (
     "scripts/run-python",
     "scripts/run-python.ps1",
 )
-EXPECTED_CATALOG_SCHEMA = "6"
+EXPECTED_CATALOG_SCHEMA = "7"
+
+
+def _string_list_failures(value: object, label: str) -> list[str]:
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) and item.strip() for item in value
+    ):
+        return [f"{label} must be a list of non-empty strings"]
+    return []
+
+
+def identity_ledger_failures(ledger: dict) -> list[str]:
+    """Validate legacy feature lists and structured positive prop topology."""
+    failures = []
+    if ledger.get("schema_version") != 1:
+        failures.append("identity-ledgers.json must use schema 1")
+    characters = ledger.get("characters")
+    if not isinstance(characters, dict) or "犬夜叉" not in characters:
+        failures.append("identity-ledgers.json must include 犬夜叉")
+        return failures
+    for subject, profile in characters.items():
+        label = f"identity ledger {subject}"
+        if not isinstance(profile, dict):
+            failures.append(f"{label} must be an object")
+            continue
+        for field in ("common", "exclusions"):
+            failures.extend(
+                _string_list_failures(profile.get(field, []), f"{label}.{field}")
+            )
+        forms = profile.get("forms")
+        if not isinstance(forms, dict) or not forms:
+            failures.append(f"{label}.forms must be a non-empty object")
+            continue
+        for form, record in forms.items():
+            form_label = f"{label}.forms.{form}"
+            if isinstance(record, list):
+                failures.extend(_string_list_failures(record, form_label))
+                continue
+            if not isinstance(record, dict):
+                failures.append(f"{form_label} must be a feature list or object")
+                continue
+            failures.extend(
+                _string_list_failures(record.get("features"), f"{form_label}.features")
+            )
+            topology = record.get("topology")
+            if not isinstance(topology, dict):
+                failures.append(f"{form_label}.topology must be an object")
+                continue
+            failures.extend(
+                _string_list_failures(
+                    topology.get("connected_sequence"),
+                    f"{form_label}.topology.connected_sequence",
+                )
+            )
+            counts = topology.get("counts")
+            if not isinstance(counts, dict) or not counts:
+                failures.append(f"{form_label}.topology.counts must be non-empty")
+            elif not all(
+                isinstance(name, str)
+                and name.strip()
+                and isinstance(count, int)
+                and not isinstance(count, bool)
+                and count > 0
+                for name, count in counts.items()
+            ):
+                failures.append(
+                    f"{form_label}.topology.counts must map names to positive integers"
+                )
+        inference = profile.get("form_inference", {})
+        if not isinstance(inference, dict):
+            failures.append(f"{label}.form_inference must be an object")
+            continue
+        for form, rules in inference.items():
+            rule_label = f"{label}.form_inference.{form}"
+            if form not in forms:
+                failures.append(f"{rule_label} references an unknown form")
+                continue
+            if isinstance(rules, list):
+                failures.extend(_string_list_failures(rules, rule_label))
+                if not rules:
+                    failures.append(f"{rule_label} must declare at least one alias")
+                continue
+            if not isinstance(rules, dict) or set(rules) - {"explicit", "context"}:
+                failures.append(
+                    f"{rule_label} must use only explicit/context alias groups"
+                )
+                continue
+            for strength in ("explicit", "context"):
+                failures.extend(
+                    _string_list_failures(
+                        rules.get(strength, []), f"{rule_label}.{strength}"
+                    )
+                )
+            if not any(rules.get(strength) for strength in ("explicit", "context")):
+                failures.append(f"{rule_label} must declare at least one alias")
+    return failures
 
 
 def main() -> int:
@@ -65,10 +159,7 @@ def main() -> int:
     identity_ledgers = json.loads(
         (SKILL_DIR / "references/identity-ledgers.json").read_text(encoding="utf-8")
     )
-    if identity_ledgers.get("schema_version") != 1:
-        failures.append("identity-ledgers.json must use schema 1")
-    if "犬夜叉" not in identity_ledgers.get("characters", {}):
-        failures.append("identity-ledgers.json must include 犬夜叉")
+    failures.extend(identity_ledger_failures(identity_ledgers))
     benchmark_path = SKILL_DIR / "references/retrieval-benchmark.json"
     benchmark = {}
     benchmark_case_count = 0
@@ -89,6 +180,14 @@ def main() -> int:
                 failures.append(f"invalid retrieval benchmark threshold: {name}")
     except (OSError, json.JSONDecodeError) as exc:
         failures.append(f"invalid retrieval benchmark dataset: {exc}")
+    visual_eval_case_count = 0
+    try:
+        visual_eval = load_visual_eval_dataset(
+            SKILL_DIR / "references/visual-eval-v2.json"
+        )
+        visual_eval_case_count = len(visual_eval["cases"])
+    except (OSError, ValueError) as exc:
+        failures.append(f"invalid visual evaluation dataset: {exc}")
     for source in config["sources"]:
         path = Path(source["path"])
         if not path.is_dir():
@@ -154,6 +253,7 @@ def main() -> int:
             }
             required_columns = {
                 "content_hash",
+                "authority",
                 "folder_path",
                 "content_label",
                 "folder_tags",
@@ -172,24 +272,70 @@ def main() -> int:
                 )
             else:
                 form_rows = {
-                    row[0]: json.loads(row[1])
+                    row[0]: (
+                        json.loads(row[1]),
+                        json.loads(row[2]),
+                    )
                     for row in connection.execute(
-                        "SELECT relative_path, forms FROM items "
-                        "WHERE source_id = 'official' AND relative_path IN (?, ?)",
+                        "SELECT relative_path, forms, subject_forms FROM items "
+                        "WHERE source_id = 'official' AND relative_path IN (?, ?, ?, ?, ?)",
                         (
                             "犬夜叉设定集/犬夜叉人类形态图01.jpg",
                             "犬夜叉设定集/犬夜叉全身图带铁碎牙01.jpg",
+                            "珊瑚设定集/珊瑚战斗服与飞来骨图01.jpg",
+                            "珊瑚设定集/珊瑚退治屋服全身图02.jpg",
+                            "铁碎牙设定集/铁碎牙变化前后形态图01.jpg",
                         ),
                     )
                 }
-                if form_rows.get("犬夜叉设定集/犬夜叉人类形态图01.jpg") != [
-                    "human-form"
-                ]:
+                human_sheet = form_rows.get(
+                    "犬夜叉设定集/犬夜叉人类形态图01.jpg", ([], {})
+                )
+                if human_sheet[1].get("犬夜叉") != ["human-form"]:
                     failures.append("official human-form sheet is not indexed exactly")
-                if form_rows.get("犬夜叉设定集/犬夜叉全身图带铁碎牙01.jpg") != [
-                    "half-demon-form"
+                tessaiga_sheet = form_rows.get(
+                    "犬夜叉设定集/犬夜叉全身图带铁碎牙01.jpg", ([], {})
+                )
+                if tessaiga_sheet[1].get("犬夜叉") != ["half-demon-form"]:
+                    failures.append(
+                        "Tessaiga full-body sheet must keep Inuyasha half-demon-form"
+                    )
+                if tessaiga_sheet[1].get("铁碎牙") != ["untransformed-form"]:
+                    failures.append(
+                        "Inuyasha full-body sheet must keep Tessaiga untransformed-form"
+                    )
+                sango_battle = form_rows.get(
+                    "珊瑚设定集/珊瑚战斗服与飞来骨图01.jpg", ([], {})
+                )
+                if sango_battle[1].get("珊瑚") != ["battle-armor-form"]:
+                    failures.append("Sango battle sheet is not indexed exactly")
+                sango_demon_slayer = form_rows.get(
+                    "珊瑚设定集/珊瑚退治屋服全身图02.jpg", ([], {})
+                )
+                if sango_demon_slayer[1].get("珊瑚") != ["demon-slayer-form"]:
+                    failures.append("Sango demon-slayer sheet is not indexed exactly")
+                tessaiga_forms = form_rows.get(
+                    "铁碎牙设定集/铁碎牙变化前后形态图01.jpg", ([], {})
+                )
+                if tessaiga_forms[1].get("铁碎牙") != [
+                    "transformed-form",
+                    "untransformed-form",
                 ]:
-                    failures.append("Tessaiga full-body sheet must be half-demon-form")
+                    failures.append(
+                        "Tessaiga setting sheet must expose exactly both prop forms"
+                    )
+                child_authority = connection.execute(
+                    "SELECT authority FROM items WHERE source_id = 'official' "
+                    "AND relative_path = ?",
+                    ("犬夜叉设定集/犬夜叉幼年形态全身图01.png",),
+                ).fetchone()
+                if (
+                    not child_authority
+                    or child_authority[0] != "user-directed-derived-identity"
+                ):
+                    failures.append(
+                        "user-directed child-form derivative has wrong item authority"
+                    )
                 kagome_default = connection.execute(
                     """
                     SELECT COUNT(*) FROM items
@@ -361,6 +507,7 @@ def main() -> int:
         "image_location_count": location_count,
         "legacy_alias_count": alias_count,
         "retrieval_benchmark_cases": benchmark_case_count,
+        "visual_eval_cases": visual_eval_case_count,
         "failures": failures,
     }
     print(json.dumps(result, ensure_ascii=False, indent=2))

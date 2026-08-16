@@ -24,6 +24,7 @@ VISUAL_TRAIT_VALUES = {
         "hold",
         "cut",
         "turn-head",
+        "look-up",
         "sleeve-hidden-hands",
         "face-off",
         "draw-weapon",
@@ -103,7 +104,18 @@ VISUAL_TRAIT_VALUES = {
         "shrine",
         "graveyard",
     },
-    "effect-type": {"none", "wind", "rain", "mist", "speed-lines", "impact", "aura"},
+    "effect-type": {
+        "none",
+        "wind",
+        "rain",
+        "mist",
+        "snow",
+        "snow-light",
+        "snow-heavy",
+        "speed-lines",
+        "impact",
+        "aura",
+    },
     "suitable-for": {
         "close-up",
         "two-shot",
@@ -132,6 +144,12 @@ VISUAL_TRAIT_VALUES = {
     "contact-type": {"none", "ground", "body", "prop", "clothing"},
     "prop-attachment": {"none", "waist", "back", "hand", "shoulder", "clothing"},
     "perspective-risk": {"low", "medium", "high"},
+    "scene-economy": {
+        "authored-negative-space",
+        "selective-detail",
+        "dense-functional",
+    },
+    "detail-falloff": {"strong", "moderate", "flat"},
 }
 
 

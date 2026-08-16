@@ -146,27 +146,78 @@ def _cross_medium_clause(manifest: dict[str, Any], medium: str) -> str:
     return "\n\nCross-medium content conversion:\n" + "\n".join(lines)
 
 
-def _identity_lines(brief: dict[str, Any]) -> list[str]:
-    forms = brief.get("identity_forms") or {}
-    costumes = brief.get("forms_and_costumes") or []
-    ledgers = {}
-    if IDENTITY_LEDGERS_PATH.is_file():
-        ledgers = read_json(IDENTITY_LEDGERS_PATH).get("characters", {})
-    lines = []
-    for name, form in forms.items():
-        profile = ledgers.get(name, {})
-        details = [
-            *profile.get("common", []),
-            *profile.get("forms", {}).get(form, []),
-            *profile.get("exclusions", []),
-        ]
-        suffix = "；".join(details) if details else f"required form `{form}`"
-        lines.append(f"- {name} ({form}): {suffix}")
-    default_costumes = {f"{name}: {form}" for name, form in forms.items()}
-    lines.extend(
-        f"- {value}" for value in costumes if value and value not in default_costumes
+def _medium_construction(medium: str, shot: str | None = None) -> str:
+    if medium != "manga":
+        return "Use the selected medium's inspected rendering grammar."
+    if shot == "wide-shot":
+        return (
+            "Make this read as a direct, page-ready late-1990s serialized manga "
+            "establishing shot. Treat information as a finite narrative budget: "
+            "keep coherent axes, scale, depth, overlap, and ground contact, then "
+            "concentrate marks only where they clarify the focal path. Organize the "
+            "scene with large silhouettes, authored white-paper intervals, decisive "
+            "flat black masses, and one restrained middle-tone family. Group repeated "
+            "forms into larger shapes, let contours open or break when structure stays "
+            "legible, and make detail fall away clearly from focal plane to distance. "
+            "Apply the selected style anchor's same economy consistently across every "
+            "scene material instead of completing each surface independently. "
+            "Keep every canonical garment component, overlap, pattern, and accessory "
+            "defined by official identity evidence, but render those same parts with "
+            "the style reference's character contour, fabric and fold treatment, and "
+            "relative paper-white, flat-black, and restrained middle-tone hierarchy. "
+            "Never copy the style source's costume design or let its values redefine "
+            "official garment construction."
+        )
+    return (
+        "Make it read first as a late-1990s serialized black-and-white manga "
+        "image, not a polished monochrome illustration or an under-rendered "
+        "coloring-book outline. Match the selected style reference's "
+        "scene-appropriate density band: use economical hand-inked shapes, "
+        "decisive contour hierarchy, open white areas, flat black masses, and "
+        "selective dot tone, while keeping every identity-bearing eye shape, "
+        "bang division, jaw contour, hair silhouette, costume layer, and "
+        "contact cue needed for recognition. Concentrate information at the "
+        "face, hands, interaction, or action focus; let environment density "
+        "follow the shot and narrative function. Avoid both strand-by-strand "
+        "hair, abundant tiny folds, delicate micro-texture, smooth volume "
+        "shading, glossy prestige-line-art refinement, and generic anime faces, "
+        "uniform vector contours, empty architecture, or missing construction. "
+        "Keep every canonical garment component, overlap, pattern, and accessory "
+        "defined by official identity evidence, but render those same parts with the "
+        "style reference's character contour, face, hair, fabric and fold treatment, "
+        "and relative paper-white, flat-black, and restrained middle-tone hierarchy. "
+        "Never copy the style source's costume design or let its values redefine "
+        "official garment construction. Economy means selecting the right marks, not "
+        "minimizing their count."
     )
-    return lines or ["- No named focal character."]
+
+
+def _manga_finish_preservation(medium: str) -> str:
+    if medium != "manga":
+        return ""
+    return (
+        "\nDo not drift toward extra digital polish or strip away "
+        "identity-critical face, hair, costume, interaction, or setting cues."
+    )
+
+
+def _manga_medium_edit_clause(medium: str, change_category: str | None) -> str:
+    if medium != "manga" or change_category != "medium":
+        return ""
+    return (
+        "\nMedium replacement is the named edit. Preserve identity, pose, "
+        "expression, composition, spatial relationships, and named content, but "
+        "move the finish into the selected style reference's scene-appropriate "
+        "density band. Remove redundant strands, folds, decorative texture, "
+        "smooth shading, and nonfunctional background marks only where they "
+        "exceed that band. Preserve identity-bearing eye and bang shapes, jaw, "
+        "hair silhouette, costume construction, hand contact, and the setting "
+        "cues required by the shot. Rebuild with open white paper, decisive flat "
+        "blacks, selective dot tone, and tapered organic contour hierarchy. "
+        "Merely changing gray to tone, or simplifying into generic sparse line "
+        "art, both fail this edit. Do not impose numeric line, fold, strand, or "
+        "rain-mark caps that are not evidenced by the selected style reference."
+    )
 
 
 def _manga_wide_edit_lock(medium: str, intent: str, shot: str | None) -> str:
@@ -186,6 +237,91 @@ def _manga_wide_edit_lock(medium: str, intent: str, shot: str | None) -> str:
     )
 
 
+def identity_requirements(
+    character: str, form: str, retrieval_traits: list[str] | set[str] = ()
+) -> list[str]:
+    """Return shared observable identity constraints for one character-form."""
+    ledgers = {}
+    if IDENTITY_LEDGERS_PATH.is_file():
+        ledgers = read_json(IDENTITY_LEDGERS_PATH).get("characters", {})
+    profile = ledgers.get(character, {})
+    traits = set(retrieval_traits)
+    form_record = profile.get("forms", {}).get(form, [])
+    if isinstance(form_record, dict):
+        form_details = list(form_record.get("features", []))
+        topology = form_record.get("topology") or {}
+        sequence = [
+            str(value).strip()
+            for value in topology.get("connected_sequence", [])
+            if str(value).strip()
+        ]
+        if sequence:
+            form_details.append("连续结构：" + " → ".join(sequence))
+        counts = topology.get("counts") or {}
+        if counts:
+            form_details.append(
+                "明确数量："
+                + "、".join(f"{name}×{count}" for name, count in counts.items())
+            )
+    else:
+        form_details = list(form_record)
+    return [
+        *profile.get("common", []),
+        *form_details,
+        *(
+            profile.get("view_traits", {}).get(form, {}).get("profile", [])
+            if "view-angle:profile" in traits
+            else []
+        ),
+        *profile.get("exclusions", []),
+    ]
+
+
+def _identity_lines(brief: dict[str, Any]) -> list[str]:
+    forms = brief.get("identity_forms") or {}
+    costumes = brief.get("forms_and_costumes") or []
+    retrieval_traits = brief.get("retrieval_traits") or []
+    lines = []
+    for name, form in forms.items():
+        details = identity_requirements(name, form, retrieval_traits)
+        suffix = "；".join(details) if details else f"required form `{form}`"
+        lines.append(f"- {name} ({form}): {suffix}")
+    default_costumes = {f"{name}: {form}" for name, form in forms.items()}
+    lines.extend(
+        f"- {value}" for value in costumes if value and value not in default_costumes
+    )
+    return lines or ["- No named focal character."]
+
+
+def _prop_lines(brief: dict[str, Any]) -> list[str]:
+    forms = brief.get("prop_forms") or {}
+    retrieval_traits = brief.get("retrieval_traits") or []
+    lines = []
+    for name, form in forms.items():
+        details = identity_requirements(name, form, retrieval_traits)
+        suffix = "；".join(details) if details else f"required form `{form}`"
+        lines.append(f"- {name} ({form}): {suffix}")
+    return lines or ["- No named canonical prop."]
+
+
+def _dominant_material_clause(brief: dict[str, Any]) -> str:
+    materials = [
+        str(value).strip()
+        for value in brief.get("dominant_scene_materials") or []
+        if str(value).strip()
+    ]
+    if brief.get("medium") != "manga" or not materials:
+        return ""
+    return (
+        "\nScene-material scope: "
+        + ", ".join(materials)
+        + ". These labels identify where the primary style anchor's information "
+        "budget must be transferred; they are not separate detailing targets or "
+        "reasons to add one style input per material. Use the same mark grouping, "
+        "black-white mass, tone restraint, and distance falloff across them."
+    )
+
+
 def compile_prompt(brief: dict[str, Any], manifest: dict[str, Any]) -> str:
     """Compile a bounded prompt whose detail level follows the task intent."""
     intent = task_intent(brief)
@@ -194,11 +330,26 @@ def compile_prompt(brief: dict[str, Any], manifest: dict[str, Any]) -> str:
     change = (brief.get("change_request") or request).strip()
     prompt_invariants = brief.get("prompt_invariants") or brief.get("invariants", [])
     invariants = [value for value in prompt_invariants if value]
-    invariant_lines = [f"- {value}" for value in invariants] or [
-        "- Preserve every already-correct identity, composition, and rendering trait."
-    ]
+    if invariants:
+        invariant_lines = [f"- {value}" for value in invariants]
+    elif medium == "manga" and brief.get("change_category") == "medium":
+        invariant_lines = [
+            "- Preserve every already-correct identity, pose, composition, spatial relationship, and named content; replace the current rendering finish."
+        ]
+    else:
+        invariant_lines = [
+            "- Preserve every already-correct identity, composition, and rendering trait."
+        ]
     reference_lines = _reference_lines(manifest)
     cross_medium_clause = _cross_medium_clause(manifest, medium)
+    manga_finish_preservation = _manga_finish_preservation(medium)
+    manga_medium_edit_clause = _manga_medium_edit_clause(
+        medium, brief.get("change_category")
+    )
+    manga_wide_edit_lock = _manga_wide_edit_lock(
+        medium, intent, brief.get("shot")
+    )
+    dominant_material_clause = _dominant_material_clause(brief)
     preference_traits = brief.get("preference_traits") or []
     preference_line = (
         "\nLearned approved traits: " + ", ".join(preference_traits) + "."
@@ -206,9 +357,6 @@ def compile_prompt(brief: dict[str, Any], manifest: dict[str, Any]) -> str:
         else ""
     )
     local_edit = brief.get("local_edit") or {}
-    manga_wide_edit_lock = _manga_wide_edit_lock(
-        medium, intent, brief.get("shot")
-    )
     local_edit_line = ""
     if local_edit.get("mode") == "crop-composite":
         edit_box = local_edit.get("edit_box")
@@ -234,6 +382,7 @@ Preserve exactly:
 {chr(10).join(invariant_lines)}
 
 Keep the current crop, pose, faces, expressions, character scale, line hierarchy, black-white balance, halftone density, background, and all non-target regions unchanged unless one is the named edit target. Produce one text-free {medium} image with no speech balloons, panel borders, signature, logo, or watermark. Do not redesign the whole image.{preference_line}
+{manga_finish_preservation}
 """
     elif intent == "edit":
         construction_line = (
@@ -252,34 +401,44 @@ Selected medium: {medium}
 Identity requirements:
 {chr(10).join(_identity_lines(brief))}
 
+Canonical prop requirements:
+{chr(10).join(_prop_lines(brief))}
+
 Reference authority:
 {chr(10).join(reference_lines)}{cross_medium_clause}
 
 Preserve:
 {chr(10).join(invariant_lines)}
 
-Use the target as the exact continuity and composition authority. Change only what the request requires. Keep official references limited to identity, selected-medium style screenshots limited to rendering, and content references limited to their exact focus. No unrequested text, balloons, borders, signature, logo, or watermark.{preference_line}
+Use the target as the exact continuity and composition authority. Change only what the request requires. Keep official references limited to identity, any selected-medium style screenshot limited to rendering, and content references limited to their exact focus. No unrequested text, balloons, borders, signature, logo, or watermark.{preference_line}
 {construction_line}
+{manga_finish_preservation}
+{manga_medium_edit_clause}
 {manga_wide_edit_lock}
+{dominant_material_clause}
 """
     else:
         scene = brief.get("scene") or request
         aspect = brief.get("aspect_ratio") or "portrait"
         period = brief.get("period_mode") or "classic-balanced"
-        construction = (
-            "Use flexible tapered dip-pen contours, clean white skin, decisive black "
-            "masses, restrained halftone, one dense texture zone, and a readable focal silhouette."
-            if medium == "manga"
-            else "Use the selected medium's inspected rendering grammar."
-        )
+        shot = brief.get("shot")
+        construction = _medium_construction(medium, shot)
+        deliverable = brief.get("deliverable", "illustration")
+        if medium == "manga" and shot == "wide-shot":
+            deliverable = (
+                "single borderless serialized-manga panel, not a standalone illustration"
+            )
         goal_line = f"Goal: {request}\n" if scene.strip() != request else ""
         text = f"""# Generation specification
 
 {goal_line}Scene and exact moment: {scene}
-Format: {aspect}; {brief.get("deliverable", "illustration")}; {period}.
+Format: {aspect}; {deliverable}; {period}.
 
 Identity requirements:
 {chr(10).join(_identity_lines(brief))}
+
+Canonical prop requirements:
+{chr(10).join(_prop_lines(brief))}
 
 Reference authority:
 {chr(10).join(reference_lines)}{cross_medium_clause}
@@ -291,6 +450,7 @@ Composition: design a new composition from the request with one clear focal hier
 Spatial construction: use one coherent depth system; keep body direction, relative scale, overlap, ground contact, and prop attachment mechanically continuous.
 
 Medium construction: {construction}
+{dominant_material_clause}
 
 Required invariants:
 {chr(10).join(invariant_lines)}
