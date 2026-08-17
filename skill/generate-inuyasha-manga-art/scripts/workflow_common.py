@@ -130,6 +130,26 @@ CHARACTER_SUBJECTS = frozenset(
     for subject in KNOWN_SUBJECTS
     if subject not in {"铁碎牙", "天生牙", "食骨之井", "普通人物", "和尚", "场景"}
 )
+REFERENCE_DOMAINS = (
+    "identity",
+    "character-style",
+    "scene",
+    "continuity",
+    "legacy-unrouted",
+)
+SCENE_TRAIT_PREFIXES = (
+    "scene-",
+    "detail-falloff:",
+    "background:",
+    "effect-type:",
+    "content-object:",
+)
+SCENE_ECONOMY_CUE_PREFIXES = (
+    "scene-id:",
+    "background:",
+    "effect-type:",
+    "content-object:",
+)
 
 
 def load_json(path: Path) -> Any:
@@ -494,6 +514,68 @@ def annotation_shot_types(tags: Iterable[str]) -> set[str]:
     return {ANNOTATION_SHOT_MAP[tag] for tag in tags if tag in ANNOTATION_SHOT_MAP}
 
 
+def reference_domain_for(
+    source_id: str,
+    relative_paths: Iterable[str],
+    subjects: Iterable[str] = (),
+) -> str:
+    """Assign one authority domain before any relevance scoring.
+
+    A curated image copied into the top-level ``场景`` folder is deliberately
+    scene evidence, even when a character is visible.  This prevents action or
+    co-occurring-character similarity from leaking into character-style search.
+    """
+    if source_id == "official":
+        return "identity"
+    if source_id in {"selected-output", "user-continuity"}:
+        return "continuity"
+    if source_id in {"manga-curated", "tv-curated"}:
+        for relative_path in relative_paths:
+            parts = Path(relative_path).parts
+            if parts and parts[0] == "场景":
+                return "scene"
+        if set(subjects).intersection(CHARACTER_SUBJECTS):
+            return "character-style"
+    return "legacy-unrouted"
+
+
+def retrieval_traits_for_domain(
+    traits: Iterable[str], reference_domain: str | None
+) -> list[str]:
+    """Keep only signals owned by a retrieval domain.
+
+    Character style deliberately ignores action, interaction, expression and
+    scene terms. Scene retrieval deliberately ignores character/action terms.
+    Identity remains an exact-facet lookup and receives no intent-score terms.
+    """
+    unique = list(dict.fromkeys(traits))
+    if reference_domain == "character-style":
+        return []
+    if reference_domain == "scene":
+        return [
+            trait
+            for trait in unique
+            if trait.startswith(SCENE_TRAIT_PREFIXES)
+        ]
+    if reference_domain == "identity":
+        return []
+    return unique
+
+
+CANONICAL_SCENE_RULES = (
+    ("bone-eaters-well", "食骨之井", ("食骨之井", "食骨井")),
+    ("goshinboku", "御神木", ("御神木", "时代树", "時代樹")),
+)
+
+
+def infer_canonical_scene(text: str) -> dict[str, str] | None:
+    normalized = " ".join(text.casefold().split())
+    for scene_id, label, aliases in CANONICAL_SCENE_RULES:
+        if any(alias.casefold() in normalized for alias in aliases):
+            return {"id": scene_id, "label": label}
+    return None
+
+
 REFERENCE_ROLE_TAGS = {
     "reference-role:identity-only": {"identity"},
     "reference-role:rendering-only": {"rendering"},
@@ -506,6 +588,8 @@ REFERENCE_ROLE_TAGS = {
 
 
 INTENT_TRAIT_RULES = (
+    ("scene-id:bone-eaters-well", ("食骨之井", "食骨井")),
+    ("scene-id:goshinboku", ("御神木", "时代树", "時代樹")),
     ("action:embrace-from-behind", ("背后拥抱", "从背后抱", "从身后抱")),
     ("action:embrace", ("拥抱", "相拥", "抱住对方")),
     ("action:carry", ("抱在怀里", "抱着孩子", "怀抱孩子", "抱起")),
@@ -587,10 +671,38 @@ INTENT_TRAIT_RULES = (
     ("scene-energy:dialogue", ("交谈", "对话", "说话")),
     ("scene-energy:action", ("追逐", "奔跑", "战斗", "攻击")),
     ("scene-energy:impact", ("冲击", "爆发", "猛力挥刀")),
-    ("background:nature", ("森林", "草地", "树林", "湖边", "野外")),
+    (
+        "background:nature",
+        (
+            "森林",
+            "草地",
+            "树林",
+            "湖边",
+            "野外",
+            "深山",
+            "山间",
+            "山林",
+            "密林",
+            "溪谷",
+        ),
+    ),
     (
         "background:architecture",
-        ("宅邸", "府邸", "内室", "缘侧", "木廊", "寺庙"),
+        (
+            "宅邸",
+            "府邸",
+            "内室",
+            "缘侧",
+            "木廊",
+            "寺庙",
+            "屋檐",
+            "檐下",
+            "屋顶",
+            "木屋",
+            "走廊",
+            "神社",
+            "鸟居",
+        ),
     ),
     ("background:night", ("夜景", "夜晚", "夜间", "深夜", "雨夜", "夜空")),
     ("background:interior", ("室内", "内室", "房间", "榻榻米")),
@@ -599,7 +711,7 @@ INTENT_TRAIT_RULES = (
     ("background:graveyard", ("墓地", "墓园", "墓碑群")),
     ("effect-type:wind", ("微风", "风中", "迎风", "随风", "风吹")),
     ("effect-type:rain", ("下雨", "雨夜", "雨中", "降雨")),
-    ("effect-type:mist", ("雾气", "薄雾", "迷雾")),
+    ("effect-type:mist", ("雾气", "薄雾", "迷雾", "浓雾", "雾中", "雾里")),
     ("effect-type:snow", ("下雪", "雪中", "降雪", "落雪")),
     (
         "effect-type:snow-light",
@@ -693,7 +805,20 @@ def retrieval_traits_for(
     }.get(shot or "")
     if shot_trait and shot_trait not in traits:
         traits.append(shot_trait)
-    if shot == "wide-shot" and medium == "manga":
+    scene_cues = {
+        trait
+        for trait in traits
+        if trait.startswith(SCENE_ECONOMY_CUE_PREFIXES)
+    }
+    environment_dominant = (
+        shot == "wide-shot"
+        or len(scene_cues) >= 2
+        or (
+            shot in {"medium-shot", "full-body", "two-shot", "group-shot"}
+            and bool(scene_cues)
+        )
+    )
+    if environment_dominant and medium == "manga":
         for trait in (
             "scene-economy:authored-negative-space",
             "detail-falloff:strong",
@@ -726,6 +851,7 @@ def retrieval_relevance(
     contents: Iterable[str] = (),
     penalized_subjects: Iterable[str] = (),
     role: str | None = None,
+    shot_weight: int = 4,
 ) -> tuple[int, list[str]]:
     """Score explicit field matches and explain why a candidate ranked highly."""
     tags = {str(value).casefold() for value in item.get("tags", [])}
@@ -766,7 +892,11 @@ def retrieval_relevance(
         elif subject_key in item_subjects:
             preferred_subjects.append(subject)
     if preferred_exact:
-        score += 3
+        # Character-style retrieval should prefer an exact focal character-form
+        # over an unrelated image that only matches the requested shot.  Keep
+        # the boost capped once so multi-character requests do not turn style
+        # evidence into identity evidence.
+        score += 5
         reasons.extend(
             f"preferred subject-form exact: {subject}={form}"
             for subject, form in preferred_exact
@@ -776,9 +906,24 @@ def retrieval_relevance(
         reasons.extend(
             f"preferred subject present: {subject}" for subject in preferred_subjects
         )
+    if preferred_subject_forms:
+        requested_subject_keys = {
+            subject.casefold() for subject, _ in preferred_subject_forms
+        }
+        known_subject_keys = {subject.casefold() for subject in KNOWN_SUBJECTS}
+        extra_subject_keys = (
+            item_subjects.intersection(known_subject_keys) - requested_subject_keys
+        )
+        if extra_subject_keys:
+            # A panel containing the focal character remains eligible as general
+            # rendering evidence, but a focused panel should be inspected first.
+            # Apply one capped penalty so multi-character requests are not
+            # distorted by the number of co-occurring background characters.
+            score -= 2
+            reasons.append("preferred subject focus: extra subjects present")
     for shot in shots:
         if shot.casefold() in item_shots:
-            score += 4
+            score += shot_weight
             reasons.append(f"shot exact: {shot}")
     for folder in folders:
         if folder.casefold() in item_folders:
@@ -795,7 +940,7 @@ def retrieval_relevance(
 
     def tag_weight(term: str) -> int:
         if term.startswith(("action:", "content-object:", "subject-object:")):
-            return 8
+            return 9
         if term.startswith("interaction:"):
             return 7
         if term.startswith(("contact-type:", "prop-attachment:")):
@@ -805,7 +950,7 @@ def retrieval_relevance(
         if term.startswith(("background:", "effect-type:", "scene-energy:")):
             return 2
         if term.startswith(("scene-economy:", "detail-falloff:")):
-            return 2
+            return 4
         return 6
 
     for raw_term in [*exact_terms, *query_terms]:
@@ -915,6 +1060,11 @@ def infer_tags(path: Path, source: dict[str, Any]) -> list[str]:
         cleaned = part.replace("设定集", "").strip()
         if cleaned and not cleaned.startswith("."):
             tags.add(cleaned)
+    # Filenames and folders are structured evidence, not free-text notes. Map
+    # their explicit wording through the same controlled vocabulary used for
+    # request intent so assets such as 山间寺庙 or 雨中屋顶 remain retrievable
+    # without duplicating those observable facts in manual annotations.
+    tags.update(infer_retrieval_traits(searchable))
     structured = infer_structured_metadata(path, source)
     for field, values in structured.items():
         if field == "subject_forms":

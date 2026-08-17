@@ -4,22 +4,15 @@ Use this guide for identity, costume, equipment, transformations, and relative s
 
 ## Authority and inspection protocol
 
-The setting-sheet root is the configured `official` source, normally
-`${REPO_ROOT}/libraries/inuyahsa-official` (keep the directory's existing
-spelling). This directory contains the 设定集. Treat each `<角色>设定集` folder
-as authoritative for that named character's canonical structural identity. Use
-`source-map.md` to distinguish it from the user's original art, selected outputs,
-manga screenshots, and TV screenshots. When the user explicitly requests one
-of their original variants from the configured `user-continuity` source,
-preserve that variant instead of silently replacing it with the canonical form.
+The setting-sheet root is `/Users/jquery/Documents/inuyahsa-official` (keep the directory's existing spelling). This directory contains the 设定集. Treat each `<角色>设定集` folder as authoritative for that named character's canonical structural identity. Use `source-map.md` to distinguish it from the user's original art, selected outputs, manga screenshots, and TV screenshots. When the user explicitly requests one of their original variants from `/Users/jquery/Documents/inuyasha-mine`, preserve that variant instead of silently replacing it with the canonical form.
 
 For every named character:
 
 1. Resolve the prompt name to exactly one canonical Chinese name in the index below.
 2. List that character's official files before selecting references:
 
-   ```powershell
-   Get-ChildItem -LiteralPath "$env:INUYASHA_WORKFLOW_HOME\libraries\inuyahsa-official\<角色>设定集" -File -Filter *.jpg | Sort-Object Name
+   ```bash
+   find "/Users/jquery/Documents/inuyahsa-official/<角色>设定集" -maxdepth 1 -type f -iname '*.jpg' -print | sort
    ```
 
 3. Inspect one face/expression sheet and one full-body/costume sheet when both exist. Also inspect a weapon, action, form, scar, or scale sheet when the requested scene depends on it. If a required back view or attachment detail is small inside a multi-view sheet, pass a focused task-local crop with recorded coordinates rather than extra whole sheets. Only pass sheets whose indexed form matches the requested character form.
@@ -27,9 +20,7 @@ For every named character:
 5. Translate the ledger into observable prompt details. Keep canonical markers even when pose, camera, or manga period changes.
 6. After generation, compare the output with the same setting sheets. Reject name swaps and borrowed features before judging the drawing style.
 
-For group scenes, inspect `全体人物对比图01.jpg` in the configured `official`
-source and preserve the depicted height relationships. This sheet includes only
-part of the cast; do not extrapolate absent characters from it.
+For group scenes, inspect `/Users/jquery/Documents/inuyahsa-official/全体人物对比图01.jpg` and preserve the depicted height relationships. This sheet includes only part of the cast; do not extrapolate absent characters from it.
 
 ## Canonical index
 
@@ -42,7 +33,7 @@ Latin aliases below are only name resolution aids. The inspected setting sheets,
 | 桔梗 | Kikyo, Kikyou | Young shrine maiden with straight dark hair, blunt bangs and long side sections, white kosode, long hakama, and bow. Her restrained face and period priestess silhouette must remain distinct from Kagome's schoolgirl silhouette. |
 | 杀生丸 | Sesshomaru | Tall adult demon with very long light hair, pointed ears, forehead crescent, cheek markings, large shoulder fur, layered patterned robes/armor, claws, and swords. Inspect the head sheet, a full-body sheet, upper-costume details, and sword sheet as required. Do not give him Inuyasha's dog ears, fire-rat robe, beads, or Tessaiga. |
 | 弥勒 | Miroku | Young monk with short dark hair, layered monk robes, sandals, ringed staff, and prayer beads sealing the Wind Tunnel on one hand. Inspect the staff, bead detail, and Wind Tunnel action sheets when used. |
-| 珊瑚 | Sango | Young demon slayer with a high ponytail. Choose explicitly between fitted battle armor, demon-slayer outfit details, and everyday kimono; the giant Hiraikotsu boomerang is her dominant weapon silhouette. Do not replace it with Kagome or Kikyo's bow. |
+| 珊瑚 | Sango | Choose exactly one of two forms. Demon-slayer form has loose long hair, a long cross-collar work robe, tied waist, shaded wrist guards, leggings, and sandals. Battle-armor form has a high ponytail, fitted patterned armor, shoulder guards, forearm and knee protection, boots, and the giant Hiraikotsu silhouette. Never mix the two hairstyles or clothing systems, and never replace Hiraikotsu with Kagome or Kikyo's bow. |
 | 七宝 | Shippo, Shippou | Very small fox-demon child with a high tied hair tuft, fox ears/traits, and a large fox tail. Preserve child scale. Fox-fire effect has its own sheet. Do not turn him into Kirara or a generic human child. |
 | 云母 | Kirara | Cat demon with pointed dark ears, a forehead diamond mark, large oval eyes, and two striped tails. Choose explicitly between tiny companion form and giant fanged combat/flying form; both forms retain the two-tail identity. |
 | 邪见 | Jaken | Very short imp-like retainer with huge round eyes, pointed ears, beak-like mouth, small robed body, and staff. Use the Sesshomaru height-comparison sheet when they appear together. |
@@ -90,7 +81,11 @@ Latin aliases below are only name resolution aids. The inspected setting sheets,
 Pass the smallest adequate set and follow `reference-manifest.json` exactly:
 
 1. Put the user target first for an edit or exact continuation.
-2. Put one selected-medium rendering reference first for a new image, or immediately after the target for an edit.
+2. Use the bundled medium guide as the default rendering baseline. For a new
+   image, add a dynamically selected rendering reference when the scene needs it.
+   For a general manga-medium edit, keep the target first and do not add a style
+   image unless a scene-specific ink, tone, effect, or period treatment remains
+   unresolved. Never select by a fixed volume or page.
 3. Add one official sheet that best covers the focal character's required face, form, and costume.
 4. Add a second official face, full-body, weapon, action, or scale sheet only for a named unresolved identity need and only when its character form is compatible with the task.
 5. Add a separate composition reference only when the selected rendering reference cannot resolve the requested camera or pose.

@@ -15,7 +15,18 @@ attempt provenance merely to move between macOS, Windows, or Linux.
 
 Run `build_reference_index.py --check` before retrieval. Exit `0` means fresh; exit `3` means missing or stale. Rebuilds reuse unchanged hashes and dimensions. Content-derived image IDs survive renames and moves; legacy path IDs remain aliases.
 
-The catalog indexes images only. Folder names provide inherited metadata, the leaf folder provides a content label, and structured filenames provide exact subject, form, and shot facets. Store `subject_forms` as a character-to-compatible-forms mapping; retain the flat `forms` list only as a compatibility union. A subject and form query must match the same mapping entry. Structured multi-character filenames may use `character-character__form-form__...`. Use annotations only for visual distinctions absent from paths and filenames.
+The catalog indexes images only. Every item stores a hard `reference_domain`:
+`identity`, `character-style`, `scene`, `continuity`, or `legacy-unrouted`.
+Official sources map to identity. Selected-medium images whose path begins with
+`场景/` map to scene even when people are visible; other selected-medium images
+with known characters map to character-style. Apply this hard filter before any
+relevance score. Folder names provide inherited metadata, the leaf folder
+provides a content label, and structured filenames provide exact subject, form,
+and shot facets. Store `subject_forms` as a character-to-compatible-forms mapping;
+retain the flat `forms` list only as a compatibility union. A subject and form
+query must match the same mapping entry. Structured multi-character filenames
+may use `character-character__form-form__...`. Use annotations only for visual
+distinctions absent from paths and filenames.
 
 Source configuration may declare `exclude_globs` for derived outputs or work files
 that live below a source root but must never gain that source's authority. Each
@@ -39,20 +50,31 @@ mount, hand, or footwear detail is needed. `prepare_reference_set.py
 Pre-generation validation rejects any identity-card entry while final validation
 continues to understand historical manifests without rewriting them.
 
-Free-text retrieval remains a fallback filter. Rank candidates by explainable
-field matches: exact content/action/object first, then interaction/contact,
-subject-form and shot/view compatibility, then conservative accepted-attempt
-feedback as a tie-breaker. Return `match_reasons` so the inspected candidate set
-shows why each item ranked. Do not let a loose path or note substring outrank an
-exact controlled tag.
+Free-text retrieval remains a fallback filter inside a domain. Character-style
+ranking ignores action, interaction, expression and scene traits. Scene ranking
+ignores characters, forms, actions and interactions, using exact `scene-id` for
+canonical places and scene/background/effect traits for rendering. Return
+`match_reasons` so the inspected candidate set shows why each item ranked. Do
+not let a loose path or note substring outrank an exact controlled tag.
+Map explicit structured folder and filename wording through the same controlled
+trait vocabulary used for intent ranking. This keeps facts such as mountain,
+forest, temple, roof and rain searchable without duplicating them as manual
+annotations. Manual annotations remain required for visual judgments that names
+cannot establish, including authored negative space and distance falloff.
 
 Rendering retrieval remains identity-independent: never add a subject or form
-SQL filter merely because a focal character is known. It may apply one capped,
-explainable preferred subject-form boost below an exact shot match, so a closely
-matched original that also demonstrates the focal character's contour, face,
-hair, fabric, or garment values can rank slightly higher. This preference never
-creates identity authority and never outranks stronger action, interaction,
-contact, object, or shot evidence.
+SQL filter merely because a focal character is known. Character-style retrieval
+must not hard-filter by shot when a preferred focal character-form is present;
+shot remains a scoring signal. It may apply one capped, explainable preferred
+subject-form boost above an exact shot match, so an original of the same character
+and form is inspected before an unrelated character that only shares the shot.
+This preference never creates identity authority and never outranks stronger
+action, interaction, contact, or object evidence.
+When character-style candidates otherwise tie, apply one capped soft penalty to
+panels containing indexed subjects outside the requested focal set. This makes a
+focused single-character panel inspectable before an unrelated co-character or
+object-bearing panel without turning co-occurrence into a hard filter or breaking
+multi-person fallback.
 
 `--intent-text` may translate explicit natural-language phrases into controlled
 traits for ranking. Inferred traits are boost-only: they do not hard-filter the
@@ -82,18 +104,28 @@ must reject a changed dataset, prompt, input, output, backend, or case list. Nev
 auto-retry a benchmark case or replace a failed output, because that would hide
 first-pass yield and latency.
 
-The active workflow-quality gate is the smaller immutable dataset at
-`references/visual-eval-v2.json`. It has exactly three representative `new`
-manga cases and two variants, producing exactly six outputs: one baseline and one
-candidate output per case. `visual_ab_eval.py --prepare` snapshots the dataset,
+The active `new` workflow-quality gate is the smaller immutable dataset at
+`references/visual-eval-v2.json`. Target-only and scoped edit changes use the
+separate immutable `references/visual-edit-eval-v1.json`; an all-`new` gate cannot
+promote an edit-only revision. Each dataset has exactly three manga cases and two
+variants, producing exactly six outputs: one baseline and one candidate output
+per case. `visual_ab_eval.py --prepare --dataset ...` snapshots the dataset,
 revision labels, and one backend under an immutable run lock. Each variant/case
-uses a dedicated task with exactly one visual attempt, `attempts/001`, recorded by
-the current `record_attempt.py`. That attempt must snapshot the brief, manifest,
-compiled prompt, exact submitted prompt, output hash, generator, and generation
-time. `--record` rejects a second attempt or a generator that differs from the
-run backend, verifies the fixed request, form, shot, medium, intent, and aspect
-ratio, and snapshots the attempt plus ordered rendered inputs. It must not
-generate, retry, replace, or overwrite an output.
+uses a dedicated task with exactly one attempt, `attempts/001`, recorded by the
+current `record_attempt.py`. That attempt must snapshot the brief, manifest,
+compiled prompt, exact submitted prompt, generator, generation time, and output
+hash when an image exists. `--record` rejects a second attempt or a generator
+that differs from the run backend, verifies the fixed request, form, shot,
+medium, intent, and aspect ratio, and snapshots the attempt plus ordered rendered
+inputs. A technical `error` is an immutable consumed slot with no output; record
+it for audit completeness, but do not retry it or allow the run to enter blind
+review. The recorder must not generate, retry, replace, or overwrite an output.
+
+Before blinding, each baseline/candidate pair must have byte-identical ordered
+inputs. Compare input order, role, item ID, and SHA-256; a pair with different
+targets or references is not an A/B test and must fail before review. Edit cases
+also lock the target SHA-256 and optional style item, style scope, and content
+SHA-256 in the dataset.
 
 After all six slots pass their complete hash checks, `--blind` builds the visible
 A/B directory transactionally: a failure leaves no partial `blind/` state. The
@@ -113,6 +145,15 @@ changing the immutable blind artifacts. Append a result-hash-bound event to
 and compute the effective verdict from the original result plus all such events.
 A critical side is ineligible to win a judgment; if both A and B have critical
 failures, the only valid choice is tie/both-fail.
+Activation is a separate hard step. Before installing, packaging, or describing
+a quality-affecting candidate revision as active, run `visual_ab_eval.py
+--assert-promoted --run-dir <run-directory>`. It must compute the effective,
+feedback-aware verdict and exit nonzero for an incomplete run, `keep_baseline`,
+or any candidate critical failure recorded after the immutable result.
+`validate_workflow.py` without a run remains structural-only and must say so in
+its JSON result. A release check must pass `--visual-run-dir` together with
+`--require-visual-promotion`; structural `ok` may never be presented as a visual
+promotion.
 
 Promote controlled `view-angle:back` and `suitable-for:back-view` annotations to
 the structured `back-view` shot facet during rebuild. Keep other visual traits
@@ -126,6 +167,11 @@ manifest. Always regenerate the crop from the catalog source. Validation must
 recompute the expected pixels from the source and coordinates instead of trusting
 manifest hashes alone. The crop keeps the source sheet's authority and may
 control only construction visible inside it.
+For a schema-5 `new` task with a `face`, `profile`, `close-up`, or `medium-shot`
+request, an official setting sheet whose shot facets do not match the request
+must be prepared as the smallest focused face/view crop. Pre-generation
+validation rejects the uncropped sheet; a character-style image cannot replace
+this identity evidence.
 
 For a strictly local microfix, the prepared target may be a task-local context
 crop of the accepted source target. Record the original target path and hash,
@@ -148,12 +194,19 @@ edits require a declared `edit_box` and exact pixel preservation outside it.
 New tasks use:
 
 - `brief.json` schema 5 with `intent`, `parent_task_id`, `change_category`,
-  `change_request`, optional `shot`, optional `content_need`, and
+  `change_request`, optional `change_scope`, optional
+  `change_scope_schema_version`, optional `shot`, optional `content_need`, and
   `content_references`. It may also declare `props`, exact `prop_forms`, and
-  `dominant_scene_materials`. New tasks persist the planner's explicit `--shot`;
+  `dominant_scene_materials`. Every current `new` task declares structured
+  `reference_strategy` schema 1 with `mode: split-domain`, required character and
+  scene style scopes, and coverage-gated canonical scene style. New tasks persist the planner's explicit `--shot`;
   legacy briefs without it remain valid.
 - `reference-manifest.json` schema 1.
-- `qa.json` schema 1.
+- `qa.json` schema 2 for new split-domain tasks. It contains exactly six required
+  acceptance dimensions: character identity, character style, scene identity,
+  scene style, action/request fidelity, and composition integration. Historical
+  schema-1 QA remains readable and is not rewritten. The six rows must be
+  objects with unique IDs; duplicate IDs never collapse or override a failure.
 - `attempts/<NNN>/attempt.json` schema 1 as append-only generation history.
 - `result.json` schema 3, written only by accepting a recorded attempt.
 - `response-window.json` schema 2 with pre-generation start, optional generation
@@ -181,7 +234,14 @@ exclude archived tasks while preserving every original file and result.
 
 ### New
 
-- Require one or two selected-medium style screenshots.
+- Require one character-style screenshot by default and permit a second only
+  after inspection records that the first is insufficient for a visible
+  character-rendering relationship. Same-character and same-form matches rank
+  first but are not generation eligibility gates; compatible selected-medium
+  evidence may supply general mark-making while official evidence retains exact
+  identity authority. Require one separate scene-style screenshot unless an
+  exact canonical scene HIT has inspected scene-style coverage. The combined
+  style budget is at most three.
 - Require official identity coverage for every focal character and exact form.
 - Permit at most one exact-focus `content` reference when the requested action,
   object, creature, effect phase, or spatial fact needs separate visual evidence.
@@ -197,6 +257,22 @@ exclude archived tasks while preserving every original file and result.
 
 - Require exactly one target and place it first.
 - Permit at most one style screenshot.
+- A current `medium` or `tone` edit must declare exactly one
+  `change_scope: character|scene` and use exactly one style screenshot whose
+  `style_scope` matches it. `character` owns face/hair/fabric/fold rendering and
+  garment value hierarchy; `scene` owns only environmental rendering. Missing or
+  mismatched scope is a pre-generation failure. Historical completed tasks without
+  this field remain readable.
+- Current edit and microfix briefs carry `change_scope_schema_version: 1`.
+  This marker makes missing or mismatched `change_scope` a failure during both
+  pre-generation and final validation. Historical completed briefs without the
+  marker remain readable; when their manifest also predates `style_scope`,
+  validation derives the effective domain from the catalog without rewriting
+  historical provenance. An explicitly recorded wrong scope always fails.
+  The marker is the exact JSON integer `1`; JSON booleans, floats, and strings
+  are invalid. Shared scope resolution uses an explicit manifest value first and
+  otherwise derives legacy scope from the current catalog, including continuation
+  through an accepted parent chain.
 - Require official coverage when identity, form, costume, or anatomy is being changed or repaired.
 - Use no more references than the named change needs.
 - Permit one separately planned exact-focus content reference only when the target
@@ -204,10 +280,10 @@ exclude archived tasks while preserving every original file and result.
 - Fast default: target only when it already supplies the unchanged identity and
   medium; otherwise add only the single authority role required by the named
   change. A target plus unrelated style or continuity evidence is not a default.
-- For a general manga-medium correction, use the target plus one dynamically
-  selected, scene-matched manga style screenshot. The bundled corpus-derived
-  guide defines the QA band but does not replace visual evidence. Do not attach
-  a fixed volume or page.
+- For a manga-medium correction, use the target plus one dynamically selected,
+  scope-matched manga style screenshot. The bundled corpus-derived guide defines
+  the QA band but does not replace visual evidence. Do not attach a fixed volume
+  or page.
 - For a target-only first preview, inspect the supplied target and generate before
   locating a historical task or completing durable task bookkeeping. Create or
   update the task record after a usable preview exists. Require pre-generation
@@ -232,6 +308,11 @@ exclude archived tasks while preserving every original file and result.
 - Use target plus official identity for identity, form, costume, or anatomy.
 - Use target plus the smallest focused official crop for construction changes involving attachment, overlap, perspective, or contact.
 - Use target plus one style screenshot for medium or tone.
+- Require `change_scope: character|scene` for medium or tone and inherit the
+  nearest matching style reference through the parent chain. Never choose the
+  first style row without checking its scope. If both domains are named, split
+  the work into two bounded continuations.
+- Include the matching domain-preservation row in microfix QA as well as edit QA.
 - Hard-limit the prompt to 1,800 characters and the reference set to five images.
 
 ## Serial retrieval contract
@@ -239,13 +320,23 @@ exclude archived tasks while preserving every original file and result.
 For a new task, run the layers in this order and record `HIT`, `MISS`,
 `INSUFFICIENT`, or an allowed `SKIP` before advancing:
 
-1. `official` for canonical identity and exact form.
-2. `manga-curated` or explicit `tv-curated` for rendering only.
-3. Optional exact content evidence. Search the selected-medium curated source first.
+1. `official`, `reference_domain=identity`, for canonical identity and exact form.
+2. Selected-medium `reference_domain=character-style` for character rendering.
+3. Selected-medium `reference_domain=scene` for scene identity. Canonical places
+   require an exact `scene-id`; after `MISS` or `INSUFFICIENT`, ImageGen constructs
+   the scene. Do not use cross-medium scene identity fallback.
+4. Selected-medium `reference_domain=scene` for scene rendering. A canonical
+   scene `HIT` may cover this only after human inspection records
+   `scene_style_coverage=HIT` and a concrete visible coverage basis. The evidence
+   log, brief, and manifest must record the same coverage state. Coverage
+   `INSUFFICIENT`, or scene-identity
+   `MISS`/`INSUFFICIENT`, makes this layer mandatory. Its fallback query must
+   exclude the canonical `scene-id` already judged inadequate.
+5. Optional exact content evidence. Search the selected-medium curated source first.
    Open the other curated medium only after the selected-medium content search is
    recorded as `MISS` or `INSUFFICIENT`. Record `SKIP` when no separate content
    evidence is needed.
-4. `selected-output` for explicitly requested accepted continuity only; otherwise
+6. `selected-output` for explicitly requested accepted continuity only; otherwise
    record `SKIP` and do not search it.
 
 Layer 1 includes a separate exact-form search for every declared canonical
@@ -260,14 +351,15 @@ style-layer `HIT` resolves rendering only and never counts as a content-layer
 selected-medium style evidence. The selected content reference must have one
 non-empty exact `focus`, and the normal budget is one image.
 
-Start identity and content layers with exact subject + form + shot. If the shot
-is empty or insufficient, remove only the shot. Never broaden identity or content
-across form. Rendering/style retrieval is identity-independent: search by current
-scene, shot, interaction, atmosphere, and action energy without subject or form
-filters. A known high-confusion subject visible in a style candidate but absent
-from the request may receive a small, explainable ranking penalty; this is never
-a hard filter, an identity match boost, or a grant of identity authority. Then
-remove shot before declaring `MISS` or `INSUFFICIENT`. 犬夜叉
+Start identity and ordinary content layers with exact subject + form + shot. If
+the shot is empty or insufficient, remove only the shot. Never broaden identity
+or content across form. Character-style retrieval uses the hard domain and a
+preferred focal form but no action or scene score. Scene-style retrieval uses
+the hard scene domain and only
+scene, background, weather and distance-detail traits. Requested shot is a soft
+scene-rendering score only: it must not eliminate a closer material, weather or
+scene-family anchor before inspection. Remove the shot score before declaring
+`MISS` or `INSUFFICIENT`. 犬夜叉
 `default-form` may alias `half-demon-form` only in configured screenshot sources;
 it never aliases human or full-demon form.
 
@@ -301,10 +393,12 @@ Manifest order is:
 7. `content`
 
 Official sheets control canonical identity and construction only. Manga
-screenshots from `origin-photos` control selected-medium character contour,
-face/hair/fabric/fold mark-making, garment value hierarchy, and scene rendering
-only. TV screenshots control the corresponding TV palette, contour, fabric,
-cel-shadow, and value relationships only. Selected outputs control approved
+character-style screenshots control selected-medium character contour and
+face/hair/fabric/fold mark-making plus garment value hierarchy only. Manga scene
+screenshots control canonical-place structure when exact-matched, and scene
+materials, weather, negative space, black-white mass and distance falloff. They
+never control visible characters or actions. TV screenshots control the
+corresponding scoped TV relationships only. Selected outputs control approved
 continuity only. A target controls every unchanged pixel relationship and
 composition choice in an edit.
 
@@ -339,12 +433,12 @@ parts are drawn and separated by relative paper-white, flat-black, halftone, or
 TV cel/value relationships. Never copy a style source's costume design or let
 its tone assignment redefine official garment construction. Before generation,
 Layer 2 must record `HIT` coverage for character mark-making, hair and face
-linework, fabric and fold treatment, garment value hierarchy, and scene
-rendering. Choose one primary style anchor. A second is permitted only when a
-core rendering dimension remains visibly unresolved. Optional scene-material
-labels are transfer scope for the primary anchor's information budget; they do
-not require material-by-material references. Every style manifest entry must
-carry a non-empty exact focus.
+linework, fabric/fold treatment and garment value hierarchy. Scene rendering has
+its own result in Layer 4. A canonical scene manifest entry must carry
+`scene_style_coverage: HIT|INSUFFICIENT`; `INSUFFICIENT` grants no scene-style
+authority. Optional scene-material labels are transfer scope for one scene
+anchor and do not require material-by-material references. Every style manifest
+entry must carry a non-empty exact focus.
 
 Every form-sensitive task must declare an identity form. Reject a reference depicting a requested character in another or unclassified form, even when the sheet was selected for a weapon or costume detail. The only exception is a selected-medium `content` crop with a non-empty exact focus when human inspection confirms that the prepared crop excludes the form-conflicting character and shows only the requested object or spatial fact. Preserve the source item, crop coordinates, source-pixel hash, rendered hash, and focus. This exception never applies to full images or to `identity`/`form` roles.
 
@@ -364,21 +458,52 @@ Generate prompts from the current brief and manifest with `compile_prompt.py`.
   component, overlap, pattern, and accessory while applying the style reference's
   character contour, face/hair/fabric/fold treatment, and relative paper-white,
   flat-black, and restrained middle-tone hierarchy to those same parts.
+- For a multi-character task, compile an explicit per-character rendering map
+  from the manifest input numbers. Label exact-character-form,
+  same-character-compatible, and general-selected-medium assignments. Exact
+  matches are preferred; compatible/general rows control only rendering grammar,
+  while official evidence remains the sole identity, form, costume, and anatomy
+  authority. Keep this wording selected-medium neutral so TV tasks never receive
+  manga instructions.
+- For every manga shot size, compile a finish-calibration clause from the selected
+  character and scene references. Require selective mark-making, focal detail,
+  nonfocal falloff, material abstraction, and coherent black-white/tone hierarchy.
+  Preserve requested scene phenomena instead of banning a fixed list of textures,
+  reflections, shadows, or hair treatments learned from individual failures.
+  A target-only edit with no style input instead compiles target-only preservation:
+  it must not mention or infer absent character-style or scene-style references.
+  An edit with only one style domain names only that attached domain and locks the
+  other domain to the target.
+- When the request explicitly says `双手`, compile a contact-topology lock that
+  requires two distinct visible hands, both participating in the named action,
+  and traces each hand through every named prop/body contact. A hidden, fused,
+  floating, or missing hand is a request-fidelity failure, not optional staging.
 - For manga, compile the corpus-derived scene-conditioned density band: the
   output must read as direct, page-ready late-1990s serialized manga rather than
   either a polished monochrome illustration or generic under-rendered line art.
   Preserve identity-bearing eyes, bangs, jaw, hair silhouette, costume layers,
   contact, and required setting cues. Never translate offline provenance into a
   fixed volume/page query or input; select style evidence dynamically.
-- For a manga `wide-shot`, compile a dedicated scene-economy clause. Treat
-  coherent axes, scale, depth, overlap, and ground contact as structural
-  completeness. Treat information as a finite narrative budget: require authored
-  paper-white intervals, grouped shapes, selective contours, restrained tones,
-  and strong detail falloff. Retrieve these as positive observable traits rather
-  than enumerating unwanted finishes or individual surfaces. When the stored
-  deliverable is `illustration`, the
-  generator-facing format must call it a single borderless serialized-manga
-  panel. Legacy briefs with no shot use the general clause.
+- For a manga `wide-shot`, or an environment-dominant manga request detected from
+  multiple scene facets such as architecture plus night/weather, compile a
+  dedicated scene-economy clause. Treat coherent axes, scale, depth, overlap,
+  and ground contact as structural completeness. Treat information as a finite
+  narrative budget: require authored paper-white intervals, grouped shapes,
+  selective contours, restrained tones, and strong detail falloff. Reserve
+  contiguous paper-white fields before secondary marks, collapse repeated scene
+  forms into a few value groups, and require every successive depth layer to
+  lose internal marks visibly. Retrieve
+  these as positive observable traits. The compiled wide-shot guard must express
+  the positive information budget and distance falloff rather than a fixed list
+  of forbidden objects or materials. Requested recognizable material and weather
+  cues may remain when rendered selectively. Scene-style density is a ceiling and must never be
+  transferred to character faces, hair, costume, or anatomy. For every manga
+  task whose stored deliverable is `illustration`, the generator-facing format
+  must call it a single borderless serialized-manga panel. Legacy briefs with no
+  scene facets use the general clause.
+  When both economy traits are present in the brief, pre-generation validation
+  must require the selected scene-style row to carry both positive tags. Literal
+  weather or architecture similarity cannot substitute for economy coverage.
 - For a manga `wide-shot` edit, compile an additional preservation lock. Unless
   the named request explicitly changes one, preserve the target's framing, crop,
   camera distance, character scale and placement, major object positions,
@@ -389,11 +514,21 @@ Generate prompts from the current brief and manifest with `compile_prompt.py`.
   locally through contour taper and breaks, clustered marks, selective density,
   and distance falloff inside the approved composition.
 - For a manga `medium` edit, preserve identity, pose, expression, composition,
-  spatial relationships, and named content, but move finish into the selected
-  style reference's density band. Remove only redundant secondary strands,
-  folds, patterns, material texture, smooth shading, and background detail.
-  A grayscale/tone substitution alone fails, and so does stripping identity or
-  scene construction into a sparse generic outline.
+  spatial relationships, and named content, but change only the declared
+  rendering domain. For `change_scope=character`, the character-style reference
+  may change contour, face/hair, fabric/fold treatment and garment value
+  hierarchy while the scene remains locked. For `change_scope=scene`, the
+  scene-style reference may change environmental materials, weather, negative
+  space, black-white mass, tone restraint and distance falloff while every
+  character's face, hair, costume, folds and garment values remain locked to the
+  target. The same domain rule applies to `tone`. A grayscale/tone substitution
+  alone fails, and so does stripping identity or scene construction into a sparse
+  generic outline.
+- Scope every later finish-calibration clause consistently with the same domain.
+  Character scope must omit scene-material and scene-economy transfer clauses;
+  scene scope must keep character contour, face/hair, fabric/folds, and garment
+  values locked to the target. No later global calibration sentence may broaden
+  the selected style authority again.
 - Do not add numeric or percentage caps for strands, folds, tones, rain lines,
   textures, or background marks unless that exact relationship is observable in
   the selected style evidence.
@@ -421,6 +556,11 @@ plus `submitted-prompt.md`. Record every generated result before the next
 generation. Use `candidate` for a usable preview pending user confirmation,
 `rejected` only for a failed visual result, and `accepted` only after explicit
 approval. Rejected attempts require at least one structured failure category.
+An explicit later acceptance or rejection of an already recorded candidate is a
+decision marker tied to the existing output hash, not a second generation. Store
+`decision_from_attempt` and `counts_as_generation: false`; feedback reports must
+retain the decision status while excluding it from generation, preview, and
+latency counts.
 Accepted attempts may include explicit feedback and preference tags. A rejected
 candidate does not automatically discredit every reference used to make it: pass
 `--reference-blame <item-id>` only when the failure is directly attributable to
@@ -505,9 +645,22 @@ cross-medium selection whose evidence log lacks selected-medium `MISS` or
 `INSUFFICIENT` followed by a fallback `HIT`. It must also reject using a
 non-selected medium as `style`.
 
+For every current `edit` or `microfix` whose change category is `medium` or
+`tone`, validation must require `brief.change_scope`, exactly one style input,
+and an exact match between `change_scope` and the manifest style row's
+`style_scope`/catalog `reference_domain`. A scene-domain style row cannot satisfy
+a character-domain garment-value change, and a character-domain row cannot
+satisfy a scene-rendering change.
+Apply the same requirement during final validation for briefs carrying
+`change_scope_schema_version: 1`. Legacy completed tasks without that marker may
+omit the new fields, but any explicit mismatch still fails.
+
 For a manga `wide-shot`, generated QA must separately test scene economy and
 spatial construction: correct perspective or abundant construction marks do not
-pass when foreground and distance share uniformly fine surface detail.
+pass when foreground and distance share uniformly fine surface detail. A warning
+is limited to one subordinate local density drift while the large paper-white,
+black, and restrained-tone groups still dominate; global multi-material or
+multi-depth microtexture is a medium failure even when all objects are complete.
 For every declared canonical prop, generated QA must test the exact official
 form. A sword must preserve one continuous grip-to-guard-to-blade force axis and
 its canonical connected silhouette; duplication, bifurcation, or disconnected
@@ -518,10 +671,37 @@ perspective axes, and overall black-white distribution. Fail an edit that
 substitutes a more dramatic composition or globally emptier finish for the named
 mark-making correction.
 
-After acceptance, require all applicable QA checks to be `pass` or `n/a`, require
-a recorded accepted attempt and existing output, and run final validation. Before
+Before recording a new split-domain task as accepted, require identity, scene
+identity, request, and composition dimensions to be `pass`; character-style and
+scene-style may be `warning` with evidence notes when a localized density drift
+does not change the first-read medium. Applicable detailed checks may use
+`warning` only for the `medium` category; all others must be `pass` or `n/a`.
+The attempt recorder must reject pending, failed, or misplaced-warning QA rather
+than writing `result.json`. Final validation repeats this gate, requires a
+recorded accepted attempt and existing output, and verifies the six dimensions
+again. Validate the original six-row list before building any ID lookup: the list
+must have exactly six object rows and no duplicate IDs. Canonical scene validation
+must also reject any disagreement between evidence-log coverage, brief coverage,
+and manifest coverage, and reject a HIT or INSUFFICIENT decision with no concrete
+inspection basis. Before
 acceptance, a usable preview needs a direct blocking check for identity/form,
 requested edit scope, applicable medium density band, and technical integrity.
+The attempt recorder must require exactly one `identity`, `request`, `medium`,
+and `technical` check for `candidate`; identity, request, and technical must be
+`pass`, while medium may be a non-blocking `warning` for localized extra detail
+that remains inside the selected manga language. Every pass or warning must
+include a concrete visual evidence note. Missing, duplicate, unknown, note-free,
+misplaced-warning, or failed checks make the result ineligible for
+handoff and require a `rejected` attempt with a structured failure instead.
+Every current split-domain manga candidate at any shot size additionally requires
+four concrete component checks—`face-hair`, `fabric-fold`, `scene-material`, and
+`value-hierarchy`. A visible component may use `pass`, `warning`, or `fail`;
+warning means a
+localized non-dominant finish drift. A component genuinely
+outside the frame may use `n/a` with a concrete reason. Value hierarchy is always
+applicable. A wide shot may mark unreadable character components `n/a`, but it
+must still check scene rendering and value hierarchy. A general statement that
+the image is black and white or uses screen tone cannot satisfy these checks.
 Fix failures in this order: identity/form, medium leakage or under-rendering,
 anatomy/costume, composition, background/tone, polish.
 

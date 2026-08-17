@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 
 from task_workflow import read_json
-from workflow_common import atomic_write_json, resolve_recorded_path
+from workflow_common import atomic_write_json
 
 
 def file_hash(path: Path) -> str:
@@ -127,7 +127,7 @@ def main() -> int:
     local_edit = brief.get("local_edit") or {}
     if local_edit.get("mode") != "crop-composite":
         raise SystemExit("task is not configured for crop-composite local editing")
-    target = resolve_recorded_path(local_edit["target"])
+    target = Path(local_edit["target"]).expanduser().resolve()
     candidate = args.candidate.expanduser().resolve()
     if not target.is_file():
         raise SystemExit(f"target image is missing: {target}")

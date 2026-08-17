@@ -9,7 +9,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-from task_workflow import CHANGE_CATEGORIES, read_json
+from task_workflow import (
+    CHANGE_CATEGORIES,
+    CHANGE_SCOPES,
+    SCOPED_STYLE_CHANGE_CATEGORIES,
+    read_json,
+)
 from workflow_common import SHOT_VALUES, atomic_write_json, atomic_write_text
 
 SCRIPTS = Path(__file__).resolve().parent
@@ -27,6 +32,7 @@ def main() -> int:
     parser.add_argument("--request", required=True)
     parser.add_argument("--target", type=Path, required=True)
     parser.add_argument("--change-category", choices=CHANGE_CATEGORIES, required=True)
+    parser.add_argument("--change-scope", choices=CHANGE_SCOPES)
     parser.add_argument("--medium", choices=("manga", "tv"), default="manga")
     parser.add_argument("--aspect-ratio", default="source target")
     parser.add_argument("--shot", choices=SHOT_VALUES)
@@ -36,6 +42,17 @@ def main() -> int:
         help="Create a manifest-tracked JPEG transport proxy with this maximum edge.",
     )
     args = parser.parse_args()
+    if args.change_category in SCOPED_STYLE_CHANGE_CATEGORIES:
+        raise SystemExit(
+            "prepare_quick_edit is target-only; medium/tone changes require a "
+            "selected style reference and --change-scope character|scene. Use "
+            "continue_art_task.py or a normal tracked edit instead."
+        )
+    if args.change_scope:
+        raise SystemExit(
+            "--change-scope is only needed for medium/tone style changes, which "
+            "the target-only quick-edit path does not prepare"
+        )
     target = args.target.expanduser().resolve()
     if not target.is_file():
         raise SystemExit(f"target is missing: {target}")

@@ -29,13 +29,14 @@ from workflow_common import (
     load_config,
     load_json,
     now_iso,
+    reference_domain_for,
     source_config_fingerprint,
     stable_file_item_id,
     visible_files,
     workflow_root,
 )
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 
 def parse_args() -> argparse.Namespace:
@@ -202,6 +203,7 @@ def create_schema(connection: sqlite3.Connection) -> None:
         CREATE TABLE items (
             item_id TEXT PRIMARY KEY,
             source_id TEXT NOT NULL REFERENCES sources(source_id),
+            reference_domain TEXT NOT NULL DEFAULT 'legacy-unrouted',
             authority TEXT NOT NULL,
             kind TEXT NOT NULL,
             path TEXT NOT NULL,
@@ -231,6 +233,7 @@ def create_schema(connection: sqlite3.Connection) -> None:
             search_text TEXT NOT NULL
         );
         CREATE INDEX idx_items_source ON items(source_id);
+        CREATE INDEX idx_items_reference_domain ON items(reference_domain);
         CREATE INDEX idx_items_kind ON items(kind);
         CREATE INDEX idx_items_volume_page ON items(volume, pdf_page);
         CREATE INDEX idx_items_curated ON items(curated);
@@ -267,6 +270,7 @@ def create_schema(connection: sqlite3.Connection) -> None:
 
 def insert_item(connection: sqlite3.Connection, row: dict[str, Any]) -> None:
     row = {
+        "reference_domain": "legacy-unrouted",
         "folder_path": "",
         "content_label": "",
         "folder_tags": "[]",
@@ -282,6 +286,7 @@ def insert_item(connection: sqlite3.Connection, row: dict[str, Any]) -> None:
     columns = (
         "item_id",
         "source_id",
+        "reference_domain",
         "authority",
         "kind",
         "path",
@@ -499,10 +504,16 @@ def build_database(
                     set(structured_fields["shot_types"]) | annotation_shot_types(tags),
                     key=str.casefold,
                 )
+                reference_domain = reference_domain_for(
+                    source_id,
+                    (location["relative_path"] for location in locations),
+                    structured_fields["subjects"],
+                )
                 search_text = " ".join(
                     [
                         source_id,
                         source["label"],
+                        reference_domain,
                         *(location["relative_path"] for location in locations),
                         *(location["folder_path"] for location in locations),
                         *(location["content_label"] for location in locations),
@@ -526,6 +537,7 @@ def build_database(
                     {
                         "item_id": item_id,
                         "source_id": source_id,
+                        "reference_domain": reference_domain,
                         "authority": item_authority,
                         "kind": "image",
                         "path": str(canonical["path"]),

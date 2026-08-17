@@ -1,0 +1,501 @@
+{
+  "schema_version": 1,
+  "output_kind": "identity-transport-bundle",
+  "cards": [
+    {
+      "id": "inuyasha-half-demon-form",
+      "character": "犬夜叉",
+      "form": "half-demon-form",
+      "output_file": "犬夜叉__半妖形态__生图身份卡.png",
+      "canvas": [1600, 1200],
+      "required_traits": [
+        "少年体型",
+        "银白长发",
+        "头顶双犬耳",
+        "言灵念珠",
+        "火鼠裘交领宽袖",
+        "宽松袴",
+        "赤足",
+        "铁碎牙按场景使用"
+      ],
+      "excluded_traits": [
+        "黑色人类长发",
+        "普通人耳替代头顶犬耳",
+        "杀生丸的额头月牙、脸纹、肩部毛皮或侧耳"
+      ],
+      "panels": [
+        {
+          "item_id": "official:file:798eaba650545b06b4a7",
+          "source_relative_path": "犬夜叉设定集/犬夜叉半妖形态图01.jpg",
+          "focus": "正面、背面、宽袖、袴、赤足与佩刀位置",
+          "crop_box": [60, 50, 900, 630],
+          "target_box": [20, 20, 1560, 650]
+        },
+        {
+          "item_id": "official:file:149a0334451c6119c480",
+          "source_relative_path": "犬夜叉设定集/犬夜叉上身图01.jpg",
+          "focus": "正面与四分之三面部、犬耳、刘海和念珠",
+          "crop_box": [250, 50, 460, 360],
+          "target_box": [20, 700, 750, 480]
+        },
+        {
+          "item_id": "official:file:b69a31a9412dc8a2a06b",
+          "source_relative_path": "犬夜叉设定集/犬夜叉全身图带铁碎牙01.jpg",
+          "focus": "铁碎牙双手握持、拔刀与刀鞘关系",
+          "crop_box": [10, 90, 560, 600],
+          "target_box": [830, 700, 750, 480]
+        }
+      ]
+    },
+    {
+      "id": "inuyasha-human-form",
+      "character": "犬夜叉",
+      "form": "human-form",
+      "output_file": "犬夜叉__人类形态__生图身份卡_v2.png",
+      "canvas": [1600, 1200],
+      "required_traits": [
+        "少年体型",
+        "黑色长发",
+        "普通人耳",
+        "无头顶犬耳",
+        "言灵念珠",
+        "火鼠裘交领宽袖",
+        "宽松袴",
+        "赤足",
+        "无獠牙和利爪"
+      ],
+      "excluded_traits": [
+        "银白发",
+        "头顶犬耳",
+        "獠牙与利爪",
+        "杀生丸的额头月牙、脸纹、肩部毛皮或侧耳"
+      ],
+      "panels": [
+        {
+          "item_id": "official:file:efe7eafd42e0ab48e48f",
+          "source_relative_path": "犬夜叉设定集/犬夜叉人类形态图01.jpg",
+          "focus": "正面全身、少年体型、黑发、人耳、宽袖、袴与赤足",
+          "crop_box": [300, 50, 225, 630],
+          "target_box": [20, 20, 460, 560]
+        },
+        {
+          "item_id": "official:file:efe7eafd42e0ab48e48f",
+          "source_relative_path": "犬夜叉设定集/犬夜叉人类形态图01.jpg",
+          "focus": "背面全身、少年体型、黑发、普通人耳位置、宽袖、袴与赤足",
+          "crop_box": [45, 65, 310, 590],
+          "target_box": [20, 620, 460, 560]
+        },
+        {
+          "item_id": "official:file:efe7eafd42e0ab48e48f",
+          "source_relative_path": "犬夜叉设定集/犬夜叉人类形态图01.jpg",
+          "focus": "放大的四分之三面部、少年面型、刘海、黑发和普通人耳",
+          "crop_box": [535, 55, 245, 250],
+          "target_box": [500, 20, 520, 550]
+        },
+        {
+          "item_id": "official:file:efe7eafd42e0ab48e48f",
+          "source_relative_path": "犬夜叉设定集/犬夜叉人类形态图01.jpg",
+          "focus": "放大的正面面部、少年眼型、刘海轮廓、黑发与念珠关系",
+          "crop_box": [725, 215, 270, 250],
+          "target_box": [1060, 20, 520, 550]
+        },
+        {
+          "item_id": "official:file:efe7eafd42e0ab48e48f",
+          "source_relative_path": "犬夜叉设定集/犬夜叉人类形态图01.jpg",
+          "focus": "放大的侧脸、额鼻下颌轮廓、普通人耳、颈部与念珠关系",
+          "crop_box": [510, 405, 300, 230],
+          "target_box": [500, 610, 1080, 570]
+        }
+      ]
+    },
+    {
+      "id": "inuyasha-child-form",
+      "character": "犬夜叉",
+      "form": "child-form",
+      "output_file": "犬夜叉__幼年形态__生图身份卡_v2.png",
+      "canvas": [1600, 1200],
+      "required_traits": [
+        "明显幼童头身比",
+        "圆润幼年脸型",
+        "银白长发",
+        "头顶双犬耳",
+        "幼童尺寸的火鼠裘交领宽袖与宽松袴",
+        "深色腰带",
+        "赤足",
+        "无言灵念珠",
+        "无铁碎牙"
+      ],
+      "excluded_traits": [
+        "成年或少年头身比",
+        "言灵念珠",
+        "铁碎牙",
+        "黑色人类长发",
+        "杀生丸的额头月牙、脸纹、肩部毛皮或侧耳"
+      ],
+      "panels": [
+        {
+          "item_id": "official:file:c72310b3df3a4455f6eb",
+          "source_relative_path": "犬夜叉设定集/犬夜叉幼年形态全身图01.png",
+          "focus": "正面全身、幼童头身比、小手、宽袖、袴、腰带和赤足",
+          "crop_box": [90, 130, 370, 780],
+          "target_box": [20, 20, 400, 560]
+        },
+        {
+          "item_id": "official:file:c72310b3df3a4455f6eb",
+          "source_relative_path": "犬夜叉设定集/犬夜叉幼年形态全身图01.png",
+          "focus": "背面全身、幼童轮廓、双犬耳、长发、宽袖和袴",
+          "crop_box": [1100, 130, 370, 780],
+          "target_box": [20, 620, 400, 560]
+        },
+        {
+          "item_id": "official:file:c72310b3df3a4455f6eb",
+          "source_relative_path": "犬夜叉设定集/犬夜叉幼年形态全身图01.png",
+          "focus": "放大的正面幼年面部、圆润脸型、眼型、刘海与双犬耳",
+          "crop_box": [105, 140, 350, 330],
+          "target_box": [460, 20, 540, 540]
+        },
+        {
+          "item_id": "official:file:c72310b3df3a4455f6eb",
+          "source_relative_path": "犬夜叉设定集/犬夜叉幼年形态全身图01.png",
+          "focus": "放大的四分之三幼年面部、圆润脸型、眼型、刘海与犬耳",
+          "crop_box": [450, 140, 360, 340],
+          "target_box": [1040, 20, 540, 540]
+        },
+        {
+          "item_id": "official:file:c72310b3df3a4455f6eb",
+          "source_relative_path": "犬夜叉设定集/犬夜叉幼年形态全身图01.png",
+          "focus": "放大的幼年侧脸、额鼻下颌轮廓、眼型、犬耳与长发起点",
+          "crop_box": [780, 140, 360, 360],
+          "target_box": [460, 600, 1120, 580]
+        }
+      ]
+    },
+    {
+      "id": "kagome-default-form",
+      "character": "戈薇",
+      "form": "default-form",
+      "output_file": "戈薇__默认形态__生图身份卡.png",
+      "canvas": [1600, 1200],
+      "required_traits": [
+        "现代少女体型与自然少女头身比",
+        "长黑发、分束刘海与蓬松外展发梢",
+        "圆润但不过度幼化的脸型与大眼",
+        "水手式校服的翻领、领巾结、长袖上衣与百褶短裙",
+        "及膝袜与便鞋",
+        "弓、箭与箭筒仅按场景使用"
+      ],
+      "excluded_traits": [
+        "桔梗的白小袖、长袴与巫女轮廓",
+        "短发或齐耳发型",
+        "成年女性体型或儿童头身比",
+        "犬耳、妖纹、利爪或其他妖怪特征"
+      ],
+      "panels": [
+        {
+          "item_id": "official:file:ebda068346bba788b765",
+          "source_relative_path": "戈薇设定集/戈薇头部表情图01.jpg",
+          "focus": "正面、左右侧脸与四分之三面部，稳定刘海、眼型、鼻口、下颌和长发轮廓",
+          "crop_box": [40, 60, 920, 610],
+          "target_box": [20, 20, 760, 560]
+        },
+        {
+          "item_id": "official:file:ca5f2bc4213f5446ff1a",
+          "source_relative_path": "戈薇设定集/戈薇校服全身图01.jpg",
+          "focus": "左侧、正面与背面全身，少女比例、水手服层次、百褶裙、及膝袜与便鞋",
+          "crop_box": [130, 70, 750, 590],
+          "target_box": [820, 20, 760, 560]
+        },
+        {
+          "item_id": "official:file:1b9aed10847de439c70f",
+          "source_relative_path": "戈薇设定集/戈薇校服动作图01.jpg",
+          "focus": "背面、正面、侧面与动态全身，长发运动轮廓、校服在动作中的结构和四肢比例",
+          "crop_box": [80, 70, 850, 600],
+          "target_box": [20, 620, 760, 560]
+        },
+        {
+          "item_id": "official:file:b39f9560182059f260b7",
+          "source_relative_path": "戈薇设定集/戈薇弓箭装备图01.jpg",
+          "focus": "弓的长度与握持、箭、箭筒和背负位置，仅在场景需要弓箭装备时使用",
+          "crop_box": [70, 40, 860, 620],
+          "target_box": [820, 620, 760, 560]
+        }
+      ]
+    },
+    {
+      "id": "izayoi-default-form",
+      "character": "十六夜",
+      "form": "default-form",
+      "output_file": "十六夜__默认形态__生图身份卡.png",
+      "canvas": [1600, 1200],
+      "required_traits": [
+        "成年人类贵族女性体型与端庄柔和的面型",
+        "极长直发、整齐厚齐刘海与两侧垂落的弧形鬓发",
+        "细长平静的眼型、小巧鼻口与收窄下颌",
+        "多层交领宫廷和服、宽大垂袖与曳地长摆",
+        "外层衣袍保留圆形花纹、散点纹样与多道袖缘线",
+        "正面与背面都保持长发覆盖衣袍的层次关系"
+      ],
+      "excluded_traits": [
+        "桔梗的白小袖、长袴、弓箭或巫女轮廓",
+        "戈薇的水手校服、现代配件或蓬松外展发梢",
+        "珊瑚的高马尾、退治屋服、战斗甲衣或飞来骨",
+        "儿童头身比、短发、露额中分或碎刘海",
+        "犬耳、妖纹、利爪或其他妖怪特征"
+      ],
+      "panels": [
+        {
+          "item_id": "official:file:6285125444be8011e070",
+          "source_relative_path": "十六夜设定集/十六夜和服全身图01.jpg",
+          "focus": "正面服装结构、多层交领、宽大垂袖、曳地长摆与圆形花纹；避开同页幼年犬夜叉头像，面部身份由表情设定格控制",
+          "crop_box": [515, 225, 465, 460],
+          "target_box": [20, 20, 760, 560]
+        },
+        {
+          "item_id": "official:file:6285125444be8011e070",
+          "source_relative_path": "十六夜设定集/十六夜和服全身图01.jpg",
+          "focus": "背面全身、长发长度与外轮廓、后领层次、宽袖、衣摆拖地形状和花纹分布",
+          "crop_box": [45, 55, 455, 630],
+          "target_box": [820, 20, 760, 560]
+        },
+        {
+          "item_id": "official:file:f4819e9df3546a3ed095",
+          "source_relative_path": "十六夜设定集/十六夜表情图01.jpg",
+          "focus": "放大的正面面部、厚齐刘海、细长平静眼型、小巧鼻口、弧形鬓发和收窄下颌",
+          "crop_box": [375, 45, 310, 340],
+          "target_box": [20, 620, 760, 560]
+        },
+        {
+          "item_id": "official:file:f4819e9df3546a3ed095",
+          "source_relative_path": "十六夜设定集/十六夜表情图01.jpg",
+          "focus": "左右侧脸、额鼻唇下颌轮廓、眼睑变化、鬓发与颈部交领关系",
+          "crop_box": [110, 205, 840, 475],
+          "target_box": [820, 620, 760, 560]
+        }
+      ]
+    },
+    {
+      "id": "miroku-default-form",
+      "character": "弥勒",
+      "form": "default-form",
+      "output_file": "弥勒__默认形态__生图身份卡.png",
+      "canvas": [1600, 1200],
+      "required_traits": [
+        "青年男性体型与清秀但明确的男性面型",
+        "短黑发、分束刘海与后颈低束短发",
+        "双耳小型耳饰",
+        "交领内层法衣、宽袖外层袈裟与长下摆",
+        "足袋与草鞋",
+        "环头锡杖按场景使用",
+        "右手风穴由念珠和护手封印，开启时黑色风穴位于右掌"
+      ],
+      "excluded_traits": [
+        "犬夜叉的长发、犬耳、火鼠裘或念珠项链",
+        "杀生丸的银白长发、额头月牙、脸纹或肩部毛皮",
+        "女性化大圆眼、长发或少女体型",
+        "把风穴或封印念珠放到左手",
+        "把锡杖替换为铁碎牙、弓箭或飞来骨"
+      ],
+      "panels": [
+        {
+          "item_id": "official:file:c829114650304a53b15f",
+          "source_relative_path": "弥勒设定集/弥勒风穴动作效果图01.jpg",
+          "focus": "实际画面中的正面、侧面、四分之三面部与多种表情，稳定短发、低束发、耳饰、眼眉、鼻口和男性下颌",
+          "crop_box": [40, 60, 920, 610],
+          "target_box": [20, 20, 760, 560]
+        },
+        {
+          "item_id": "official:file:c1962c98f36ac1839d03",
+          "source_relative_path": "弥勒设定集/弥勒持锡杖全身图02.jpg",
+          "focus": "背面、正面与侧面全身，青年男性比例、法衣和袈裟层次、足袋草鞋、锡杖长度与握持位置",
+          "crop_box": [70, 55, 860, 605],
+          "target_box": [820, 20, 760, 560]
+        },
+        {
+          "item_id": "official:file:c195fb061bfba9509314",
+          "source_relative_path": "弥勒设定集/弥勒风穴念珠细节图01.jpg",
+          "focus": "右手风穴的护手与念珠封印缠绕方式、手背手腕关系，以及环头锡杖的顶部构造",
+          "crop_box": [70, 50, 850, 610],
+          "target_box": [20, 620, 760, 560]
+        },
+        {
+          "item_id": "official:file:38153b6036396ab71795",
+          "source_relative_path": "弥勒设定集/弥勒锡杖头部细节图01.jpg",
+          "focus": "实际画面中的右掌风穴开启状态、黑色掌心孔洞、手指透视、念珠松开关系与吸入效果，仅在场景需要风穴时使用",
+          "crop_box": [80, 60, 850, 570],
+          "target_box": [820, 620, 760, 560]
+        }
+      ]
+    },
+    {
+      "id": "sango-demon-slayer-form",
+      "character": "珊瑚",
+      "form": "demon-slayer-form",
+      "output_file": "珊瑚__退治屋服形态__生图身份卡.png",
+      "canvas": [1600, 1200],
+      "required_traits": [
+        "年轻女性除妖师体型与清醒坚毅的少女面型",
+        "黑色长发自然披散，整齐额发与两侧长鬓发",
+        "和式交领长衣、系带腰身与过膝下摆",
+        "深色袖口护腕、深色绑腿与草鞋",
+        "动作需要时保留弓具与退治工具的正确背负关系"
+      ],
+      "excluded_traits": [
+        "战斗服的高马尾、贴身纹样甲衣、肩甲、护膝或长靴",
+        "戈薇的水手校服或桔梗的标准白小袖长袴",
+        "把披散长发改成高马尾、短发或低马尾",
+        "把武器替换为铁碎牙或锡杖",
+        "把云母的猫耳、尾巴或额头菱形加到珊瑚身上"
+      ],
+      "panels": [
+        {
+          "item_id": "official:file:3fe6d0fc4ce826bd8910",
+          "source_relative_path": "珊瑚设定集/珊瑚退治屋服全身图02.jpg",
+          "focus": "更新后的退治屋服整页：服装正背结构、珊瑚穿着时的正背全身、散发轮廓、腰带、护腕、绑腿、草鞋与弓具关系",
+          "crop_box": [60, 40, 900, 630],
+          "target_box": [20, 20, 1560, 560]
+        },
+        {
+          "item_id": "official:file:4b13d4913b0f0cc8721d",
+          "source_relative_path": "珊瑚设定集/珊瑚退治屋服全身细节图01.jpg",
+          "focus": "退治屋服背面、正面与侧面全身，交领、后背系带、袖口护腕、长下摆、绑腿和草鞋，以及护腕手指结构",
+          "crop_box": [80, 60, 840, 600],
+          "target_box": [20, 620, 1560, 560]
+        }
+      ]
+    },
+    {
+      "id": "sango-battle-armor-form",
+      "character": "珊瑚",
+      "form": "battle-armor-form",
+      "output_file": "珊瑚__战斗服形态__生图身份卡.png",
+      "canvas": [1600, 1200],
+      "required_traits": [
+        "年轻女性除妖师体型与清醒坚毅的少女面型",
+        "黑色长发束成高马尾，整齐额发与两侧长鬓发",
+        "贴身深色纹样甲衣、圆形肩甲与胸口鳞片纹样",
+        "护臂、腰胯护片、护膝与长靴层次清楚",
+        "飞来骨按场景作为巨大宽厚回旋镖使用"
+      ],
+      "excluded_traits": [
+        "退治屋服的披散长发、交领长衣、宽袖、长下摆、绑腿或草鞋",
+        "戈薇的水手校服或桔梗的标准白小袖长袴",
+        "短发、低马尾或披散长发替代高马尾",
+        "把飞来骨替换为弓箭、铁碎牙或锡杖",
+        "把云母的猫耳、尾巴或额头菱形加到珊瑚身上"
+      ],
+      "panels": [
+        {
+          "item_id": "official:file:f49fb704ab4479e230fe",
+          "source_relative_path": "珊瑚设定集/珊瑚战斗服与飞来骨图01.jpg",
+          "focus": "战斗服背面、侧面与正面全身，高马尾、肩甲、胸甲纹样、护臂、腰胯护片、护膝、长靴，以及背负武器关系",
+          "crop_box": [70, 45, 860, 620],
+          "target_box": [20, 20, 1560, 760]
+        },
+        {
+          "item_id": "official:file:f49fb704ab4479e230fe",
+          "source_relative_path": "珊瑚设定集/珊瑚战斗服与飞来骨图01.jpg",
+          "focus": "正面头部与上身特写，稳定脸型、眼型、整齐额发、两侧鬓发、高马尾起点、肩甲与胸口鳞片纹样",
+          "crop_box": [650, 50, 300, 350],
+          "target_box": [20, 820, 760, 360]
+        },
+        {
+          "item_id": "official:file:f49fb704ab4479e230fe",
+          "source_relative_path": "珊瑚设定集/珊瑚战斗服与飞来骨图01.jpg",
+          "focus": "侧面头部特写，稳定侧脸、耳部、鬓发、颈肩、高马尾走向与肩甲层次",
+          "crop_box": [650, 340, 300, 300],
+          "target_box": [820, 820, 760, 360]
+        }
+      ]
+    },
+    {
+      "id": "tessaiga-untransformed-form",
+      "character": "铁碎牙",
+      "subject_kind": "prop",
+      "form": "untransformed-form",
+      "output_file": "铁碎牙__未变化形态__生图身份卡.png",
+      "canvas": [1600, 1200],
+      "required_traits": [
+        "犬夜叉的妖刀铁碎牙未变化形态",
+        "破旧细长且轻微弯曲的单刃刀身",
+        "缠绕式刀柄、圆形护手与方形柄头",
+        "独立细长刀鞘与刀身弧度匹配",
+        "人物持刀时刀柄、双手、刀鞘和刀身关系必须连贯"
+      ],
+      "excluded_traits": [
+        "变化后巨型獠牙弧刃、根部毛簇或任何中间变化形态",
+        "普通直身武士刀、双刃剑或西式大剑",
+        "天生牙、斗鬼神、弓箭、飞来骨或锡杖",
+        "刀身与刀柄断开、刀鞘和刀身融合或出现多余刀刃",
+        "用武器卡改变犬夜叉的人物身份、服装、画风、姿势或场景构图"
+      ],
+      "panels": [
+        {
+          "item_id": "official:file:2b8d2a36697685aa5a04",
+          "source_relative_path": "铁碎牙设定集/铁碎牙变化前后形态图01.jpg",
+          "focus": "设定页上半部分的未变化铁碎牙与刀鞘完整侧视轮廓，只取上半部分，禁止带入下方变化形态",
+          "crop_box": [430, 170, 2250, 760],
+          "target_box": [20, 20, 1560, 760]
+        },
+        {
+          "item_id": "official:file:2b8d2a36697685aa5a04",
+          "source_relative_path": "铁碎牙设定集/铁碎牙变化前后形态图01.jpg",
+          "focus": "未变化形态的缠绕刀柄、方形柄头、圆形护手与刀身根部连接",
+          "crop_box": [430, 180, 1000, 590],
+          "target_box": [20, 820, 760, 360]
+        },
+        {
+          "item_id": "official:file:2b8d2a36697685aa5a04",
+          "source_relative_path": "铁碎牙设定集/铁碎牙变化前后形态图01.jpg",
+          "focus": "未变化形态圆形护手正视结构与细长弯曲刀身、刀鞘的相对弧度",
+          "crop_box": [1650, 90, 1050, 760],
+          "target_box": [820, 820, 760, 360]
+        }
+      ]
+    },
+    {
+      "id": "tessaiga-transformed-form",
+      "character": "铁碎牙",
+      "subject_kind": "prop",
+      "form": "transformed-form",
+      "output_file": "铁碎牙__变化形态__生图身份卡.png",
+      "canvas": [1600, 1200],
+      "required_traits": [
+        "犬夜叉的妖刀铁碎牙变化形态",
+        "巨大厚重的弧形獠牙状单刃刀身",
+        "刀身从根部向宽大弧刃连续展开并收束到尖端",
+        "缠绕式刀柄与刀身根部之间有明显毛簇状变化效果",
+        "人物持刀时必须保持巨刃相对人物的夸张尺度与连续结构"
+      ],
+      "excluded_traits": [
+        "未变化形态的破旧细长刀身、独立刀鞘或任何中间变化形态",
+        "普通直身武士刀、双刃剑或西式大剑",
+        "天生牙、斗鬼神、弓箭、飞来骨或锡杖",
+        "刀身与刀柄断开、刀鞘套在巨刃外或出现多余刀刃",
+        "用武器卡改变犬夜叉的人物身份、服装、画风、姿势或场景构图"
+      ],
+      "panels": [
+        {
+          "item_id": "official:file:2b8d2a36697685aa5a04",
+          "source_relative_path": "铁碎牙设定集/铁碎牙变化前后形态图01.jpg",
+          "focus": "设定页下半部分的变化后铁碎牙完整巨型弧刃，只取下半部分，禁止带入上方未变化刀身与刀鞘",
+          "crop_box": [300, 1000, 2500, 900],
+          "target_box": [20, 20, 1560, 760]
+        },
+        {
+          "item_id": "official:file:2b8d2a36697685aa5a04",
+          "source_relative_path": "铁碎牙设定集/铁碎牙变化前后形态图01.jpg",
+          "focus": "变化形态的缠绕刀柄、方形柄头、根部毛簇与巨刃连接方式",
+          "crop_box": [280, 1080, 1100, 900],
+          "target_box": [20, 820, 760, 360]
+        },
+        {
+          "item_id": "official:file:2b8d2a36697685aa5a04",
+          "source_relative_path": "铁碎牙设定集/铁碎牙变化前后形态图01.jpg",
+          "focus": "变化形态厚重弧刃的宽度、双侧轮廓与尖端收束比例",
+          "crop_box": [1550, 1050, 1250, 850],
+          "target_box": [820, 820, 760, 360]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "id": "inuyasha-workflow-visual-edit-ab-v1",
+  "description": "Three-case, six-image blind A/B gate for target-only and scoped manga edit behavior.",
+  "policy": {
+    "variants": ["baseline", "candidate"],
+    "cases_per_variant": 3,
+    "total_images": 6,
+    "single_generation_per_slot": true,
+    "automatic_retry": false,
+    "blind_pairwise_review": true
+  },
+  "promotion": {
+    "minimum_candidate_wins": 2,
+    "maximum_candidate_critical_failures": 0,
+    "ties_keep_baseline": true
+  },
+  "critical_categories": [
+    "identity",
+    "manga_medium",
+    "request_fidelity",
+    "anatomy_contact",
+    "technical"
+  ],
+  "cases": [
+    {
+      "id": "human-inuyasha-target-only-dry-hair",
+      "title": "目标图单独控制的干发修正",
+      "intent": "edit",
+      "medium": "manga",
+      "request": "只去掉犬夜叉黑发、衣袖和衣襟上的水珠，让头发与衣服保持干燥；脸颊、下颌和捧水双手保留少量水珠。人物身份、深色衣服、溪水、石头、树叶、构图和现有漫画画法完全不变。",
+      "change_category": "polish",
+      "identity_forms": {"犬夜叉": "human-form"},
+      "shot": "medium-shot",
+      "aspect_ratio": "2:3 portrait",
+      "input_contract": {
+        "target_sha256": "83b88399c23f8a2869f8d9a807d2290e16ae97b1fd8ea9a1f14331bd0c62c182",
+        "style": null
+      },
+      "criteria": [
+        "黑发与衣服明确保持干燥，水珠只留在脸、下颌和捧水双手",
+        "人物脸、黑发轮廓、衣服值阶和双手结构没有被重新设计",
+        "溪水、石头、树叶、构图和既有画法保持目标图不变",
+        "没有凭空采用未提供的人物或场景风格参考"
+      ]
+    },
+    {
+      "id": "human-inuyasha-character-tone-dark-robe",
+      "title": "人物域深色服装网点修正",
+      "intent": "edit",
+      "medium": "manga",
+      "request": "只把犬夜叉的交领宽袖上衣与袴改为原著漫画中的深灰网点和深色块；必须明显深于纸白皮肤与水面，但与纯黑头发分层。保持衣服结构、脸、黑发、构图、表情、双手、水珠、溪水、石头和树叶画法完全不变。",
+      "change_category": "tone",
+      "change_scope": "character",
+      "identity_forms": {"犬夜叉": "human-form"},
+      "shot": "medium-shot",
+      "aspect_ratio": "2:3 portrait",
+      "input_contract": {
+        "target_sha256": "ea5f25af970b638bd3b3ebae06de116cbf13cd6381995c228afe8159e4669a7f",
+        "style": {
+          "item_id": "manga-curated:file:4979f0e5da216eff0102",
+          "style_scope": "character",
+          "content_sha256": "4979f0e5da216eff01023384691f0470a6d2ee6fb62cce141ae39463dffd7e85"
+        }
+      },
+      "criteria": [
+        "上衣与袴形成清楚的深灰网点和深色块，并与黑发、纸白皮肤分层",
+        "人物服装部件、脸、黑发、双手、姿势和构图保持目标图",
+        "溪水、石头、树叶与背景密度没有因人物域修正而重画",
+        "画面保持直接连载漫画语言而不是细腻黑白插画"
+      ]
+    },
+    {
+      "id": "human-inuyasha-scene-medium-creek-economy",
+      "title": "场景域溪水与岩石简化",
+      "intent": "edit",
+      "medium": "manga",
+      "request": "只把溪水、石头和树叶改为原著漫画式纸白、短线、简洁黑白块与明确远近衰减，删除细密写实纹理。犬夜叉的脸、黑发及其水珠、衣服部件与既有深色网点、双手、姿势、构图完全不变。",
+      "change_category": "medium",
+      "change_scope": "scene",
+      "identity_forms": {"犬夜叉": "human-form"},
+      "shot": "medium-shot",
+      "aspect_ratio": "2:3 portrait",
+      "input_contract": {
+        "target_sha256": "83b88399c23f8a2869f8d9a807d2290e16ae97b1fd8ea9a1f14331bd0c62c182",
+        "style": {
+          "item_id": "manga-curated:file:ac8262fc1bfa13ecd536",
+          "style_scope": "scene",
+          "content_sha256": "ac8262fc1bfa13ecd536baf7102f46d2af166e45571250b5f38ce37af72256ca"
+        }
+      },
+      "criteria": [
+        "溪水、石头和树叶采用经济的纸白、短线、黑白块和远近衰减",
+        "人物脸、黑发轮廓和发丝、水珠、服装网点与双手保持目标图",
+        "场景简化没有改变人物身份、姿势、比例或构图",
+        "场景不再是均匀细密写实纹理，也没有删成空洞线稿"
+      ]
+    }
+  ]
+}

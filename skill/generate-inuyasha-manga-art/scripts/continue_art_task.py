@@ -11,15 +11,18 @@ from pathlib import Path
 from prepare_reference_set import file_hash, parse_box, validate_crop_box
 from task_workflow import (
     CHANGE_CATEGORIES,
+    CHANGE_SCOPES,
+    SCOPED_STYLE_CHANGE_CATEGORIES,
     read_json,
     result_output,
+    style_scope_for_entry,
     write_compiled_prompt,
 )
 from workflow_common import (
     atomic_write_json,
     atomic_write_text,
     load_config,
-    resolve_recorded_path,
+    open_database,
     workflow_paths,
     workflow_root,
 )
@@ -64,6 +67,59 @@ def continuation_intent(candidate_source: dict | None, full_canvas: bool) -> str
     return "edit" if candidate_source or full_canvas else "microfix"
 
 
+def scoped_style_from_ancestry(
+    parent: Path,
+    tasks_root: Path,
+    change_scope: str,
+    catalog_connection=None,
+) -> tuple[dict, Path] | None:
+    """Find the nearest inherited style authority matching the requested domain."""
+    tasks_root = tasks_root.resolve()
+    current = parent.resolve()
+    visited: set[Path] = set()
+    while current not in visited:
+        if current.parent != tasks_root:
+            raise SystemExit(
+                f"Continuation parent chain escapes the workflow task root: {current}"
+            )
+        visited.add(current)
+        manifest_path = current / "reference-manifest.json"
+        brief_path = current / "brief.json"
+        if not manifest_path.is_file() or not brief_path.is_file():
+            raise SystemExit(f"Continuation ancestor is incomplete: {current}")
+        ancestor_manifest = read_json(manifest_path)
+        for entry in ancestor_manifest.get("references", []):
+            catalog_domain = None
+            if catalog_connection is not None and entry.get("item_id"):
+                row = catalog_connection.execute(
+                    """
+                    SELECT reference_domain FROM items
+                    WHERE item_id = ? OR item_id = (
+                        SELECT item_id FROM item_aliases WHERE alias_id = ?
+                    )
+                    """,
+                    (entry["item_id"], entry["item_id"]),
+                ).fetchone()
+                if row is not None:
+                    catalog_domain = row["reference_domain"]
+            if (
+                entry.get("role") == "style"
+                and style_scope_for_entry(entry, catalog_domain) == change_scope
+            ):
+                return entry, current
+        ancestor_brief = read_json(brief_path)
+        parent_task_id = ancestor_brief.get("parent_task_id")
+        if not parent_task_id:
+            return None
+        recorded_parent = Path(str(parent_task_id)).expanduser()
+        current = (
+            recorded_parent.resolve()
+            if recorded_parent.is_absolute()
+            else (tasks_root / recorded_parent).resolve()
+        )
+    raise SystemExit("Continuation parent chain contains a cycle")
+
+
 def recorded_attempt_source(parent: Path, selector: str) -> tuple[Path, dict]:
     """Resolve one immutable candidate output and verify its recorded hash."""
     attempts_root = parent / "attempts"
@@ -75,7 +131,8 @@ def recorded_attempt_source(parent: Path, selector: str) -> tuple[Path, dict]:
             (
                 path
                 for path in reversed(attempt_paths)
-                if read_json(path).get("status") in {"accepted", "rejected"}
+                if read_json(path).get("status")
+                in {"accepted", "rejected", "candidate"}
             ),
             None,
         )
@@ -95,14 +152,14 @@ def recorded_attempt_source(parent: Path, selector: str) -> tuple[Path, dict]:
         raise SystemExit(f"Recorded attempt is missing: {attempt_path}")
 
     attempt = read_json(attempt_path)
-    if attempt.get("status") not in {"accepted", "rejected"}:
+    if attempt.get("status") not in {"accepted", "rejected", "candidate"}:
         raise SystemExit(
-            "Candidate local edits require an accepted or rejected image attempt"
+            "Candidate local edits require an accepted, rejected, or pending candidate image attempt"
         )
     output_text = attempt.get("output")
     if not output_text:
         raise SystemExit("Recorded candidate attempt has no output")
-    target = resolve_recorded_path(output_text)
+    target = Path(output_text).expanduser().resolve()
     if not target.is_file():
         raise SystemExit(f"Recorded candidate output is missing: {target}")
     output_hash = file_hash(target)
@@ -125,6 +182,14 @@ def main() -> int:
     parser.add_argument("--slug", required=True)
     parser.add_argument("--change", required=True)
     parser.add_argument("--change-category", choices=CHANGE_CATEGORIES, required=True)
+    parser.add_argument(
+        "--change-scope",
+        choices=CHANGE_SCOPES,
+        help=(
+            "Rendering domain changed by medium/tone work: character for face, "
+            "hair, fabric, folds, and garment values; scene for environment only."
+        ),
+    )
     parser.add_argument("--target", type=Path)
     parser.add_argument(
         "--from-attempt",
@@ -172,6 +237,11 @@ def main() -> int:
         help="Context pixels around --edit-box (default: 96).",
     )
     args = parser.parse_args()
+    needs_style = args.change_category in SCOPED_STYLE_CHANGE_CATEGORIES
+    if (needs_style or args.inherit_style) and not args.change_scope:
+        raise SystemExit(
+            "medium/tone or --inherit-style requires --change-scope character|scene"
+        )
     if args.from_attempt and args.target:
         raise SystemExit("--from-attempt cannot be combined with --target")
     if args.edit_box and args.full_canvas:
@@ -207,6 +277,29 @@ def main() -> int:
         raise SystemExit("Parent accepted output or --target is missing")
 
     intent = continuation_intent(candidate_source, args.full_canvas)
+    scoped_style = None
+    style_source_task = None
+    if needs_style or args.inherit_style:
+        database = workflow_paths(root)["database"]
+        if not database.is_file():
+            raise SystemExit("Catalog missing; run build_reference_index.py first")
+        catalog_connection = open_database(database, read_only=True)
+        try:
+            scoped_style = scoped_style_from_ancestry(
+                parent,
+                workflow_paths(root)["tasks"],
+                args.change_scope,
+                catalog_connection,
+            )
+        finally:
+            catalog_connection.close()
+        if scoped_style is None:
+            raise SystemExit(
+                f"No inherited {args.change_scope}-style reference exists in the "
+                "parent chain; retrieve and inspect one selected-medium "
+                f"{args.change_scope} reference before continuing"
+            )
+        _, style_source_task = scoped_style
 
     init_command = [
         sys.executable,
@@ -225,6 +318,11 @@ def main() -> int:
         str(parent),
         "--change-category",
         args.change_category,
+        *(
+            ["--change-scope", args.change_scope]
+            if args.change_scope
+            else []
+        ),
         "--change-request",
         args.change,
         "--request",
@@ -239,12 +337,22 @@ def main() -> int:
     child_brief = read_json(child_brief_path)
     child_brief["prompt_invariants"] = [
         (
-            "来源候选图中未被点名的角色身份、形态、构图和漫画画法保持不变"
+            "来源候选图中未被点名的角色身份、形态、构图和漫画画法"
+            "保持不变"
             if candidate_source
-            else "父任务中已经通过的角色身份、形态、构图和漫画画法保持不变"
+            else "父任务中已经通过的角色身份、形态、构图和漫画画法"
+            "保持不变"
         ),
         f"只处理 {args.change_category} 类问题，不引入其他设计改动",
     ]
+    if args.change_scope == "character":
+        child_brief["prompt_invariants"].append(
+            "人物域修改不得改变目标图的水体、岩石、植被、天气、背景密度和场景构图"
+        )
+    elif args.change_scope == "scene":
+        child_brief["prompt_invariants"].append(
+            "场景域修改不得改变人物脸和头发画法、服装部件与衣褶，或服装既有黑白网点值阶"
+        )
     if candidate_source:
         child_brief["candidate_source"] = candidate_source
     if args.full_canvas:
@@ -289,12 +397,9 @@ def main() -> int:
         "anatomy",
         "construction",
     }
-    needs_style = args.change_category in {"medium", "tone"}
     if needs_style or args.inherit_style:
-        selected_entries.extend(
-            entry for entry in references if entry.get("role") == "style"
-        )
-        selected_entries = selected_entries[:1]
+        style_entry, _ = scoped_style
+        selected_entries.append(style_entry)
     if needs_identity or args.inherit_identity:
         selected_entries.extend(
             entry for entry in references if entry.get("role") == "identity"
@@ -366,9 +471,11 @@ Intent: `{intent}`
 ## Change-specific evidence
 
 - Category: `{args.change_category}`
+- Change scope: `{args.change_scope or 'target-only'}`
 - Requested change: {args.change}
 - Prepared evidence: `{inherited}`
 - Result: `HIT`; target controls all unchanged regions. Added references control only their manifest roles.
+{f'- Scoped style inherited from: `{style_source_task.name}`' if style_source_task else ''}
 {local_edit_evidence}
 """
     atomic_write_text(task_dir / "evidence-log.md", evidence)
