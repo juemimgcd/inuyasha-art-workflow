@@ -10,16 +10,14 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from workflow_common import (
-    IMAGE_EXTENSIONS,
-    atomic_write_json,
-    load_config,
-    repository_root,
-    workflow_root,
-)
+from workflow_common import IMAGE_EXTENSIONS, atomic_write_json
 
-DEFAULT_ROOT = repository_root() / "libraries" / "origin-photos" / "manga-photos"
-DEFAULT_MANIFEST_DIR = workflow_root(load_config()) / "rename-manifests"
+DEFAULT_ROOT = Path(
+    "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos"
+)
+DEFAULT_MANIFEST_DIR = Path(
+    "/Users/jquery/Documents/inuYasha-design/reference-workflow/rename-manifests"
+)
 SUBJECT_NAMES = (
     "枫婆婆",
     "戈薇爷爷",

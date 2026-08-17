@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from image_sheet import build_contact_sheet
+from task_workflow import is_split_domain_task
 from workflow_common import (
     atomic_write_json,
     atomic_write_text,
@@ -47,15 +48,33 @@ ROLE_ORDER = {
     "composition": 5,
     "content": 6,
 }
-MANGA_STYLE_INSTRUCTION = (
-    "Control only selected-medium black-and-white manga rendering: character "
+MANGA_CHARACTER_STYLE_INSTRUCTION = (
+    "Control only selected-medium black-and-white manga character rendering: character "
     "contour rhythm and line hierarchy; face, hair, fabric, and fold mark-making; "
     "the relative paper-white, flat-black, and restrained halftone hierarchy used "
     "to separate the canonical garment parts defined by official identity evidence; "
-    "effect construction; background omission; material simplification; negative "
-    "space; and distance-based detail falloff. Do not alter or copy visible "
+    "effect construction. Do not alter or copy visible "
     "character identity, garment construction, components, patterns, or accessories, "
     "dialogue, balloons, panel borders, layout, pose, composition, or story content."
+)
+MANGA_SCENE_STYLE_INSTRUCTION = (
+    "Control only selected-medium black-and-white manga scene rendering: architecture "
+    "and natural-material mark grouping, paper-white and black-mass balance, restrained "
+    "halftone, weather effects, background omission, negative space, and distance-based "
+    "detail falloff. Treat its visible scene density as a ceiling, not a completeness "
+    "target. Never transfer its texture frequency, contour density, black coverage, or "
+    "lighting finish onto character faces, hair, costumes, or bodies. Do not copy visible "
+    "people, poses, actions, framing, dialogue, balloons, panel borders, or story content; "
+    "do not redefine canonical scene geometry."
+)
+MANGA_LEGACY_STYLE_INSTRUCTION = (
+    "Control only selected-medium black-and-white manga rendering: character "
+    "contour rhythm and line hierarchy; face, hair, fabric, and fold mark-making; "
+    "the relative paper-white, flat-black, and restrained halftone garment value "
+    "hierarchy; effect construction; background omission; material "
+    "simplification; negative space; and distance-based detail falloff. Do not "
+    "alter or copy identity, garment construction, dialogue, layout, pose, "
+    "composition, or story content."
 )
 TV_STYLE_INSTRUCTION = (
     "Control only TV-series rendering: palette relationships, contour weight, face, "
@@ -68,7 +87,10 @@ IDENTITY_INSTRUCTION = (
     "Control canonical character identity, form, anatomy, costume components and "
     "layering, weapon or prop construction, attachment, and scale only. Do not "
     "control selected-medium mark-making, garment value or tone rendering, or scene "
-    "composition."
+    "composition. Treat this as a construction diagram, not a finish reference: "
+    "redraw visible contours, face and hair marks, fabric lines, black areas, and "
+    "values under the selected-medium character-style authority. Do not inherit "
+    "uninspected finish traits from the identity sheet."
 )
 FORM_INSTRUCTION = (
     "Control only the exact requested form or age state visible in this selected-medium "
@@ -86,6 +108,17 @@ CONTENT_INSTRUCTION = (
     "action state, object or creature configuration, effect phase, or necessary "
     "spatial relationship. Do not control named-character identity, form, costume, "
     "palette, rendering style, camera framing, background treatment, or story staging."
+)
+CANONICAL_SCENE_IDENTITY_INSTRUCTION = (
+    "Control only the exact canonical scene named by Exact focus: its identifying "
+    "structure, fixed spatial relationships, and landmark proportions. Do not control or "
+    "copy visible characters, poses, actions, expressions, dialogue, panel layout, "
+    "or camera framing. ImageGen supplies the requested moment and staging."
+)
+CANONICAL_SCENE_STYLE_COVERAGE_INSTRUCTION = (
+    " Human inspection recorded scene-style coverage as HIT, so this same source "
+    "may also control selected-medium scene materials, weather treatment, negative "
+    "space, black-white mass, and distance-based detail falloff."
 )
 
 
@@ -145,6 +178,16 @@ def parse_focus(value: str) -> tuple[str, str]:
     return item_id, focus.strip()
 
 
+def parse_scene_style_coverage(value: str) -> tuple[str, str]:
+    item_id, separator, status = value.partition("=")
+    status = status.strip().upper()
+    if not separator or not item_id or status not in {"HIT", "INSUFFICIENT"}:
+        raise argparse.ArgumentTypeError(
+            "scene style coverage must look like ITEM_ID=HIT|INSUFFICIENT"
+        )
+    return item_id, status
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workflow-root", type=Path)
@@ -176,6 +219,17 @@ def parse_args() -> argparse.Namespace:
         default=[],
         metavar="ITEM_ID=VISIBLE_DETAIL",
         help="State the exact visible construction a selected reference may control.",
+    )
+    parser.add_argument(
+        "--scene-style-coverage",
+        type=parse_scene_style_coverage,
+        action="append",
+        default=[],
+        metavar="ITEM_ID=HIT|INSUFFICIENT",
+        help=(
+            "Required for a canonical scene reference. HIT lets that image also "
+            "cover scene rendering; INSUFFICIENT requires a separate scene style."
+        ),
     )
     parser.add_argument(
         "--external",
@@ -465,21 +519,38 @@ def instruction_for(
     focus: str = "",
     source_medium: str | None = None,
     content_provenance: str = "observed-content",
+    reference_domain: str = "",
+    content_kind: str = "content",
+    scene_style_coverage: str = "",
 ) -> str:
     if role == "identity":
         instruction = IDENTITY_INSTRUCTION
     elif role == "form":
         instruction = FORM_INSTRUCTION
     elif role == "style":
-        instruction = (
-            MANGA_STYLE_INSTRUCTION if medium == "manga" else TV_STYLE_INSTRUCTION
-        )
+        if medium == "manga" and reference_domain == "scene":
+            instruction = MANGA_SCENE_STYLE_INSTRUCTION
+        elif medium == "manga" and reference_domain == "character-style":
+            instruction = MANGA_CHARACTER_STYLE_INSTRUCTION
+        elif medium == "manga":
+            instruction = MANGA_LEGACY_STYLE_INSTRUCTION
+        else:
+            instruction = TV_STYLE_INSTRUCTION
     elif role == "continuity":
         instruction = CONTINUITY_INSTRUCTION
     elif role == "content":
         if not focus:
             raise ValueError("Content references require an exact focus")
-        instruction = CONTENT_INSTRUCTION
+        if content_kind == "scene":
+            instruction = CANONICAL_SCENE_IDENTITY_INSTRUCTION
+            if scene_style_coverage == "HIT":
+                instruction += CANONICAL_SCENE_STYLE_COVERAGE_INSTRUCTION
+            elif scene_style_coverage != "INSUFFICIENT":
+                raise ValueError(
+                    "Canonical scene references require scene style coverage HIT or INSUFFICIENT"
+                )
+        else:
+            instruction = CONTENT_INSTRUCTION
         if source_medium and source_medium != medium:
             instruction += (
                 f" This is cross-medium {source_medium}-to-{medium} content evidence. "
@@ -554,6 +625,14 @@ def validate_reference(
                 f"{medium} form references must come from {expected_source}: {item_id}"
             )
     if role == "style":
+        try:
+            domain = row["reference_domain"]
+        except (IndexError, KeyError):
+            domain = ""
+        if domain not in {"character-style", "scene", ""}:
+            raise SystemExit(
+                f"Style references must come from a style domain, not {domain}: {item_id}"
+            )
         expected_source = "manga-curated" if medium == "manga" else "tv-curated"
         if source_id != expected_source:
             raise SystemExit(
@@ -641,12 +720,16 @@ def main() -> int:
     if not task_dir.is_dir() or not brief_path.is_file():
         raise SystemExit("--task-dir must be a task created by init_art_task.py")
     brief = json.loads(brief_path.read_text(encoding="utf-8"))
+    qa_path = task_dir / "qa.json"
+    qa = json.loads(qa_path.read_text(encoding="utf-8")) if qa_path.is_file() else {}
+    split_domain_task = is_split_domain_task(brief, qa)
     medium = brief.get("medium")
     identity_forms = brief.get("identity_forms", {})
     prop_forms = brief.get("prop_forms", {})
     required_forms = {**identity_forms, **prop_forms}
     content_need = brief.get("content_need") or {}
     content_provenance = content_need.get("provenance", "observed-content")
+    content_kind = content_need.get("kind", "content")
 
     output = task_dir / "references"
     output.mkdir(exist_ok=True)
@@ -720,6 +803,9 @@ def main() -> int:
 
     crop_requests = canonical_assignments(args.crop, "crop")
     focus_requests = canonical_assignments(args.focus, "focus")
+    scene_style_coverage_requests = canonical_assignments(
+        args.scene_style_coverage, "scene-style-coverage"
+    )
     if set(crop_requests) - set(focus_requests):
         connection.close()
         missing = sorted(set(crop_requests) - set(focus_requests))
@@ -789,6 +875,26 @@ def main() -> int:
                     "Content reference focus must match brief.content_need.focus: "
                     f"{item_id}"
                 )
+            if content_kind == "scene":
+                try:
+                    domain = existing_row["reference_domain"]
+                except (IndexError, KeyError):
+                    domain = ""
+                expected_source = (
+                    "manga-curated" if medium == "manga" else "tv-curated"
+                )
+                if domain != "scene" or existing_row["source_id"] != expected_source:
+                    connection.close()
+                    raise SystemExit(
+                        "Canonical scene evidence must come from the selected-medium "
+                        f"scene domain: {item_id}"
+                    )
+                if entry.get("scene_style_coverage") not in {"HIT", "INSUFFICIENT"}:
+                    connection.close()
+                    raise SystemExit(
+                        "Canonical scene manifest entries require "
+                        f"scene_style_coverage HIT or INSUFFICIENT: {item_id}"
+                    )
         existing_canonical[canonical_id] = (role, item_id)
         if role == "identity":
             existing_official_identity_subjects.update(
@@ -879,6 +985,7 @@ def main() -> int:
             continue
         focus = focus_requests.get(canonical_id, "")
         crop_box = crop_requests.get(canonical_id)
+        scene_style_coverage = scene_style_coverage_requests.get(canonical_id, "")
         validate_reference(
             row,
             role,
@@ -905,6 +1012,27 @@ def main() -> int:
                     "--focus for a content reference must exactly match "
                     "brief.content_need.focus"
                 )
+            if content_kind == "scene":
+                expected_source = (
+                    "manga-curated" if medium == "manga" else "tv-curated"
+                )
+                if row["reference_domain"] != "scene" or row["source_id"] != expected_source:
+                    connection.close()
+                    raise SystemExit(
+                        "Canonical scene evidence must come from the selected-medium "
+                        f"scene domain: {item_id}"
+                    )
+                if scene_style_coverage not in {"HIT", "INSUFFICIENT"}:
+                    connection.close()
+                    raise SystemExit(
+                        "Canonical scene selection requires --scene-style-coverage "
+                        f"{canonical_id}=HIT|INSUFFICIENT"
+                    )
+        elif scene_style_coverage:
+            connection.close()
+            raise SystemExit(
+                "--scene-style-coverage is valid only for a canonical scene content reference"
+            )
         selected_rows.append(
             (
                 role,
@@ -912,6 +1040,7 @@ def main() -> int:
                 row,
                 crop_box,
                 focus,
+                scene_style_coverage,
             )
         )
         selected_canonical_ids.add(canonical_id)
@@ -920,11 +1049,13 @@ def main() -> int:
 
     unused_detail_requests = (
         set(crop_requests) | set(focus_requests)
+        | set(scene_style_coverage_requests)
     ) - selected_canonical_ids
     if unused_detail_requests:
         connection.close()
         raise SystemExit(
-            "--crop and --focus must name references newly added with --select: "
+            "--crop, --focus, and --scene-style-coverage must name references "
+            "newly added with --select: "
             f"{sorted(unused_detail_requests)}"
         )
 
@@ -938,7 +1069,7 @@ def main() -> int:
     card_rows = []
     selected_identity_subjects = {
         subject
-        for role, _, row, _, _ in selected_rows
+        for role, _, row, _, _, _ in selected_rows
         if role == "identity"
         for subject in json.loads(row["subjects"] or "[]")
     }
@@ -984,10 +1115,33 @@ def main() -> int:
         if role == "style"
     }
     requested_style_ids = current_style_ids | {
-        item_id for role, item_id, _, _, _ in selected_rows if role == "style"
+        item_id for role, item_id, _, _, _, _ in selected_rows if role == "style"
     }
-    if len(requested_style_ids) > 2:
-        raise SystemExit("Use at most two curated style screenshots per task")
+    max_style_references = 3 if split_domain_task else 2
+    if len(requested_style_ids) > max_style_references:
+        raise SystemExit(
+            f"Use at most {max_style_references} curated style screenshots per task"
+        )
+    if split_domain_task:
+        existing_style_domains = [
+            entry.get("reference_domain")
+            for entry in manifest.get("references", [])
+            if entry.get("role") == "style" and entry.get("reference_domain")
+        ]
+        selected_style_domains = [
+            row["reference_domain"]
+            for role, _, row, _, _, _ in selected_rows
+            if role == "style"
+        ]
+        style_domains = existing_style_domains + selected_style_domains
+        if style_domains.count("scene") > 1:
+            raise SystemExit(
+                "New split-domain tasks allow at most one scene-style reference"
+            )
+        if style_domains.count("character-style") > 2:
+            raise SystemExit(
+                "New split-domain tasks allow at most two character-style references"
+            )
 
     added = []
     for role, item_id, source, content_hash in external_target_rows:
@@ -1106,13 +1260,14 @@ def main() -> int:
             }
         )
 
-    for role, item_id, row, crop_box, focus in selected_rows:
+    for role, item_id, row, crop_box, focus, scene_style_coverage in selected_rows:
         target = render_item(row, role, output, args.dpi, crop_box)
         entry = {
             "order": len(manifest.get("references", [])) + len(added) + 1,
             "role": role,
             "item_id": item_id,
             "source_id": row["source_id"],
+            "reference_domain": row["reference_domain"],
             "source_authority": row["authority"],
             "content_hash": row["content_hash"],
             "folder_path": row["folder_path"],
@@ -1133,6 +1288,9 @@ def main() -> int:
                 focus,
                 source_medium=row["medium"],
                 content_provenance=content_provenance,
+                reference_domain=row["reference_domain"],
+                content_kind=content_kind,
+                scene_style_coverage=scene_style_coverage,
             ),
             "crop_box": list(crop_box) if crop_box is not None else None,
             "focus": focus,
@@ -1150,6 +1308,13 @@ def main() -> int:
                 f"{row['medium']}-to-{medium}-content" if cross_medium else None
             )
             entry["provenance"] = content_provenance
+            entry["content_kind"] = content_kind
+            if content_kind == "scene":
+                entry["scene_style_coverage"] = scene_style_coverage
+        if role == "style":
+            entry["style_scope"] = (
+                "scene" if row["reference_domain"] == "scene" else "character"
+            )
         added.append(entry)
 
     for role, item_id, source, content_hash in external_composition_rows:
@@ -1200,6 +1365,14 @@ def main() -> int:
         for entry in manifest["references"]
         if entry["role"] == "content"
     ]
+    scene_entries = [
+        entry
+        for entry in manifest["references"]
+        if entry.get("role") == "content" and entry.get("content_kind") == "scene"
+    ]
+    brief["scene_style_coverage"] = (
+        scene_entries[0].get("scene_style_coverage") if scene_entries else None
+    )
     atomic_write_json(brief_path, brief)
 
     entries = [
@@ -1225,6 +1398,9 @@ def main() -> int:
                 "",
                 f"- Item: `{entry['item_id']}`",
                 f"- Authority: `{entry['source_authority']}`",
+                f"- Reference domain: `{entry.get('reference_domain') or 'N/A'}`",
+                f"- Style scope: `{entry.get('style_scope') or 'N/A'}`",
+                f"- Scene style coverage: `{entry.get('scene_style_coverage') or 'N/A'}`",
                 f"- Prepared file: `{entry['rendered_path']}`",
                 f"- Source: `{locator}`",
                 f"- Folder labels: `{', '.join(entry.get('folder_tags', [])) or 'N/A'}`",

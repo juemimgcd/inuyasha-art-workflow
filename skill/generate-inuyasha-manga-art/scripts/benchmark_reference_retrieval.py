@@ -26,6 +26,7 @@ REPEATABLE_FLAGS = {
 }
 SCALAR_FLAGS = {
     "source": "--source",
+    "reference_domain": "--reference-domain",
     "medium": "--medium",
     "role": "--role",
     "kind": "--kind",
@@ -77,7 +78,7 @@ def load_dataset(path: Path) -> dict[str, Any]:
                 f"benchmark case {case_id} requires relevant_item_ids"
             )
         if not isinstance(case.get("query"), dict):
-            raise ValueError(f"benchmark case {case_id} requires query")
+            raise TypeError(f"benchmark case {case_id} requires query")
     return data
 
 

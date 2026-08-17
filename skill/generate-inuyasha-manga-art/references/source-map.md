@@ -6,15 +6,19 @@ Use each source only for its declared role. The local catalog is a locator for a
 
 | Source | Path | Authority | Normal use |
 | --- | --- | --- | --- |
-| `official` | `${REPO_ROOT}/libraries/inuyahsa-official` | canonical identity | Character name, face, anatomy, form, costume, weapon/prop construction and attachment, scar, and scale. |
-| `manga-curated` | `${REPO_ROOT}/libraries/origin-photos/manga-photos` | growing user-curated manga style and scoped content | One or two inspected screenshots for manga rendering, or one separately selected exact-focus content reference. |
-| `tv-curated` | `${REPO_ROOT}/libraries/origin-photos/TV-photos` | growing user-curated TV rendering and scoped content | TV rendering for TV tasks, or one separately selected exact-focus content reference. |
-| `user-continuity` | `${REPO_ROOT}/libraries/inuyasha-mine` | requested continuity | A user-original form or prior accepted interpretation when explicitly requested. |
-| `selected-output` | `${REPO_ROOT}/libraries/selected-output` | selected user-original precedent | One inspected accepted output for continuity and finish quality after identity and medium style are resolved. |
+| `official` | `/Users/jquery/Documents/inuyahsa-official` | canonical identity | Character name, face, anatomy, form, costume, weapon/prop construction and attachment, scar, and scale. |
+| `manga-curated` | `/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos` | growing user-curated manga style, scene identity and scoped content | Character folders supply `character-style`; the top-level `场景/` folder supplies scene identity and scene rendering. |
+| `tv-curated` | `/Users/jquery/Documents/inuYasha-design/origin-photos/TV-photos` | growing user-curated TV rendering and scoped content | TV rendering for TV tasks, or one separately selected exact-focus content reference. |
+| `user-continuity` | `/Users/jquery/Documents/inuyasha-mine` | requested continuity | A user-original form or prior accepted interpretation when explicitly requested. |
+| `selected-output` | `/Users/jquery/Documents/inuYasha-design/selected-output` | selected user-original precedent | One inspected accepted output for continuity and finish quality after identity and medium style are resolved. |
 
-`${REPO_ROOT}` is the clone directory resolved from `INUYASHA_WORKFLOW_HOME` or
-the repo-local skill location. Keep path casing and spelling exact.
-`inuyahsa-official` is the directory's existing spelling.
+`official` is the default authority for that directory, not an unconditional
+claim about every file. A `path_authority_overrides` entry may retain an adopted
+derivative as identity evidence while labeling it `user-directed-derived-identity`.
+Such an item can control the explicitly requested local variant, but it must not be described as a
+publisher-original official sheet.
+
+Keep path casing and spelling exact. `inuyahsa-official` is the directory's existing spelling.
 
 For both curated `origin-photos` sources, treat every folder name as inherited retrieval metadata and the leaf folder as the screenshot's content label. For `selected-output`, use its structured filenames as primary metadata and its character folders as inherited tags. All three libraries are user-owned and open-ended.
 
@@ -22,18 +26,34 @@ For multi-character filenames, preserve the ordered character-to-form mapping
 instead of sharing one flat form list across the image. The flat list is only a
 legacy union for form-only browsing; exact retrieval uses `subject_forms`.
 
+The catalog writes `reference_domain` before ranking. `official` is `identity`;
+selected-medium images under top-level `场景/` are `scene` even when a person is
+visible; other selected-medium images naming a known character are
+`character-style`. Never mix these domains in one relevance score.
+
 ## Default manga route
 
 Run these layers serially. Record `HIT`, `MISS`, or `INSUFFICIENT` for the current layer before advancing; do not scan all layers in parallel.
 
 1. Resolve every named character and required form from `official`.
-2. Browse `manga-curated` and inspect one or two screenshots for manga rendering only.
-3. If the request needs separately evidenced content, search `manga-curated` for
+2. Browse `manga-curated`, hard-filtered to `character-style`, and inspect one
+   screenshot for character contour, face/hair, fabric/fold and garment values.
+   Action, interaction, expression, camera and scene similarity are ignored.
+3. Search `manga-curated`, hard-filtered to `scene`. For an Inuyasha-specific
+   place, require its exact `scene-id`; on `MISS` or `INSUFFICIENT`, ImageGen
+   constructs the scene. For a generic place, ImageGen constructs it immediately.
+4. Select one scene-domain screenshot for scene rendering. An exact canonical
+   scene hit may cover both steps 3 and 4 only after recording
+   `scene_style_coverage=HIT` with a concrete inspection basis recorded
+   consistently in evidence, brief, and manifest. Coverage `INSUFFICIENT`, or scene identity
+   `MISS`/`INSUFFICIENT`, requires a separate scene-style reference and the
+   fallback query excludes the canonical `scene-id` already judged inadequate.
+5. If the request needs separately evidenced non-scene content, search `manga-curated` for
    that exact content. Only after a recorded `MISS` or `INSUFFICIENT`, search
    `tv-curated` and select at most one image as `content` with a non-empty focus.
-4. Search `selected-output` only when accepted continuity was explicitly requested.
+6. Search `selected-output` only when accepted continuity was explicitly requested.
    Inspect at most one matching precedent. A `MISS` here is allowed.
-5. Design the new composition in the prompt.
+7. Let ImageGen design the new composition, pose, action, expression and staging.
 
 Do not use a manga screenshot or selected output as identity evidence. Do not copy a screenshot's panels, dialogue, depicted characters, or story. Do not let selected output replace the selected medium's original rendering evidence.
 

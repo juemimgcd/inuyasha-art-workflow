@@ -14,12 +14,14 @@ from task_workflow import feedback_rank, reference_performance
 from workflow_common import (
     FORM_VALUES,
     KNOWN_SUBJECTS,
+    REFERENCE_DOMAINS,
     SHOT_VALUES,
     library_signature,
     load_config,
     open_database,
     retrieval_relevance,
     retrieval_traits_for,
+    retrieval_traits_for_domain,
     style_conflict_subjects,
     workflow_paths,
     workflow_root,
@@ -51,6 +53,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--workflow-root", type=Path)
     parser.add_argument(
         "--source", help="One source id, such as official or manga-curated."
+    )
+    parser.add_argument(
+        "--reference-domain",
+        choices=REFERENCE_DOMAINS,
+        help="Hard authority-domain filter applied before relevance scoring.",
     )
     parser.add_argument(
         "--medium", choices=("identity", "manga", "tv", "user-original")
@@ -166,6 +173,9 @@ def main() -> int:
     if args.source:
         clauses.append("items.source_id = ?")
         parameters.append(args.source)
+    if args.reference_domain:
+        clauses.append("items.reference_domain = ?")
+        parameters.append(args.reference_domain)
     if args.medium:
         clauses.append("sources.medium = ?")
         parameters.append(args.medium)
@@ -278,7 +288,7 @@ def main() -> int:
     add_json_facet("shot_types", args.shot, "any")
 
     terms = [term.casefold() for term in args.query.split() if term.strip()]
-    intent_traits = retrieval_traits_for(
+    inferred_traits = retrieval_traits_for(
         args.intent_text,
         args.shot[0] if args.role == "rendering" and len(args.shot) == 1 else None,
         medium=(
@@ -289,9 +299,12 @@ def main() -> int:
             else None
         ),
     )
+    intent_traits = retrieval_traits_for_domain(
+        inferred_traits, args.reference_domain
+    )
     rendering_conflicts = (
         style_conflict_subjects(args.intent_text)
-        if args.role == "rendering"
+        if args.role == "rendering" and args.reference_domain != "scene"
         else set()
     )
     scoring_terms = list(dict.fromkeys([*terms, *intent_traits]))
@@ -352,6 +365,11 @@ def main() -> int:
             contents=args.content,
             penalized_subjects=rendering_conflicts,
             role=args.role,
+            shot_weight=(
+                1
+                if args.reference_domain == "scene" and args.role == "rendering"
+                else 4
+            ),
         )
         item["feedback"] = performance.get(
             item["item_id"],
@@ -363,7 +381,8 @@ def main() -> int:
             },
         )
         item["feedback_rank"] = round(feedback_rank(item["feedback"]), 4)
-        item["inferred_traits"] = intent_traits
+        item["inferred_traits"] = inferred_traits
+        item["scoring_traits"] = intent_traits
         item["style_conflict_subjects"] = sorted(
             rendering_conflicts, key=str.casefold
         )
@@ -385,7 +404,7 @@ def main() -> int:
         print("No matching references.")
         return 1
     if intent_traits:
-        print(f"Inferred traits: {' '.join(intent_traits)}")
+        print(f"Scoring traits: {' '.join(intent_traits)}")
     for item in output:
         locator = item["path"]
         if item["kind"] == "pdf_page":
@@ -397,6 +416,7 @@ def main() -> int:
         print(
             f"{item['item_id']} [{item['source_id']}/{item['kind']}{curated}]{dimensions}"
         )
+        print(f"  domain: {item['reference_domain']}")
         print(f"  {locator}")
         if item["note"]:
             print(f"  note: {item['note']}")

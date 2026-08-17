@@ -4,6 +4,10 @@ Annotate only distinctions that filenames and folders cannot express. Keep ident
 
 Allowed trait keys:
 
+- `scene-class`: `canonical`, `generic`
+- `scene-id`: `bone-eaters-well`, `goshinboku`
+- `scene-family`: `architecture`, `nature`, `settlement`, `interior`, `canonical-landmark`
+- `scene-structure`: `overall`, `detail`, `spatial-relation`
 - `action`: `embrace`, `embrace-from-behind`, `look-down`, `look-up`, `reach`, `hold`, `cut`, `turn-head`, `sleeve-hidden-hands`, `face-off`, `draw-weapon`, `swing-weapon`, `jump`, `run`, `sit`, `kneel`, `carry`, `crouch`, `pass-ball`, `catch-ball`, `kick-ball`, `comb-hair`, `touch-ears`, `adjust-clothing`
 - `interaction`: `mother-child`, `romantic`, `face-to-face`, `body-contact`, `hand-prop`, `hand-clothing`, `shoulder-rest`, `shared-gaze`, `confrontation`, `caregiving`, `teaching`, `ear-touch`
 - `expression`: `alert-sad`, `shy`, `surprised`, `gentle`, `restrained`, `angry`, `determined`, `crying`, `neutral`
@@ -40,6 +44,10 @@ scripts/run-python scripts/annotate_reference.py \
 ```
 
 Rebuild the catalog after annotation. Search with `--query "scene-energy:quiet face-clarity:high"` when the trait is relevant. Do not annotate every file merely to fill fields.
+
+`scene-id` is an exact identity key for a work-specific canonical place. Search it
+inside `reference_domain=scene` before asking ImageGen to construct the scene.
+Generic places use scene-family, background, effect and rendering traits instead.
 
 For natural-language requests, use `--intent-text`. It maps only explicit phrases
 such as `背后拥抱`, `蹲坐抱球`, `袖中藏手`, `挥动铁碎牙`, or `雨夜神社` to

@@ -10,14 +10,20 @@ from pathlib import Path
 from task_workflow import (
     BRIEF_SCHEMA_VERSION,
     CHANGE_CATEGORIES,
+    CHANGE_SCOPE_SCHEMA_VERSION,
+    CHANGE_SCOPES,
     DEFAULT_EDIT_PRE_GENERATION_TARGET_SECONDS,
     DEFAULT_MAX_TECHNICAL_RETRIES,
     DEFAULT_NEW_PRE_GENERATION_TARGET_SECONDS,
     DEFAULT_POST_GENERATION_TARGET_SECONDS,
     INTENT_VALUES,
     LATENCY_SCHEMA_VERSION,
+    QA_DIMENSIONS,
+    QA_SCHEMA_VERSION,
+    SCOPED_STYLE_CHANGE_CATEGORIES,
     compile_prompt,
     identity_requirements,
+    new_split_domain_reference_strategy,
     read_json,
 )
 from workflow_common import (
@@ -52,6 +58,7 @@ def qa_items(
     medium: str,
     intent: str = "new",
     change_category: str | None = None,
+    change_scope: str | None = None,
     shot: str | None = None,
     prop_forms: dict[str, str] | None = None,
 ) -> list[tuple[str, str]]:
@@ -64,11 +71,19 @@ def qa_items(
         [
             (
                 "medium",
-                "整体处于所选风格参考对应的场景完成度区间：既不是发丝、碎衣褶、微纹理和平滑体积光堆叠的精修黑白插画，也不是通用动漫脸、均匀矢量轮廓、空洞场景或缺少结构关系的简陋线稿；身份关键的眼型、刘海分束、下颌、发型轮廓、服装层次和接触关系完整",
+                "整体处于所选风格参考与镜头功能对应的完成度区间：局部细节较多但仍保持原作式线条、网点、黑白块和视觉主次时记为 warning；只有发丝、碎衣褶、微纹理、平滑体积光或均匀数字轮廓把第一印象推成精修黑白插画时才 fail；通用动漫脸、空洞场景、缺少结构关系或身份关键眼型、刘海、下颌、发型轮廓、服装层次和接触关系同样 fail",
             ),
             (
                 "medium",
                 "角色轮廓粗细、脸部简化、头发分束与布料衣褶使用所选 origin-photos 风格参考的笔触逻辑，同时没有复制参考图中的人物身份、姿势或构图",
+            ),
+            (
+                "medium",
+                "逐个人物检查可见的脸、头发、服装和手部：身份结构来自 official，轮廓节奏、用线密度、布料与衣褶概括来自所选人物画风素材；同人物同形态素材只是优先项，使用兼容素材时不得改写人物五官、发型轮廓、形态或服装",
+            ),
+            (
+                "medium",
+                "逐项检查画面中实际可见的场景材质、天气与光影现象：雨线、反光、阴影和材质细节可为叙事服务；局部略密但仍使用原作式选择性用线、留白、黑白块和远近衰减时记 warning，只有平滑写实塑形、电影式照明或全画面同等精度造成媒介偏移时才 fail；不可见项目记为 n/a 并说明原因",
             ),
             (
                 "medium",
@@ -88,11 +103,27 @@ def qa_items(
         if medium == "manga" and change_category == "medium"
         else []
     )
+    scoped_style_checks = []
+    if medium == "manga" and change_category in SCOPED_STYLE_CHANGE_CATEGORIES:
+        if change_scope == "character":
+            scoped_style_checks = [
+                (
+                    "medium",
+                    "人物域修改只使用 character-style：服装纸白、整块黑和网点值阶及人物线条可按人物漫画原图调整；场景材质、水体、岩石、植被、天气、背景密度和构图保持目标图不变",
+                )
+            ]
+        elif change_scope == "scene":
+            scoped_style_checks = [
+                (
+                    "preservation",
+                    "场景域修改只使用 scene-style：人物脸、头发、服装部件、衣褶画法以及既有服装纸白、整块黑和网点值阶保持目标图不变，不得因水体或背景简化而重新上色",
+                )
+            ]
     wide_scene_checks = (
         [
             (
                 "medium",
-                "远景以有限的信息预算组织大轮廓、主动留白、整块黑和克制中间调；笔触集中于叙事焦点，重复形体被归组，细节随距离明确衰减",
+                "远景先保留场景中连续可见的纸白开阔面，再以少数整块黑、中间调和轮廓组组织建筑、植被、地形，并让每一层远景明显减少内部线条；只有单一从属区域略密且缩略图仍由大块纸白、黑和中间调主导时才记 warning；若多个材质或远近层同时铺满微纹理、距离不减线，或第一眼成为版画、蚀刻或精修黑白插画，即使物件齐全和透视正确也必须 fail，不能记 warning",
             ),
             (
                 "composition",
@@ -100,6 +131,17 @@ def qa_items(
             ),
         ]
         if medium == "manga" and shot == "wide-shot"
+        else []
+    )
+    character_finish_checks = (
+        [
+            (
+                "medium",
+                "人物中近景优先检查脸、眼睛、头发和衣褶的媒介偏移：少量局部线条略密但仍符合原作人物画法时记 warning；平滑体积塑形、跨区域均匀光泽、发丝级均匀刻画或现代精致插画式五官时才 fail",
+            )
+        ]
+        if medium == "manga"
+        and shot in {"face", "profile", "close-up", "medium-shot", "upper-body", "two-shot"}
         else []
     )
     prop_checks = []
@@ -140,7 +182,9 @@ def qa_items(
         *BASE_QA_ITEMS[:-1],
         *medium_specific_checks,
         *medium_edit_checks,
+        *scoped_style_checks,
         *wide_scene_checks,
+        *character_finish_checks,
         *prop_checks,
         *wide_edit_preservation_checks,
         ("process", source_check),
@@ -181,6 +225,7 @@ def qa_items(
         )
     return [
         *checks,
+        *scoped_style_checks,
         ("technical", "没有非要求文字、对话框、签名、logo 或水印"),
         ("technical", "成图比例与目标图保持一致"),
         ("process", "实际使用的参考图与 reference-manifest.json 一致"),
@@ -214,6 +259,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--intent", choices=INTENT_VALUES)
     parser.add_argument("--parent-task", type=Path)
     parser.add_argument("--change-category", choices=CHANGE_CATEGORIES)
+    parser.add_argument("--change-scope", choices=CHANGE_SCOPES)
     parser.add_argument("--change-request")
     parser.add_argument("--aspect-ratio", default="2:3 portrait")
     parser.add_argument("--shot", choices=SHOT_VALUES)
@@ -263,6 +309,12 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--content-kind",
+        choices=("content", "scene"),
+        default="content",
+        help="Use scene for selected-medium canonical-place evidence.",
+    )
+    parser.add_argument(
         "--pre-generation-target-seconds",
         type=int,
         help="Soft target for controllable preparation; defaults by intent.",
@@ -306,6 +358,18 @@ def main() -> int:
         raise SystemExit("microfix tasks require --change-request")
     if intent == "microfix" and not args.change_category:
         raise SystemExit("microfix tasks require --change-category")
+    if args.change_scope and not args.change_category:
+        raise SystemExit("--change-scope requires --change-category")
+    if intent == "new" and args.change_scope:
+        raise SystemExit("--change-scope is only valid for edit or microfix")
+    if (
+        intent in {"edit", "microfix"}
+        and args.change_category in SCOPED_STYLE_CHANGE_CATEGORIES
+        and not args.change_scope
+    ):
+        raise SystemExit(
+            f"{args.change_category} changes require --change-scope character|scene"
+        )
     if parent_brief and parent_brief.get("medium") != args.medium:
         raise SystemExit("Parent and child tasks must use the same medium")
     content_query = args.content_query.strip()
@@ -363,11 +427,14 @@ def main() -> int:
         {
             "query": content_query,
             "focus": content_focus,
+            "kind": args.content_kind,
             "selected_medium_source": (
                 "manga-curated" if args.medium == "manga" else "tv-curated"
             ),
             "fallback_source": (
-                "tv-curated" if args.medium == "manga" else "manga-curated"
+                None
+                if args.content_kind == "scene"
+                else ("tv-curated" if args.medium == "manga" else "manga-curated")
             ),
             "provenance": args.content_provenance,
         }
@@ -386,16 +453,26 @@ def main() -> int:
         "intent": intent,
         "parent_task_id": parent_task_id,
         "change_category": args.change_category,
+        "change_scope_schema_version": (
+            CHANGE_SCOPE_SCHEMA_VERSION
+            if intent in {"edit", "microfix"}
+            else None
+        ),
+        "change_scope": args.change_scope,
         "change_request": args.change_request or "",
         "medium": args.medium,
         "deliverable": args.deliverable,
         "period_mode": period_mode,
         "style_strategy": f"two-layer-{args.medium}-fast",
+        "reference_strategy": (
+            new_split_domain_reference_strategy() if intent == "new" else None
+        ),
         "style_references": [],
         "content_need": content_need,
         "content_references": [],
         "characters": list(identity_forms),
         "identity_forms": identity_forms,
+        "character_style_targets": identity_forms if intent == "new" else {},
         "props": list(prop_forms),
         "prop_forms": prop_forms,
         "forms_and_costumes": [
@@ -421,12 +498,21 @@ def main() -> int:
     atomic_write_json(
         task_dir / "qa.json",
         {
-            "schema_version": 1,
-            "status_values": ["pending", "pass", "fail", "n/a"],
+            "schema_version": QA_SCHEMA_VERSION,
+            "status_values": ["pending", "pass", "warning", "fail", "n/a"],
+            "dimensions": [
+                {"id": dimension_id, "label": label, "status": "pending", "note": ""}
+                for dimension_id, label in QA_DIMENSIONS
+            ],
             "checks": [
                 {"category": category, "check": check, "status": "pending", "note": ""}
                 for category, check in qa_items(
-                    args.medium, intent, args.change_category, shot, prop_forms
+                    args.medium,
+                    intent,
+                    args.change_category,
+                    args.change_scope,
+                    shot,
+                    prop_forms,
                 )
             ],
         },
@@ -449,6 +535,7 @@ The parent task's inspected identity and manga evidence remain authoritative whi
 ## Change-specific evidence
 
 - Category: `{args.change_category}`
+- Change scope: `{args.change_scope or 'target-only'}`
 - Requested change: {args.change_request}
 - Additional source: `N/A` unless a new detail reference is prepared.
 - Result: `HIT` from target continuity; inspect any added reference before generation.
@@ -457,18 +544,28 @@ The parent task's inspected identity and manga evidence remain authoritative whi
         selected_content_source = (
             "manga-curated" if args.medium == "manga" else "tv-curated"
         )
-        fallback_content_source = (
-            "tv-curated" if args.medium == "manga" else "manga-curated"
-        )
+        fallback_content_source = content_need.get("fallback_source") or "ImageGen"
         content_need_text = content_need.get("focus") or "N/A"
         content_query_text = content_need.get("query") or "N/A"
-        selected_content_result = "" if content_need else "SKIP"
-        fallback_content_result = "" if content_need else "SKIP"
+        canonical_scene_planned = content_need.get("kind") == "scene"
+        ordinary_content_planned = bool(content_need) and not canonical_scene_planned
+        selected_content_result = "" if ordinary_content_planned else "SKIP"
+        fallback_content_result = "" if ordinary_content_planned else "SKIP"
+        scene_identity_result = "" if canonical_scene_planned else "SKIP"
+        scene_style_coverage = "" if canonical_scene_planned else "SKIP"
+        scene_style_coverage_basis = "" if canonical_scene_planned else "N/A"
+        character_style_preference_lines = "\n".join(
+            f"- Character style preference {character}={form}: exact / compatible / general"
+            for character, form in identity_forms.items()
+        )
         evidence = f"""# Evidence log
 
 Task: `{task_id}`
+Intent: `{intent}`
+Change category: `{args.change_category or 'N/A'}`
+Change scope: `{args.change_scope or 'target-only'}`
 
-Run the required retrieval layers in order and record one of `HIT`, `MISS`, `INSUFFICIENT`, or `SKIP` before advancing: official identity -> selected-medium rendering -> optional exact content -> optional continuity. Use `SKIP` for selected-medium rendering only when the bundled generalized guide fully resolves the rendering need. Never turn that guide's offline source provenance into a fixed volume/page query. For exact content, search the selected medium first; open the cross-medium fallback only after a recorded `MISS` or `INSUFFICIENT`. Never substitute cross-medium content for selected-medium style or official identity.
+Run the required retrieval layers in order and record one of `HIT`, `MISS`, `INSUFFICIENT`, or `SKIP` before advancing: official identity -> character rendering -> scene identity or construction -> scene rendering -> optional exact content -> optional continuity. Canonical scenes search the selected-medium scene domain first. When scene identity is `HIT`, separately record `Scene style coverage: HIT|INSUFFICIENT`; only `HIT` may skip Layer 4. On identity `MISS`/`INSUFFICIENT`, ImageGen constructs the scene and Layer 4 becomes mandatory. Actions, expressions, and complex staging are always generated, never retrieved as authority.
 
 ## Layer 1: official identity
 
@@ -478,7 +575,7 @@ Run the required retrieval layers in order and record one of `HIT`, `MISS`, `INS
 - Selected item IDs:
 - Usable evidence:
 
-## Layer 2: Manga or TV screenshots
+## Layer 2: character rendering
 
 - Need:
 - Source browsed:
@@ -488,12 +585,32 @@ Run the required retrieval layers in order and record one of `HIT`, `MISS`, `INS
 - Hair and face linework coverage:
 - Fabric and fold treatment coverage:
 - Garment value hierarchy coverage:
-- Scene rendering coverage:
-- Dominant material rendering coverage: record whether the primary style anchor's information budget transfers across the listed scene scope; do not add one reference per material
-- Controls:
-- Must not control:
+{character_style_preference_lines}
+- Must not control: action, pose, expression, interaction, framing, or scene
+- Controls: character linework, face/hair simplification, costume mark-making and value hierarchy only
 
-## Layer 3: exact content evidence
+## Layer 3: scene identity or construction
+
+- Need: {content_need_text if content_need.get('kind') == 'scene' else 'scene described by request'}
+- Scene-domain query: {content_query_text if content_need.get('kind') == 'scene' else 'generic scene facets'}
+- Scene identity result: {scene_identity_result}
+- Selected item IDs:
+- Scene style coverage: {scene_style_coverage}
+- Coverage basis: {scene_style_coverage_basis}
+- Fallback after MISS/INSUFFICIENT: ImageGen constructs the scene
+
+## Layer 4: scene rendering
+
+- Source browsed: selected-medium `reference_domain=scene`
+- Scene style result:
+- Selected item IDs:
+- Allowed SKIP: only when Layer 3 scene identity is HIT and Scene style coverage is HIT
+- Scene rendering coverage:
+- Dominant material rendering coverage: transfer one scene anchor's information budget across the listed scene scope; do not add one reference per material
+- Controls:
+- Must not control: characters, pose, action, expression, interaction, or framing
+
+## Layer 5: exact content evidence
 
 - Need: {content_need_text}
 - Query: {content_query_text}
@@ -505,7 +622,7 @@ Run the required retrieval layers in order and record one of `HIT`, `MISS`, `INS
 - Exact focus: {content_need_text}
 - Must not control: identity, form, costume, palette, rendering style, framing, background treatment, or story staging
 
-## Layer 4: selected original outputs
+## Layer 6: selected original outputs
 
 - Need: explicit accepted-output continuity, otherwise `N/A`
 - Source searched: `/Users/jquery/Documents/inuYasha-design/selected-output`

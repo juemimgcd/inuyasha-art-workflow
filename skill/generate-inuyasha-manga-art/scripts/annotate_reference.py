@@ -16,6 +16,10 @@ from workflow_common import (
 )
 
 VISUAL_TRAIT_VALUES = {
+    "scene-class": {"canonical", "generic"},
+    "scene-id": {"bone-eaters-well", "goshinboku"},
+    "scene-family": {"architecture", "nature", "settlement", "interior", "canonical-landmark"},
+    "scene-structure": {"overall", "detail", "spatial-relation"},
     "action": {
         "embrace",
         "embrace-from-behind",

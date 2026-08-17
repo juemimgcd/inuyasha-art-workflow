@@ -1,0 +1,264 @@
+{
+  "schema_version": 1,
+  "id": "inuyasha-manga-character-consistency-v1",
+  "description": "固定输入、单次首图的犬夜叉漫画人物一致性与生成延迟基准。每个 case 只生成一次，不自动重试。",
+  "prompt_contract": {
+    "medium": "manga",
+    "global_requirements": [
+      "画面首先读作90年代黑白连载漫画，并处于所选风格参考对应的场景完成度区间；既不是发丝、碎衣褶、微纹理和平滑体积塑造堆叠的现代精修插画，也不是通用动漫脸、均匀矢量轮廓、空洞场景或缺少结构关系的简陋线稿",
+      "经济取舍不得删除身份关键的眼型、刘海分束、下颌、发型外轮廓、服装层次、手部接触或镜头所需的场景线索",
+      "不得使用没有风格证据支持的固定数量或百分比限制来约束发丝、衣褶、网点、雨线或背景笔触",
+      "不得复制风格参考中的角色、对白、分镜、构图、姿势或剧情",
+      "不得出现文字、对白框、分镜边框、标志、签名或水印"
+    ],
+    "style_authority": "输入1只控制黑白漫画的线条、网点、明暗和背景处理，不控制人物身份或构图。",
+    "identity_authority": "输入2是由当前本地官方设定素材派生的身份卡，只控制指定人物与形态的可见身份、服装、体型和道具结构。",
+    "identity_authority_by_card": {
+      "inuyasha-child-form": "输入2是由用户明确要求制作并投入本地工作流的幼年犬夜叉衍生设定派生的身份卡，只控制幼年形态的可见身份、服装、体型和道具结构；它不是出版社原始官方图，也没有单独登记为正式 accepted result。"
+    },
+    "additional_identity_authority": "后续输入只控制对应配角的身份与服装，不控制犬夜叉或画面风格。"
+  },
+  "coverage_requirements": {
+    "minimum_cases": 12,
+    "forms": {
+      "half-demon-form": 4,
+      "human-form": 4,
+      "child-form": 4
+    },
+    "shot_types": ["close-up", "full-body", "back-view", "action", "two-shot"]
+  },
+  "thresholds": {
+    "minimum": {
+      "technical_success_rate": 0.9,
+      "first_pass_usable_rate": 0.75,
+      "identity_form_pass_rate": 1.0,
+      "identity_features_pass_rate": 0.9,
+      "costume_pass_rate": 0.9,
+      "manga_medium_pass_rate": 0.9
+    },
+    "maximum": {
+      "median_generation_seconds": 120.0,
+      "p90_generation_seconds": 180.0
+    }
+  },
+  "cases": [
+    {
+      "id": "half-demon-alert-portrait",
+      "form": "half-demon-form",
+      "identity_card_id": "inuyasha-half-demon-form",
+      "style_item_id": "manga-curated:file:d755737354e5af252e61",
+      "shot_type": "close-up",
+      "aspect_ratio": "4:5",
+      "scene": "成年半妖形态犬夜叉的胸像，四分之三角度，神情警觉而克制，风轻轻带动长发。",
+      "checks": {
+        "identity_form": ["银白长发", "头顶双犬耳", "少年而非成年男性体型"],
+        "identity_features": ["刘海、犬耳与面型符合身份卡", "有言灵念珠", "无杀生丸脸纹或额头月牙"],
+        "costume": ["火鼠裘交领和宽袖结构正确"],
+        "anatomy_contact": ["耳朵与头骨连接自然", "肩颈与衣领关系连续"],
+        "composition": ["胸像主体清晰且没有被裁断犬耳"],
+        "manga_medium": ["黑白墨线和网点统一", "无动画赛璐璐上色", "人物近景没有逐根发丝、细碎微纹理或平滑体积塑造"]
+      }
+    },
+    {
+      "id": "half-demon-standing-full-body",
+      "form": "half-demon-form",
+      "identity_card_id": "inuyasha-half-demon-form",
+      "style_item_id": "manga-curated:file:66888293995b507c50b4",
+      "shot_type": "full-body",
+      "aspect_ratio": "4:5",
+      "scene": "成年半妖形态犬夜叉全身站立在食骨之井旁，身体放松但保持戒备，铁碎牙连鞘佩在腰侧。",
+      "checks": {
+        "identity_form": ["银白长发", "头顶双犬耳", "半妖少年体型"],
+        "identity_features": ["有言灵念珠", "赤足", "铁碎牙归属犬夜叉而非杀生丸"],
+        "costume": ["火鼠裘宽袖、交领和宽松袴完整", "腰带与刀鞘连接合理"],
+        "anatomy_contact": ["双脚接地", "手臂从宽袖中连续伸出", "刀鞘不穿过身体"],
+        "composition": ["完整全身入画", "人物与井的前后关系清楚"],
+        "manga_medium": ["黑白墨线、网点和背景处理一致", "全身人物与环境以连载漫画式取舍组织，没有均匀精修所有衣褶和背景"]
+      }
+    },
+    {
+      "id": "half-demon-back-view",
+      "form": "half-demon-form",
+      "identity_card_id": "inuyasha-half-demon-form",
+      "style_item_id": "manga-curated:file:565e5d15efb341bab7e8",
+      "shot_type": "back-view",
+      "aspect_ratio": "4:5",
+      "scene": "成年半妖形态犬夜叉背对镜头沿林间小路向前走，头略微侧转，但不露出完整正脸。",
+      "checks": {
+        "identity_form": ["银白长发", "头顶双犬耳", "半妖少年体型"],
+        "identity_features": ["背面仍可辨认双犬耳、长发和念珠位置", "无杀生丸肩部毛皮"],
+        "costume": ["火鼠裘背面、宽袖、袴和腰带结构正确"],
+        "anatomy_contact": ["步态与双脚接地合理", "长发覆盖与衣服遮挡顺序正确"],
+        "composition": ["明确背面视角", "没有为了露正脸扭曲颈部"],
+        "manga_medium": ["黑白墨线和背景网点统一"]
+      }
+    },
+    {
+      "id": "half-demon-tessaiga-swing",
+      "form": "half-demon-form",
+      "identity_card_id": "inuyasha-half-demon-form",
+      "style_item_id": "manga-curated:file:819e53697f4559b21d3b",
+      "shot_type": "action",
+      "aspect_ratio": "4:5",
+      "scene": "成年半妖形态犬夜叉双手挥动变化后的铁碎牙，强透视但刀柄、双手和肩臂关系必须清楚。",
+      "checks": {
+        "identity_form": ["银白长发", "头顶双犬耳", "半妖少年体型"],
+        "identity_features": ["有言灵念珠", "铁碎牙而非天生牙"],
+        "costume": ["宽袖和袴在动作中仍保持火鼠裘结构"],
+        "anatomy_contact": ["双手确实握住同一刀柄", "肩肘腕形成连续受力链", "刀身不穿过身体"],
+        "composition": ["强透视仍能读清人物与铁碎牙", "动作方向明确"],
+        "manga_medium": ["冲击线、墨线和网点属于同一黑白漫画体系", "动作焦点之外的发丝、衣褶和材质保持简练，没有现代精修插画感"]
+      }
+    },
+    {
+      "id": "human-form-alert-portrait",
+      "form": "human-form",
+      "identity_card_id": "inuyasha-human-form",
+      "style_item_id": "manga-curated:file:4979f0e5da216eff0102",
+      "shot_type": "close-up",
+      "aspect_ratio": "4:5",
+      "scene": "新月夜的人类形态犬夜叉近景，黑发被微风吹动，清醒、警觉并带克制的忧伤。",
+      "checks": {
+        "identity_form": ["黑色长发", "普通人耳", "无头顶犬耳", "无獠牙和利爪"],
+        "identity_features": ["少年面型仍可辨认为犬夜叉", "有言灵念珠", "没有画成困倦表情"],
+        "costume": ["火鼠裘交领和宽袖结构正确"],
+        "anatomy_contact": ["普通人耳与头侧位置自然", "肩颈与衣领连续"],
+        "composition": ["近景保留完整头发轮廓和人耳"],
+        "manga_medium": ["黑白墨线和克制网点统一"]
+      }
+    },
+    {
+      "id": "human-form-standing-full-body",
+      "form": "human-form",
+      "identity_card_id": "inuyasha-human-form",
+      "style_item_id": "manga-curated:file:eadb08d023996da87e1b",
+      "shot_type": "full-body",
+      "aspect_ratio": "4:5",
+      "scene": "人类形态犬夜叉在月光下全身站立，铁碎牙保持未变化状态并连鞘佩在腰侧。",
+      "checks": {
+        "identity_form": ["黑色长发", "普通人耳", "无头顶犬耳", "无獠牙和利爪"],
+        "identity_features": ["少年体型", "有言灵念珠", "铁碎牙未变化"],
+        "costume": ["火鼠裘宽袖、交领、宽松袴和赤足完整", "腰带与刀鞘连接合理"],
+        "anatomy_contact": ["双脚接地", "四肢比例自然", "刀鞘不穿过衣服"],
+        "composition": ["完整全身入画并保留脚部"],
+        "manga_medium": ["月夜通过黑白明暗和网点表达，不使用彩色动画光效"]
+      }
+    },
+    {
+      "id": "human-form-seated-profile",
+      "form": "human-form",
+      "identity_card_id": "inuyasha-human-form",
+      "style_item_id": "manga-curated:file:d47d8442e4f7fd7c3875",
+      "shot_type": "profile",
+      "aspect_ratio": "4:5",
+      "scene": "人类形态犬夜叉侧身坐在食骨之井边，双手自然放在膝上，安静望向远处。",
+      "checks": {
+        "identity_form": ["黑色长发", "普通人耳", "无头顶犬耳"],
+        "identity_features": ["侧脸仍符合犬夜叉少年面型", "有言灵念珠"],
+        "costume": ["坐姿下交领、宽袖和袴的褶皱关系正确"],
+        "anatomy_contact": ["臀腿与井沿有明确承重", "双手与膝部接触自然", "赤足方向合理"],
+        "composition": ["侧面视角清楚", "人物与井沿空间关系可读"],
+        "manga_medium": ["黑白墨线、网点和留白统一"]
+      }
+    },
+    {
+      "id": "human-form-kagome-two-shot",
+      "form": "human-form",
+      "identity_card_id": "inuyasha-human-form",
+      "style_item_id": "manga-curated:file:932d323504b3fda7ee15",
+      "additional_identity": [
+        {
+          "character": "戈薇",
+          "form": "default-form",
+          "item_id": "official:file:ca5f2bc4213f5446ff1a"
+        }
+      ],
+      "shot_type": "two-shot",
+      "aspect_ratio": "4:5",
+      "scene": "人类形态犬夜叉与穿校服的戈薇面对面安静交谈，两人保持自然距离和清楚视线关系。",
+      "checks": {
+        "identity_form": ["犬夜叉黑发、人耳、无犬耳", "戈薇是现代少女而非桔梗"],
+        "identity_features": ["犬夜叉与戈薇的脸、发型和年龄感彼此清楚区分", "犬夜叉有念珠"],
+        "costume": ["犬夜叉火鼠裘与戈薇水手校服不互相混穿"],
+        "anatomy_contact": ["两人各有完整四肢", "视线方向互相对应", "没有身体穿插"],
+        "composition": ["双人同框层级清楚", "没有复制输入1的原分镜"],
+        "manga_medium": ["两人使用统一黑白漫画线条和网点"]
+      }
+    },
+    {
+      "id": "child-form-front-full-body",
+      "form": "child-form",
+      "identity_card_id": "inuyasha-child-form",
+      "style_item_id": "manga-curated:file:8f7a2ef700f3ecd25058",
+      "shot_type": "full-body",
+      "aspect_ratio": "4:5",
+      "scene": "幼年犬夜叉正面全身站在贵族宅邸庭院，神情安静而戒备，双手自然垂在身侧。",
+      "checks": {
+        "identity_form": ["明显幼童头身比", "银白长发", "头顶双犬耳", "无念珠", "无铁碎牙"],
+        "identity_features": ["圆润幼年脸型", "不是成年犬夜叉缩小版"],
+        "costume": ["幼童尺寸深色火鼠裘、交领宽袖、宽松袴、深色腰带和赤足"],
+        "anatomy_contact": ["双脚接地", "小手从袖口自然伸出", "儿童四肢比例合理"],
+        "composition": ["完整全身和脚部入画", "庭院不压过主体"],
+        "manga_medium": ["黑白墨线和网点统一", "衣服以深色块或网点区别于白发与皮肤"]
+      }
+    },
+    {
+      "id": "child-form-back-view",
+      "form": "child-form",
+      "identity_card_id": "inuyasha-child-form",
+      "style_item_id": "manga-curated:file:cd73f043f0439d0ba73d",
+      "shot_type": "back-view",
+      "aspect_ratio": "4:5",
+      "scene": "幼年犬夜叉背对镜头站在庭院中央，长发自然覆盖背部，双犬耳与儿童轮廓仍然清楚。",
+      "checks": {
+        "identity_form": ["幼童头身比", "银白长发", "头顶双犬耳", "无念珠", "无铁碎牙"],
+        "identity_features": ["背面仍是幼年圆小体型", "双犬耳没有被画成人耳或杀生丸侧耳"],
+        "costume": ["幼童火鼠裘背面、宽袖、腰带和袴结构正确"],
+        "anatomy_contact": ["长发、背部和衣服遮挡顺序合理", "双脚接地"],
+        "composition": ["明确背面视角", "完整全身入画"],
+        "manga_medium": ["黑白墨线与衣服深色网点统一"]
+      }
+    },
+    {
+      "id": "child-form-running-turn",
+      "form": "child-form",
+      "identity_card_id": "inuyasha-child-form",
+      "style_item_id": "manga-curated:file:cd73f043f0439d0ba73d",
+      "shot_type": "action",
+      "aspect_ratio": "4:5",
+      "scene": "幼年犬夜叉在庭院奔跑中回头，表情惊讶，宽袖和长发随动作向后摆动。",
+      "checks": {
+        "identity_form": ["幼童头身比", "银白长发", "头顶双犬耳", "无念珠", "无铁碎牙"],
+        "identity_features": ["惊讶表情仍保持幼年犬夜叉面型", "没有变成七宝或普通人类儿童"],
+        "costume": ["幼童火鼠裘、宽袖、袴和腰带在动作中保持结构"],
+        "anatomy_contact": ["跑步重心合理", "手臂与袖口连续", "双腿不互相粘连"],
+        "composition": ["回头和奔跑方向同时可读", "犬耳与头发不被裁断"],
+        "manga_medium": ["动作线、墨线和网点属于统一黑白漫画体系"]
+      }
+    },
+    {
+      "id": "child-form-izayoi-two-shot",
+      "form": "child-form",
+      "identity_card_id": "inuyasha-child-form",
+      "style_item_id": "manga-curated:file:8f7a2ef700f3ecd25058",
+      "additional_identity": [
+        {
+          "character": "十六夜",
+          "form": "default-form",
+          "item_id": "official:file:6285125444be8011e070"
+        }
+      ],
+      "shot_type": "two-shot",
+      "aspect_ratio": "4:5",
+      "scene": "雨天的缘侧上，幼年犬夜叉坐在十六夜身前，十六夜跪坐并用布巾替他擦拭湿透的长发；犬耳、布巾、双手和头发的前后遮挡清楚，母子情绪温柔而克制。",
+      "checks": {
+        "identity_form": ["犬夜叉是幼童、银白长发、双犬耳、无念珠无铁碎牙", "十六夜是成年人类贵族女性"],
+        "identity_features": ["母子年龄、身高和面型差异清楚，幼年犬夜叉不是通用圆脸吉祥物", "十六夜保持略长柔和椭圆脸、细长平静眼型、小巧鼻口、收窄下颌、厚齐刘海分束与贴颊鬓发，不是通用圆脸少女", "十六夜没有变成桔梗"],
+        "costume": ["幼年犬夜叉深色火鼠裘与十六夜多层贵族和服彼此不混穿"],
+        "anatomy_contact": ["跪坐和坐姿承重合理", "十六夜双手、布巾、湿发与犬耳形成连续清楚的接触和遮挡链", "身体、袖口和长发没有互相穿插"],
+        "composition": ["擦发动作与母子情绪同时可读", "母子比例和空间距离自然", "缘侧与雨景提供足够场所信息但不抢夺人物焦点"],
+        "manga_medium": ["两人使用统一黑白漫画墨线和网点", "人物脸、刘海、手部和衣装交叠完整，画面既没有逐根发丝与均匀精修，也没有退化成空白背景中的通用简陋线稿"]
+      }
+    }
+  ]
+}

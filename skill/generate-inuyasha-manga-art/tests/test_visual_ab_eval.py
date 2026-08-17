@@ -18,6 +18,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 from record_attempt import main as record_attempt_main
 from visual_ab_eval import (
+    assert_promoted,
     blind_run,
     effective_results,
     file_hash,
@@ -28,6 +29,7 @@ from visual_ab_eval import (
     record_human_feedback,
     record_slot,
     results,
+    validate_manifest,
 )
 from workflow_common import SHOT_VALUES
 
@@ -62,6 +64,7 @@ class VisualAbEvalTests(unittest.TestCase):
         generator: str = BACKEND,
         shot: str | None = None,
         extra_attempt: bool = False,
+        reference_color: tuple[int, int, int] = (20, 30, 40),
     ) -> tuple[Path, Path]:
         task = root / "source-tasks" / f"{case['id']}-{variant}"
         task.mkdir(parents=True)
@@ -76,7 +79,7 @@ class VisualAbEvalTests(unittest.TestCase):
         prompt = f"locked prompt for {case['id']} {variant}\n"
         submitted = f"submitted prompt for {case['id']} {variant}\n"
         reference = task / "reference.png"
-        Image.new("RGB", (12, 12), (20, 30, 40)).save(reference)
+        Image.new("RGB", (12, 12), reference_color).save(reference)
         manifest = {
             "references": [
                 {
@@ -182,6 +185,35 @@ class VisualAbEvalTests(unittest.TestCase):
             path.write_text(json.dumps(dataset, ensure_ascii=False), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "automatic_retry"):
                 load_dataset(path)
+
+    def test_edit_dataset_locks_target_and_scoped_style_inputs(self) -> None:
+        path = SKILL_DIR / "references" / "visual-edit-eval-v1.json"
+        dataset = load_dataset(path)
+        self.assertEqual(
+            [case["intent"] for case in dataset["cases"]],
+            ["edit", "edit", "edit"],
+        )
+        for case in dataset["cases"]:
+            contract = case["input_contract"]
+            references = [
+                {
+                    "role": "target",
+                    "content_hash": contract["target_sha256"],
+                }
+            ]
+            if contract["style"] is not None:
+                references.append(
+                    {
+                        "role": "style",
+                        "item_id": contract["style"]["item_id"],
+                        "style_scope": contract["style"]["style_scope"],
+                        "content_hash": contract["style"]["content_sha256"],
+                    }
+                )
+            validate_manifest(case, {"references": references})
+            references[0]["content_hash"] = "0" * 64
+            with self.assertRaisesRegex(ValueError, "target hash changed"):
+                validate_manifest(case, {"references": references})
 
     def test_candidate_with_two_blind_wins_is_promoted(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -331,6 +363,14 @@ class VisualAbEvalTests(unittest.TestCase):
                 BACKEND,
                 "--duration-seconds",
                 "3.5",
+                "--preview-check",
+                "identity=pass:face and form match official evidence",
+                "--preview-check",
+                "request=pass:fixed evaluation request is visible",
+                "--preview-check",
+                "medium=pass:line and tone density match manga evidence",
+                "--preview-check",
+                "technical=pass:image is complete and artifact free",
             ]
             with patch("sys.argv", arguments), redirect_stdout(io.StringIO()):
                 self.assertEqual(record_attempt_main(), 0)
@@ -356,6 +396,35 @@ class VisualAbEvalTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ValueError, "exactly one"):
                 record_slot(run_dir, "baseline", case["id"], task, attempt)
+
+    def test_error_attempt_is_locked_but_cannot_be_blinded(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run_dir, dataset = self.prepare_empty_run(root, "error-slot-run")
+            for case in dataset["cases"]:
+                for variant in ("baseline", "candidate"):
+                    task, attempt_dir = self.create_attempt(root, case, variant)
+                    if case is dataset["cases"][0] and variant == "baseline":
+                        attempt_path = attempt_dir / "attempt.json"
+                        attempt = json.loads(attempt_path.read_text(encoding="utf-8"))
+                        attempt["status"] = "error"
+                        attempt["output"] = None
+                        attempt["output_sha256"] = None
+                        attempt_path.write_text(json.dumps(attempt), encoding="utf-8")
+                    record_slot(run_dir, variant, case["id"], task, attempt_dir)
+            error_slot = (
+                run_dir
+                / "cases"
+                / dataset["cases"][0]["id"]
+                / "baseline"
+                / "slot.json"
+            )
+            locked = json.loads(error_slot.read_text(encoding="utf-8"))
+            self.assertEqual(locked["attempt_status"], "error")
+            self.assertIsNone(locked["output"])
+            with self.assertRaisesRegex(ValueError, "no visual output"):
+                blind_run(run_dir)
+            self.assertFalse((run_dir / "blind").exists())
 
     def test_changed_reference_pixels_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -400,6 +469,40 @@ class VisualAbEvalTests(unittest.TestCase):
             slot = run_dir / "cases" / dataset["cases"][0]["id"] / "baseline"
             (slot / "prompt.md").write_text("changed", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "prompt.md lock mismatch"):
+                blind_run(run_dir)
+            self.assertFalse((run_dir / "blind").exists())
+
+    def test_paired_input_bytes_must_match_before_blinding(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run_dir, dataset = self.prepare_empty_run(root, "paired-input-run")
+            for case in dataset["cases"]:
+                baseline_task, baseline_attempt = self.create_attempt(
+                    root, case, "baseline"
+                )
+                candidate_task, candidate_attempt = self.create_attempt(
+                    root,
+                    case,
+                    "candidate",
+                    reference_color=(80, 30, 20)
+                    if case is dataset["cases"][0]
+                    else (20, 30, 40),
+                )
+                record_slot(
+                    run_dir,
+                    "baseline",
+                    case["id"],
+                    baseline_task,
+                    baseline_attempt,
+                )
+                record_slot(
+                    run_dir,
+                    "candidate",
+                    case["id"],
+                    candidate_task,
+                    candidate_attempt,
+                )
+            with self.assertRaisesRegex(ValueError, "paired inputs differ"):
                 blind_run(run_dir)
             self.assertFalse((run_dir / "blind").exists())
 
@@ -462,6 +565,36 @@ class VisualAbEvalTests(unittest.TestCase):
             results(run_dir)
             with self.assertRaisesRegex(ValueError, "already written"):
                 results(run_dir)
+
+    def test_activation_guard_uses_effective_feedback_aware_verdict(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            run_dir, dataset = self.prepare_recorded_run(
+                Path(directory), "activation-guard-run"
+            )
+            for index, case in enumerate(dataset["cases"]):
+                wanted = "candidate" if index < 2 else "baseline"
+                judge_run(
+                    run_dir,
+                    case["id"],
+                    self.side_for(run_dir, case["id"], wanted),
+                    [],
+                    "blind test",
+                )
+            results(run_dir)
+            self.assertTrue(assert_promoted(run_dir)["promotion_passed"])
+            record_human_feedback(
+                run_dir,
+                [
+                    (
+                        "half-demon-inuyasha-rain-shrine-wide",
+                        "candidate",
+                        "manga_medium",
+                    )
+                ],
+                "later explicit rejection",
+            )
+            with self.assertRaisesRegex(ValueError, "not promotable"):
+                assert_promoted(run_dir)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 {
-  "built_at": "2026-08-16T17:35:31+08:00",
-  "database": "/private/tmp/inuyasha-sync-worktree.BQKQq9/workflow/reference-workflow/catalog.sqlite3",
+  "built_at": "2026-08-17T21:17:53+08:00",
+  "database": "/private/tmp/inuyasha-edit-scope-push.naFgZD/worktree/workflow/reference-workflow/catalog.sqlite3",
   "counts": {
     "image": 218,
     "image_file": 244,
@@ -38,42 +38,42 @@
       "exists": true,
       "file_count": 88,
       "total_size": 15020559,
-      "latest_mtime_ns": 1786871468437403723,
-      "inventory_hash": "69e66709058b00cfc415f2052cc0ebd60de3fe3fdd421cac1f2d7747fc1080a3"
+      "latest_mtime_ns": 1786970681585899585,
+      "inventory_hash": "47602ab3ab60d67fd7cfafb21c1ec3d331ffad373a33ae9e0b5c2f3e3208da70"
     },
     "manga-curated": {
       "exists": true,
       "file_count": 121,
       "total_size": 13906864,
-      "latest_mtime_ns": 1786872787589784420,
-      "inventory_hash": "4e85a55b150399332fcd463473261a6a98b2f8df14f0c8a336000cf3855fbab6"
+      "latest_mtime_ns": 1786972498530888567,
+      "inventory_hash": "f0ad965fae7158d61ae2ce97530b368e85a684d360d42ebb4bec2a9bcfae9b22"
     },
     "user-continuity": {
       "exists": true,
       "file_count": 9,
       "total_size": 22545698,
-      "latest_mtime_ns": 1786871468536183622,
-      "inventory_hash": "25285f5f8d8ed3412f1a69d39e256ef05f8c6b05917ab336f051eb493cb6c909"
+      "latest_mtime_ns": 1786970035076068753,
+      "inventory_hash": "a6e9a2e5e7969189e544184b073e5de64744a3ba61eafc2aaa6d4847ea98c90c"
     },
     "tv-curated": {
       "exists": true,
       "file_count": 11,
       "total_size": 6689855,
-      "latest_mtime_ns": 1786871468573878352,
-      "inventory_hash": "23719e15acd21a43e3897a083473f6a05bf14bdca7fdeed1f95cc4822f44f188"
+      "latest_mtime_ns": 1786970035111320767,
+      "inventory_hash": "d8661efc64c87a2654036ca1cbe7765ff61feb3e737aa74d54e5b18be211de4b"
     },
     "selected-output": {
       "exists": true,
       "file_count": 15,
       "total_size": 42590281,
-      "latest_mtime_ns": 1786871468751042511,
-      "inventory_hash": "dd429773cef4aa08e23bf90ebcf027525e2373ce3bf4605ff9528dd6ae751157"
+      "latest_mtime_ns": 1786970035285409788,
+      "inventory_hash": "bf7f70db3ec4fa0076406e545decdb583b8aa5b515f7676b6a5c16a7c083469c"
     }
   },
-  "annotation_count": 35,
+  "annotation_count": 39,
   "incremental_cache": {
-    "hash_cache_hits": 243,
-    "hash_computations": 1,
+    "hash_cache_hits": 0,
+    "hash_computations": 244,
     "rehash_requested": false
   }
 }

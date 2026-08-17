@@ -35,6 +35,20 @@ CRITICAL_CATEGORIES = (
 )
 VISUAL_ATTEMPT_STATUSES = {"accepted", "candidate", "rejected"}
 SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+SHA256 = re.compile(r"^[0-9a-f]{64}$")
+EDIT_CHANGE_CATEGORIES = {
+    "identity",
+    "form",
+    "costume",
+    "anatomy",
+    "construction",
+    "medium",
+    "composition",
+    "background",
+    "tone",
+    "polish",
+}
+EDIT_STYLE_CATEGORIES = {"medium", "tone"}
 
 
 def now_iso() -> str:
@@ -167,6 +181,49 @@ def load_dataset(path: Path) -> dict[str, Any]:
             isinstance(item, str) and item.strip() for item in criteria
         ):
             raise ValueError(f"visual eval case {case_id} lacks criteria")
+        if case["intent"] == "edit":
+            category = case.get("change_category")
+            scope = case.get("change_scope")
+            if category not in EDIT_CHANGE_CATEGORIES:
+                raise ValueError(
+                    f"visual eval edit case {case_id} has invalid change_category"
+                )
+            if category in EDIT_STYLE_CATEGORIES and scope not in {
+                "character",
+                "scene",
+            }:
+                raise ValueError(
+                    f"visual eval edit case {case_id} requires change_scope"
+                )
+            contract = case.get("input_contract")
+            if not isinstance(contract, dict):
+                raise TypeError(
+                    f"visual eval edit case {case_id} lacks input_contract"
+                )
+            if not SHA256.fullmatch(str(contract.get("target_sha256") or "")):
+                raise ValueError(
+                    f"visual eval edit case {case_id} has invalid target_sha256"
+                )
+            style = contract.get("style")
+            if style is not None:
+                if not isinstance(style, dict):
+                    raise TypeError(
+                        f"visual eval edit case {case_id} style contract is invalid"
+                    )
+                if not str(style.get("item_id") or "").strip():
+                    raise ValueError(
+                        f"visual eval edit case {case_id} style item is missing"
+                    )
+                if style.get("style_scope") not in {"character", "scene"}:
+                    raise ValueError(
+                        f"visual eval edit case {case_id} style scope is invalid"
+                    )
+                if not SHA256.fullmatch(
+                    str(style.get("content_sha256") or "")
+                ):
+                    raise ValueError(
+                        f"visual eval edit case {case_id} style hash is invalid"
+                    )
     return dataset
 
 
@@ -189,6 +246,43 @@ def validate_brief(case: dict[str, Any], brief: dict[str, Any]) -> None:
     for field, value in expected.items():
         if brief.get(field) != value:
             raise ValueError(f"task {field} does not match case {case['id']}")
+    for field in ("change_category", "change_scope"):
+        if field in case and brief.get(field) != case[field]:
+            raise ValueError(f"task {field} does not match case {case['id']}")
+
+
+def validate_manifest(case: dict[str, Any], manifest: dict[str, Any]) -> None:
+    """Bind edit evaluations to one fixed target and optional fixed style input."""
+    if case.get("intent") != "edit":
+        return
+    references = manifest.get("references")
+    if not isinstance(references, list):
+        raise TypeError(f"task manifest references are invalid: {case['id']}")
+    targets = [entry for entry in references if entry.get("role") == "target"]
+    if len(targets) != 1 or not references or references[0] is not targets[0]:
+        raise ValueError(f"edit eval case requires one target first: {case['id']}")
+    contract = case["input_contract"]
+    target_hash = targets[0].get("rendered_content_hash") or targets[0].get(
+        "content_hash"
+    )
+    if target_hash != contract["target_sha256"]:
+        raise ValueError(f"edit eval target hash changed: {case['id']}")
+    styles = [entry for entry in references if entry.get("role") == "style"]
+    expected_style = contract.get("style")
+    if expected_style is None:
+        if styles:
+            raise ValueError(f"target-only edit eval gained a style input: {case['id']}")
+        return
+    if len(styles) != 1:
+        raise ValueError(f"edit eval requires one fixed style input: {case['id']}")
+    style = styles[0]
+    style_hash = style.get("rendered_content_hash") or style.get("content_hash")
+    if (
+        style.get("item_id") != expected_style["item_id"]
+        or style.get("style_scope") != expected_style["style_scope"]
+        or style_hash != expected_style["content_sha256"]
+    ):
+        raise ValueError(f"edit eval style input changed: {case['id']}")
 
 
 def load_run(
@@ -301,7 +395,7 @@ def load_attempt(
     case: dict[str, Any],
     task_dir: Path,
     attempt_dir: Path,
-) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], Path]:
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], Path | None]:
     expected_root = (task_dir / "attempts").resolve()
     attempt_dir = attempt_dir.resolve()
     if attempt_dir.parent != expected_root or attempt_dir.name != "001":
@@ -318,10 +412,11 @@ def load_attempt(
     if attempt_dirs != ["001"]:
         raise ValueError("visual eval task must contain exactly one generation attempt")
     attempt = read_json(attempt_dir / "attempt.json", "generation attempt")
-    if attempt.get("schema_version") != 1 or attempt.get("attempt") != 1:
-        raise ValueError("visual eval requires attempt schema 1 and attempt number 1")
-    if attempt.get("status") not in VISUAL_ATTEMPT_STATUSES:
-        raise ValueError("visual eval attempt must contain a visual output")
+    if attempt.get("schema_version") not in {1, 2} or attempt.get("attempt") != 1:
+        raise ValueError("visual eval requires attempt schema 1 or 2 and attempt number 1")
+    status = attempt.get("status")
+    if status not in {*VISUAL_ATTEMPT_STATUSES, "error"}:
+        raise ValueError("visual eval attempt must be visual or a recorded error")
     if attempt.get("generator") != run["backend"]:
         raise ValueError("visual eval attempt generator does not match run backend")
     duration = attempt.get("generation_seconds")
@@ -342,16 +437,22 @@ def load_attempt(
         "attempt reference manifest snapshot",
     )
     validate_brief(case, brief)
+    validate_manifest(case, manifest)
     references = manifest.get("references")
     if not isinstance(references, list) or not references:
         raise ValueError("visual eval attempt requires prepared references")
     item_ids = [entry.get("item_id") for entry in references]
     if attempt.get("reference_item_ids") != item_ids:
         raise ValueError("attempt reference item IDs do not match its manifest")
-    output = resolve_attempt_output(task_dir, attempt.get("output"))
-    if not output.is_file() or file_hash(output) != attempt.get("output_sha256"):
-        raise ValueError("generation attempt output hash mismatch")
-    verify_image(output)
+    output = None
+    if status == "error":
+        if attempt.get("output") is not None or attempt.get("output_sha256") is not None:
+            raise ValueError("visual eval error attempt must not claim an output")
+    else:
+        output = resolve_attempt_output(task_dir, attempt.get("output"))
+        if not output.is_file() or file_hash(output) != attempt.get("output_sha256"):
+            raise ValueError("generation attempt output hash mismatch")
+        verify_image(output)
     return brief, manifest, attempt, output
 
 
@@ -436,9 +537,11 @@ def record_slot(
                 "input_order": inputs,
             },
         )
-        suffix = output.suffix.casefold() or ".png"
-        locked_output = staging / f"output{suffix}"
-        shutil.copy2(output, locked_output)
+        locked_output = None
+        if output is not None:
+            suffix = output.suffix.casefold() or ".png"
+            locked_output = staging / f"output{suffix}"
+            shutil.copy2(output, locked_output)
         atomic_write_json(
             staging / "slot.json",
             {
@@ -464,8 +567,10 @@ def record_slot(
                 ),
                 "attempt_sha256": file_hash(staging / "attempt.json"),
                 "inputs_sha256": file_hash(staging / "inputs.json"),
-                "output": locked_output.name,
-                "output_sha256": file_hash(locked_output),
+                "output": locked_output.name if locked_output is not None else None,
+                "output_sha256": (
+                    file_hash(locked_output) if locked_output is not None else None
+                ),
             },
         )
         staging.rename(slot)
@@ -514,6 +619,7 @@ def checked_slot(
         slot / "reference-manifest.json",
         "locked slot reference manifest",
     )
+    validate_manifest(case, manifest)
     attempt = read_json(slot / "attempt.json", "locked slot attempt")
     if attempt.get("attempt") != 1 or attempt.get("generator") != run["backend"]:
         raise ValueError(f"slot {case['id']}/{variant} attempt metadata changed")
@@ -558,16 +664,39 @@ def checked_slot(
         if not path.is_file() or file_hash(path) != item.get("sha256"):
             raise ValueError(f"slot {case['id']}/{variant} input hash mismatch")
         verify_image(path)
-    output = resolve_locked_path(slot, record.get("output"), "slot output")
-    if not output.is_file() or file_hash(output) != record.get("output_sha256"):
-        raise ValueError(f"slot {case['id']}/{variant} output hash mismatch")
-    if attempt.get("output_sha256") != record.get("output_sha256"):
-        raise ValueError(f"slot {case['id']}/{variant} attempt output changed")
-    verify_image(output)
+    output = None
+    if attempt.get("status") == "error":
+        if any(
+            value is not None
+            for value in (
+                record.get("output"),
+                record.get("output_sha256"),
+                attempt.get("output"),
+                attempt.get("output_sha256"),
+            )
+        ):
+            raise ValueError(f"slot {case['id']}/{variant} error output changed")
+    else:
+        output = resolve_locked_path(slot, record.get("output"), "slot output")
+        if not output.is_file() or file_hash(output) != record.get("output_sha256"):
+            raise ValueError(f"slot {case['id']}/{variant} output hash mismatch")
+        if attempt.get("output_sha256") != record.get("output_sha256"):
+            raise ValueError(f"slot {case['id']}/{variant} attempt output changed")
+        verify_image(output)
+    input_signature = [
+        {
+            "order": item["order"],
+            "role": item["role"],
+            "item_id": item["item_id"],
+            "sha256": item["sha256"],
+        }
+        for item in inputs["input_order"]
+    ]
     return {
         "record": record,
         "output": output,
         "slot_sha256": file_hash(slot / "slot.json"),
+        "input_signature": input_signature,
     }
 
 
@@ -582,6 +711,20 @@ def blind_run(run_dir: Path) -> Path:
             variant: checked_slot(run_dir, case, variant, run, run_lock)
             for variant in VARIANTS
         }
+        if (
+            slots[case["id"]]["baseline"]["input_signature"]
+            != slots[case["id"]]["candidate"]["input_signature"]
+        ):
+            raise ValueError(
+                f"visual eval paired inputs differ: {case['id']}"
+            )
+        for variant in VARIANTS:
+            if slots[case["id"]][variant]["output"] is None:
+                status = slots[case["id"]][variant]["record"]["attempt_status"]
+                raise ValueError(
+                    "visual eval slot has no visual output: "
+                    f"{case['id']}/{variant} status={status}"
+                )
     staging = Path(tempfile.mkdtemp(prefix=".blind-", dir=run_dir))
     try:
         review_dir = staging / "review"
@@ -1068,6 +1211,29 @@ def effective_results(run_dir: Path) -> dict[str, Any]:
     }
 
 
+def assert_promoted(run_dir: Path) -> dict[str, Any]:
+    """Block activation when immutable results plus feedback do not promote."""
+    effective = effective_results(run_dir)
+    if not effective.get("promotion_passed"):
+        candidate_failures = effective.get("critical_failures", {}).get(
+            "candidate", []
+        )
+        detail = (
+            "; candidate critical failures: "
+            + ", ".join(
+                f"{failure.get('case_id')}={failure.get('category')}"
+                for failure in candidate_failures
+            )
+            if candidate_failures
+            else ""
+        )
+        raise ValueError(
+            "visual workflow revision is not promotable: "
+            f"{effective.get('verdict', 'unknown')}{detail}"
+        )
+    return effective
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -1080,6 +1246,7 @@ def parse_args() -> argparse.Namespace:
         "results",
         "record-human-feedback",
         "effective-results",
+        "assert-promoted",
     ):
         mode.add_argument(f"--{name}", action="store_true")
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
@@ -1160,6 +1327,8 @@ def main() -> int:
             )
         elif args.effective_results:
             result = effective_results(run_dir)
+        elif args.assert_promoted:
+            result = assert_promoted(run_dir)
         else:
             result = results(run_dir)
     if args.json:

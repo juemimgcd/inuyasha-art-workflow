@@ -6,7 +6,14 @@ Use `compile_prompt.py` for the base prompt. Append only the scene-specific reci
 
 Choose recipes from the selected medium. Do not append manga rendering clauses to a TV prompt or TV color/cel-shading clauses to a manga prompt.
 
-For every manga recipe, state before the scene specification: `Each manga style-reference image controls mark-making only. Use its declared line hierarchy, black-white balance, halftone economy, or effect construction; ignore and do not reproduce its characters, dialogue, balloons, panel borders, layout, or story.` Let official setting-sheet images control all named-character identity. Design the requested composition anew unless the user explicitly supplied a target or original panel.
+When a manga style-reference image is actually present, state before the scene
+specification: `Each manga style-reference image controls mark-making only. Use
+its declared line hierarchy, black-white balance, halftone economy, or effect
+construction; ignore and do not reproduce its characters, dialogue, balloons,
+panel borders, layout, or story.` Do not add a style image merely because a
+recipe exists, and never select one by a fixed volume or page. Let official
+setting sheets control named-character identity. Design the requested composition
+anew unless the user supplied a target or original panel.
 
 When a separately declared `content` image comes from the non-selected medium,
 state its exact focus once and translate only that visible fact. Explicitly ignore

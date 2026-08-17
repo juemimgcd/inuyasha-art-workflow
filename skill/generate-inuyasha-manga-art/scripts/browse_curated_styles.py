@@ -13,12 +13,14 @@ from image_sheet import build_contact_sheet
 from task_workflow import feedback_rank, reference_performance
 from workflow_common import (
     FORM_VALUES,
+    REFERENCE_DOMAINS,
     SHOT_VALUES,
     library_signature,
     load_config,
     open_database,
     retrieval_relevance,
     retrieval_traits_for,
+    retrieval_traits_for_domain,
     style_conflict_subjects,
     workflow_paths,
     workflow_root,
@@ -39,9 +41,39 @@ def parse_preferred_subject_form(value: str) -> tuple[str, str]:
     return subject, form
 
 
+def hard_facet_filters(
+    *,
+    reference_domain: str | None,
+    role: str | None,
+    preferred_subject_forms: list[tuple[str, str]],
+    subjects: list[str],
+    shots: list[str],
+) -> tuple[tuple[str, list[str]], ...]:
+    """Return facets that are safe to apply before relevance ranking.
+
+    A requested shot remains a useful character-style scoring signal, but it
+    must not eliminate an exact focal character-form before ranking.  Explicit
+    identity/content queries without a preferred character-form retain the
+    historical hard shot filter.
+    """
+    filters: list[tuple[str, list[str]]] = [("subjects", subjects)]
+    rendering_style_search = role == "rendering" and reference_domain in {
+        "character-style",
+        "scene",
+    }
+    if not rendering_style_search:
+        filters.append(("shot_types", shots))
+    return tuple(filters)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workflow-root", type=Path)
+    parser.add_argument(
+        "--reference-domain",
+        choices=REFERENCE_DOMAINS,
+        help="Hard authority-domain filter applied before ranking.",
+    )
     source_group = parser.add_mutually_exclusive_group()
     source_group.add_argument("--medium", choices=("manga", "tv"))
     source_group.add_argument("--source", choices=SOURCE_CHOICES)
@@ -63,6 +95,15 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Exact structured filename term, tag, or content label; repeat to "
             "require several terms. Prefer this for content evidence."
+        ),
+    )
+    parser.add_argument(
+        "--exclude-exact-term",
+        action="append",
+        default=[],
+        help=(
+            "Exclude an exact structured filename term, tag, or content label. "
+            "Used when a canonical scene hit cannot also cover scene rendering."
         ),
     )
     parser.add_argument("--match", choices=("all", "any"), default="all")
@@ -128,6 +169,9 @@ def main() -> int:
     source_id = args.source or SOURCE_BY_MEDIUM[args.medium or "manga"]
     clauses = ["source_id = ?", "kind = 'image'"]
     parameters: list[object] = [source_id]
+    if args.reference_domain:
+        clauses.append("reference_domain = ?")
+        parameters.append(args.reference_domain)
     if args.role:
         clauses.append(
             "EXISTS (SELECT 1 FROM json_each(eligible_roles) AS eligible_role "
@@ -135,7 +179,7 @@ def main() -> int:
         )
         parameters.append(args.role)
     terms = [term.casefold() for term in args.query.split() if term.strip()]
-    intent_traits = retrieval_traits_for(
+    inferred_traits = retrieval_traits_for(
         args.intent_text,
         args.shot[0] if args.role == "rendering" and len(args.shot) == 1 else None,
         medium=(
@@ -146,12 +190,20 @@ def main() -> int:
             else None
         ),
     )
+    intent_traits = retrieval_traits_for_domain(
+        inferred_traits, args.reference_domain
+    )
     rendering_conflicts = (
         style_conflict_subjects(args.intent_text)
-        if args.role == "rendering"
+        if args.role == "rendering" and args.reference_domain != "scene"
         else set()
     )
-    scoring_terms = list(dict.fromkeys([*terms, *intent_traits]))
+    excluded_scoring_terms = {term.casefold() for term in args.exclude_exact_term}
+    scoring_terms = [
+        term
+        for term in dict.fromkeys([*terms, *intent_traits])
+        if term.casefold() not in excluded_scoring_terms
+    ]
     if terms:
         joiner = " AND " if args.match == "all" else " OR "
         clauses.append("(" + joiner.join("search_text LIKE ?" for _ in terms) + ")")
@@ -159,6 +211,17 @@ def main() -> int:
     for term in args.exact_term:
         clauses.append(
             "(EXISTS (SELECT 1 FROM json_each(filename_terms) AS filename_term "
+            "WHERE filename_term.value = ? COLLATE NOCASE) OR "
+            "EXISTS (SELECT 1 FROM json_each(tags) AS exact_tag "
+            "WHERE exact_tag.value = ? COLLATE NOCASE) OR "
+            "EXISTS (SELECT 1 FROM item_locations AS exact_location "
+            "WHERE exact_location.item_id = items.item_id "
+            "AND exact_location.content_label = ? COLLATE NOCASE))"
+        )
+        parameters.extend((term, term, term))
+    for term in args.exclude_exact_term:
+        clauses.append(
+            "NOT (EXISTS (SELECT 1 FROM json_each(filename_terms) AS filename_term "
             "WHERE filename_term.value = ? COLLATE NOCASE) OR "
             "EXISTS (SELECT 1 FROM json_each(tags) AS exact_tag "
             "WHERE exact_tag.value = ? COLLATE NOCASE) OR "
@@ -182,7 +245,13 @@ def main() -> int:
         ]
         clauses.append(f"({' OR '.join(content_clauses)})")
         parameters.extend(args.content)
-    for column, values in (("subjects", args.subject), ("shot_types", args.shot)):
+    for column, values in hard_facet_filters(
+        reference_domain=args.reference_domain,
+        role=args.role,
+        preferred_subject_forms=args.prefer_subject_form,
+        subjects=args.subject,
+        shots=args.shot,
+    ):
         if values:
             clauses.append(
                 "("
@@ -234,6 +303,7 @@ def main() -> int:
                folder_path, content_label, folder_tags, subjects, forms,
                subject_forms, shot_types, filename_terms, duplicate_count,
                eligible_roles
+               , reference_domain
         FROM items
         WHERE {" AND ".join(clauses)}
         ORDER BY relative_path COLLATE NOCASE
@@ -274,7 +344,26 @@ def main() -> int:
             contents=args.content,
             penalized_subjects=rendering_conflicts,
             role=args.role,
+            shot_weight=(
+                1
+                if args.reference_domain == "scene" and args.role == "rendering"
+                else 4
+            ),
         )
+        if args.reference_domain == "scene" and any(
+            term.startswith("scene-id:") for term in args.exact_term
+        ):
+            structure_boosts = {
+                "scene-structure:overall": 4,
+                "scene-structure:detail": 2,
+                "scene-structure:spatial-relation": 1,
+            }
+            for tag, boost in structure_boosts.items():
+                if tag in candidate["tags"]:
+                    candidate["score"] += boost
+                    candidate["match_reasons"].append(
+                        f"canonical scene structure: {tag.rsplit(':', 1)[-1]}"
+                    )
         candidate["feedback"] = performance.get(
             row["item_id"],
             {
@@ -285,7 +374,12 @@ def main() -> int:
             },
         )
         candidate["feedback_rank"] = round(feedback_rank(candidate["feedback"]), 4)
-        candidate["inferred_traits"] = intent_traits
+        candidate["inferred_traits"] = inferred_traits
+        candidate["scoring_traits"] = [
+            trait
+            for trait in intent_traits
+            if trait.casefold() not in excluded_scoring_terms
+        ]
         candidate["style_conflict_subjects"] = sorted(
             rendering_conflicts, key=str.casefold
         )
@@ -317,10 +411,12 @@ def main() -> int:
     filter_signature = json.dumps(
         {
             "source": source_id,
+            "reference_domain": args.reference_domain,
             "query": args.query,
             "intent_text": args.intent_text,
             "inferred_traits": intent_traits,
             "exact_terms": args.exact_term,
+            "excluded_exact_terms": args.exclude_exact_term,
             "folders": args.folder,
             "content": args.content,
             "subjects": args.subject,
@@ -336,12 +432,14 @@ def main() -> int:
         args.query
         or args.intent_text
         or args.exact_term
+        or args.exclude_exact_term
         or args.folder
         or args.content
         or args.subject
         or args.form
         or args.shot
         or args.role
+        or args.reference_domain
     )
     query_suffix = (
         f"-q{hashlib.sha1(filter_signature.encode('utf-8')).hexdigest()[:8]}"
@@ -358,12 +456,14 @@ def main() -> int:
 
     result = {
         "source_id": source_id,
+        "reference_domain": args.reference_domain,
         "medium": args.medium,
         "query": args.query,
         "intent_text": args.intent_text,
         "inferred_traits": intent_traits,
         "style_conflict_subjects": sorted(rendering_conflicts, key=str.casefold),
         "exact_terms": args.exact_term,
+        "excluded_exact_terms": args.exclude_exact_term,
         "folders": args.folder,
         "content": args.content,
         "subjects": args.subject,
@@ -381,10 +481,11 @@ def main() -> int:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
         if intent_traits:
-            print(f"Inferred traits: {' '.join(intent_traits)}")
+            print(f"Scoring traits: {' '.join(intent_traits)}")
         for row in candidates:
             print(f"[{row['position']}] {row['item_id']}")
             print(f"  {row['path']}")
+            print(f"  domain: {row['reference_domain']}")
             if row["folder_tags"]:
                 print(
                     f"  folders: {' / '.join(row['folder_tags'])}; "

@@ -3,11 +3,13 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import sqlite3
 from pathlib import Path
 
 from build_reference_index import freshness
+from visual_ab_eval import effective_results
 from visual_ab_eval import load_dataset as load_visual_eval_dataset
 from workflow_common import (
     CONFIG_PATH,
@@ -28,6 +30,7 @@ REQUIRED_FILES = (
     "references/visual-traits.md",
     "references/retrieval-benchmark.json",
     "references/visual-eval-v2.json",
+    "references/visual-edit-eval-v1.json",
     "scripts/build_reference_index.py",
     "scripts/search_reference_index.py",
     "scripts/browse_curated_styles.py",
@@ -50,7 +53,29 @@ REQUIRED_FILES = (
     "scripts/run-python",
     "scripts/run-python.ps1",
 )
-EXPECTED_CATALOG_SCHEMA = "7"
+EXPECTED_CATALOG_SCHEMA = "8"
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--workflow-root",
+        type=Path,
+        help=(
+            "Validate a specific packaged workflow-data root instead of the "
+            "configured live root."
+        ),
+    )
+    parser.add_argument("--visual-run-dir", type=Path)
+    parser.add_argument(
+        "--require-visual-promotion",
+        action="store_true",
+        help=(
+            "Fail unless --visual-run-dir has a complete feedback-aware "
+            "promote_candidate verdict."
+        ),
+    )
+    return parser.parse_args()
 
 
 def _string_list_failures(value: object, label: str) -> list[str]:
@@ -149,7 +174,13 @@ def identity_ledger_failures(ledger: dict) -> list[str]:
 
 
 def main() -> int:
+    args = parse_args()
     failures = []
+    warnings = []
+    if args.require_visual_promotion and args.visual_run_dir is None:
+        failures.append(
+            "--require-visual-promotion requires --visual-run-dir"
+        )
     for relative in REQUIRED_FILES:
         path = SKILL_DIR / relative
         if not path.is_file():
@@ -181,13 +212,58 @@ def main() -> int:
     except (OSError, json.JSONDecodeError) as exc:
         failures.append(f"invalid retrieval benchmark dataset: {exc}")
     visual_eval_case_count = 0
+    visual_edit_eval_case_count = 0
+    visual_promotion = {
+        "checked": False,
+        "promotion_passed": None,
+        "verdict": "not-checked",
+    }
     try:
         visual_eval = load_visual_eval_dataset(
             SKILL_DIR / "references/visual-eval-v2.json"
         )
         visual_eval_case_count = len(visual_eval["cases"])
+        visual_edit_eval = load_visual_eval_dataset(
+            SKILL_DIR / "references/visual-edit-eval-v1.json"
+        )
+        visual_edit_eval_case_count = len(visual_edit_eval["cases"])
     except (OSError, ValueError) as exc:
         failures.append(f"invalid visual evaluation dataset: {exc}")
+    if args.visual_run_dir is not None:
+        try:
+            effective = effective_results(args.visual_run_dir.expanduser().resolve())
+            visual_promotion = {
+                "checked": True,
+                "run_dir": str(args.visual_run_dir.expanduser().resolve()),
+                "promotion_passed": bool(effective.get("promotion_passed")),
+                "verdict": effective.get("verdict"),
+                "candidate_critical_failures": effective.get(
+                    "critical_failures", {}
+                ).get("candidate", []),
+            }
+            if (
+                args.require_visual_promotion
+                and not visual_promotion["promotion_passed"]
+            ):
+                failures.append(
+                    "visual workflow revision is not promotable: "
+                    f"{visual_promotion['verdict']}"
+                )
+        except (OSError, TypeError, ValueError) as exc:
+            visual_promotion = {
+                "checked": True,
+                "promotion_passed": False,
+                "verdict": "incomplete-or-invalid",
+                "error": str(exc),
+            }
+            if args.require_visual_promotion:
+                failures.append(f"visual promotion gate failed: {exc}")
+            else:
+                warnings.append(f"visual promotion could not be read: {exc}")
+    else:
+        warnings.append(
+            "structural validation only; ok=true does not prove generated-image quality"
+        )
     for source in config["sources"]:
         path = Path(source["path"])
         if not path.is_dir():
@@ -225,7 +301,7 @@ def main() -> int:
     except ImportError:
         failures.append("Pillow unavailable; use scripts/run-python")
 
-    root = workflow_root(config)
+    root = workflow_root(config, args.workflow_root)
     paths = workflow_paths(root)
     database = paths["database"]
     counts = {}
@@ -508,7 +584,19 @@ def main() -> int:
         "legacy_alias_count": alias_count,
         "retrieval_benchmark_cases": benchmark_case_count,
         "visual_eval_cases": visual_eval_case_count,
+        "visual_edit_eval_cases": visual_edit_eval_case_count,
+        "validation_scope": (
+            "structural-and-visual-promotion"
+            if args.require_visual_promotion
+            else (
+                "structural-with-visual-diagnostic"
+                if args.visual_run_dir is not None
+                else "structural-only"
+            )
+        ),
+        "visual_promotion": visual_promotion,
         "failures": failures,
+        "warnings": warnings,
     }
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if not failures else 2

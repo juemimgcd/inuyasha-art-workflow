@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Summarize accepted/rejected attempt evidence for reference selection."""
+"""Summarize attempt evidence, timing, and decided reference outcomes."""
 
 from __future__ import annotations
 
@@ -104,6 +104,11 @@ def main() -> int:
         intent = task_intent(brief)
         status = attempt.get("status", "unknown")
         statuses[status] += 1
+        # An accepted row may be an append-only decision marker for an existing
+        # candidate image.  Preserve the accepted outcome, but do not count the
+        # same image and submission as a second generation or preview.
+        if attempt.get("counts_as_generation") is False:
+            continue
         if status == "error":
             error_tasks[path.parents[2].name] += 1
         actual_inputs = attempt.get("actual_input_images") or []
@@ -135,7 +140,7 @@ def main() -> int:
         if isinstance(duration, (int, float)) and duration >= 0:
             durations.append(float(duration))
             durations_by_intent.setdefault(intent, []).append(float(duration))
-        if status in {"accepted", "rejected"} and attempt.get("output"):
+        if status in {"accepted", "rejected", "candidate"} and attempt.get("output"):
             response_eligible += 1
             response_duration = attempt.get("response_seconds")
             if isinstance(response_duration, (int, float)) and response_duration >= 0:
@@ -165,13 +170,17 @@ def main() -> int:
         for failure in attempt.get("failures", []):
             failures[failure.get("category", "unknown")] += 1
     total_attempts = sum(statuses.values())
+    decided_attempts = statuses["accepted"] + statuses["rejected"]
     result = {
         "total_attempts": total_attempts,
         "accepted_attempts": statuses["accepted"],
         "rejected_attempts": statuses["rejected"],
+        "candidate_attempts": statuses["candidate"],
         "error_attempts": statuses["error"],
         "accepted_yield": (
-            round(statuses["accepted"] / total_attempts, 4) if total_attempts else 0.0
+            round(statuses["accepted"] / decided_attempts, 4)
+            if decided_attempts
+            else 0.0
         ),
         "duration_coverage": {
             **duration_summary(durations),
@@ -272,7 +281,8 @@ def main() -> int:
     print(
         "Attempts: "
         f"total={total_attempts} accepted={statuses['accepted']} "
-        f"rejected={statuses['rejected']} error={statuses['error']}"
+        f"rejected={statuses['rejected']} candidate={statuses['candidate']} "
+        f"error={statuses['error']}"
     )
     print(
         "Measured generation duration: "

@@ -13,8 +13,143 @@ from workflow_common import atomic_write_text, resolve_recorded_path
 
 BRIEF_SCHEMA_VERSION = 5
 RESULT_SCHEMA_VERSION = 3
-ATTEMPT_SCHEMA_VERSION = 1
+ATTEMPT_SCHEMA_VERSION = 2
 LATENCY_SCHEMA_VERSION = 2
+QA_SCHEMA_VERSION = 2
+REFERENCE_STRATEGY_SCHEMA_VERSION = 1
+SPLIT_DOMAIN_REFERENCE_STRATEGY = {
+    "schema_version": REFERENCE_STRATEGY_SCHEMA_VERSION,
+    "mode": "split-domain",
+    "required_style_scopes": ["character", "scene"],
+    "canonical_scene_style": "coverage-gated",
+}
+QA_DIMENSIONS = (
+    ("character_identity", "人物身份"),
+    ("character_style", "人物画风"),
+    ("scene_identity", "场景身份"),
+    ("scene_style", "场景画风"),
+    ("action_request", "动作与请求"),
+    ("composition_integration", "人物与场景结合、镜头和构图"),
+)
+QA_WARNING_DIMENSIONS = {"character_style", "scene_style"}
+QA_WARNING_CHECK_CATEGORIES = {"medium"}
+
+
+def new_split_domain_reference_strategy() -> dict[str, Any]:
+    """Return a fresh structured strategy for a new character-plus-scene task."""
+    return {
+        key: list(value) if isinstance(value, list) else value
+        for key, value in SPLIT_DOMAIN_REFERENCE_STRATEGY.items()
+    }
+
+
+def is_split_domain_task(
+    brief: dict[str, Any], qa: dict[str, Any] | None = None
+) -> bool:
+    """Recognize current and compatibility split-domain new tasks in one place."""
+    if task_intent(brief) != "new":
+        return False
+    strategy = brief.get("reference_strategy")
+    if isinstance(strategy, dict) and strategy.get("mode") == "split-domain":
+        return True
+    if isinstance(qa, dict) and qa.get("schema_version") == QA_SCHEMA_VERSION:
+        return True
+    return "character-style" in str(brief.get("style_strategy", ""))
+
+
+def reference_strategy_failures(brief: dict[str, Any]) -> list[str]:
+    """Validate a structured strategy when the brief declares one."""
+    strategy = brief.get("reference_strategy")
+    if strategy is None:
+        return []
+    if not isinstance(strategy, dict):
+        return ["brief.reference_strategy must be an object"]
+    failures = []
+    if strategy.get("schema_version") != REFERENCE_STRATEGY_SCHEMA_VERSION:
+        failures.append(
+            "brief.reference_strategy.schema_version must be "
+            f"{REFERENCE_STRATEGY_SCHEMA_VERSION}"
+        )
+    if strategy.get("mode") != "split-domain":
+        failures.append("brief.reference_strategy.mode must be split-domain")
+    if strategy.get("required_style_scopes") != ["character", "scene"]:
+        failures.append(
+            "brief.reference_strategy.required_style_scopes must be "
+            "['character', 'scene']"
+        )
+    if strategy.get("canonical_scene_style") != "coverage-gated":
+        failures.append(
+            "brief.reference_strategy.canonical_scene_style must be coverage-gated"
+        )
+    return failures
+
+
+def qa_acceptance_failures(qa: Any) -> list[str]:
+    """Return blocking QA defects for a new split-domain acceptance."""
+    if not isinstance(qa, dict):
+        return ["qa must be an object"]
+    failures: list[str] = []
+    if qa.get("schema_version") != QA_SCHEMA_VERSION:
+        failures.append(f"qa.schema_version must be {QA_SCHEMA_VERSION}")
+    dimensions = qa.get("dimensions")
+    if not isinstance(dimensions, list):
+        return [*failures, "qa.dimensions must be a list"]
+    expected_count = len(QA_DIMENSIONS)
+    if len(dimensions) != expected_count:
+        failures.append(f"qa.dimensions must contain exactly {expected_count} rows")
+    object_rows = [row for row in dimensions if isinstance(row, dict)]
+    if len(object_rows) != len(dimensions):
+        failures.append("qa.dimensions must contain objects")
+    raw_dimension_ids = [row.get("id") for row in object_rows]
+    if any(not isinstance(dimension_id, str) for dimension_id in raw_dimension_ids):
+        failures.append("qa dimension IDs must be strings")
+    dimension_ids = [
+        dimension_id
+        for dimension_id in raw_dimension_ids
+        if isinstance(dimension_id, str)
+    ]
+    if len(dimension_ids) != len(set(dimension_ids)):
+        failures.append("qa.dimensions must not contain duplicate IDs")
+    by_id = {
+        row.get("id"): row for row in object_rows if isinstance(row.get("id"), str)
+    }
+    expected = {dimension_id for dimension_id, _ in QA_DIMENSIONS}
+    if set(by_id) != expected:
+        failures.append("qa.dimensions must contain exactly the six required dimensions")
+    for dimension_id, label in QA_DIMENSIONS:
+        row = by_id.get(dimension_id) or {}
+        status = row.get("status")
+        if status == "warning" and dimension_id not in QA_WARNING_DIMENSIONS:
+            failures.append(f"QA dimension warning is not allowed: {label}")
+        elif status not in {"pass", "warning"}:
+            failures.append(f"QA dimension is not pass: {label}")
+        if status in {"pass", "warning"} and not str(row.get("note", "")).strip():
+            failures.append(f"QA dimension {status} has no note: {label}")
+    checks = qa.get("checks")
+    if not isinstance(checks, list) or not checks:
+        failures.append("qa.checks must be a non-empty list")
+        checks = []
+    for check in checks:
+        if not isinstance(check, dict):
+            failures.append("qa.checks must contain objects")
+            continue
+        status = check.get("status")
+        category = check.get("category")
+        if status == "warning" and category not in QA_WARNING_CHECK_CATEGORIES:
+            failures.append(
+                "QA check warning is only allowed for medium: "
+                f"{check.get('check', '[unnamed check]')}"
+            )
+        elif status not in {"pass", "warning", "n/a"}:
+            failures.append(
+                f"QA check is not complete: {check.get('check', '[unnamed check]')}"
+            )
+        if status in {"pass", "warning"} and not str(check.get("note", "")).strip():
+            failures.append(
+                f"QA check {status} has no note: "
+                f"{check.get('check', '[unnamed check]')}"
+            )
+    return failures
 DEFAULT_NEW_PRE_GENERATION_TARGET_SECONDS = 90
 DEFAULT_EDIT_PRE_GENERATION_TARGET_SECONDS = 30
 DEFAULT_POST_GENERATION_TARGET_SECONDS = 30
@@ -32,6 +167,9 @@ CHANGE_CATEGORIES = (
     "tone",
     "polish",
 )
+CHANGE_SCOPES = ("character", "scene")
+CHANGE_SCOPE_SCHEMA_VERSION = 1
+SCOPED_STYLE_CHANGE_CATEGORIES = {"medium", "tone"}
 IDENTITY_LEDGERS_PATH = (
     Path(__file__).resolve().parent.parent / "references" / "identity-ledgers.json"
 )
@@ -116,6 +254,98 @@ def task_intent(brief: dict[str, Any]) -> str:
     return "edit" if brief.get("deliverable") == "edit" else "new"
 
 
+def style_scope_for_entry(
+    entry: dict[str, Any],
+    catalog_reference_domain: str | None = None,
+) -> str | None:
+    """Return an explicit scope or a legacy catalog-derived rendering domain."""
+    if "style_scope" in entry and entry.get("style_scope") is not None:
+        scope = entry.get("style_scope")
+        return scope if scope in CHANGE_SCOPES else None
+    reference_domain = entry.get("reference_domain") or catalog_reference_domain
+    if reference_domain == "character-style":
+        return "character"
+    if reference_domain == "scene":
+        return "scene"
+    return None
+
+
+def scoped_style_failures(
+    brief: dict[str, Any],
+    manifest: dict[str, Any],
+    *,
+    require_scope: bool,
+    catalog_reference_domains: dict[str, str] | None = None,
+) -> list[str]:
+    """Validate that a style-changing edit uses one matching authority domain."""
+    intent = task_intent(brief)
+    category = brief.get("change_category")
+    scope = brief.get("change_scope")
+    contract_version = brief.get("change_scope_schema_version")
+    style_entries = [
+        entry
+        for entry in manifest.get("references", [])
+        if entry.get("role") == "style"
+    ]
+    failures: list[str] = []
+    if contract_version is not None and (
+        type(contract_version) is not int
+        or contract_version != CHANGE_SCOPE_SCHEMA_VERSION
+    ):
+        failures.append(
+            "brief.change_scope_schema_version must be "
+            f"{CHANGE_SCOPE_SCHEMA_VERSION}"
+        )
+        return failures
+    if scope is not None and scope not in CHANGE_SCOPES:
+        failures.append(
+            "brief.change_scope must be one of: " + ", ".join(CHANGE_SCOPES)
+        )
+        return failures
+    if intent not in {"edit", "microfix"}:
+        if scope is not None:
+            failures.append("brief.change_scope is only valid for edit or microfix")
+        return failures
+    if category not in SCOPED_STYLE_CHANGE_CATEGORIES:
+        if scope is not None and style_entries:
+            mismatches = [
+                entry.get("item_id") or "[missing]"
+                for entry in style_entries
+                if style_scope_for_entry(
+                    entry,
+                    (catalog_reference_domains or {}).get(entry.get("item_id")),
+                )
+                != scope
+            ]
+            if mismatches:
+                failures.append(
+                    f"style reference scope does not match brief.change_scope={scope}: "
+                    + ", ".join(mismatches)
+                )
+        return failures
+    if scope is None:
+        if require_scope or contract_version == CHANGE_SCOPE_SCHEMA_VERSION:
+            failures.append(
+                f"{intent} {category} changes require brief.change_scope "
+                "(character or scene)"
+            )
+        return failures
+    if len(style_entries) != 1:
+        return failures
+    style_entry = style_entries[0]
+    actual_scope = style_scope_for_entry(
+        style_entry,
+        (catalog_reference_domains or {}).get(style_entry.get("item_id")),
+    )
+    if actual_scope != scope:
+        failures.append(
+            f"{intent} {category} change_scope={scope} requires one {scope}-style "
+            f"reference, got {actual_scope or 'unscoped'}: "
+            f"{style_entries[0].get('item_id') or '[missing]'}"
+        )
+    return failures
+
+
 def prompt_limit(intent: str) -> int:
     return {"new": 7000, "edit": 3500, "microfix": 1800}[intent]
 
@@ -127,6 +357,89 @@ def _reference_lines(manifest: dict[str, Any]) -> list[str]:
         instruction = entry.get("instructions") or "Use only for its declared role."
         lines.append(f"- Input {index} ({role}): {instruction}")
     return lines or ["- No references prepared yet."]
+
+
+def character_style_assignments(
+    brief: dict[str, Any], manifest: dict[str, Any]
+) -> dict[str, dict[str, Any]]:
+    """Prefer exact style evidence without turning rendering into identity lookup."""
+    targets = brief.get("character_style_targets") or {}
+    style_entries = [
+        (index, entry)
+        for index, entry in enumerate(manifest.get("references", []), 1)
+        if entry.get("role") == "style" and entry.get("style_scope") == "character"
+    ]
+    assignments: dict[str, dict[str, Any]] = {}
+    for character, form in targets.items():
+        key = f"{character}={form}"
+        exact = [
+            index
+            for index, entry in style_entries
+            if form in ((entry.get("subject_forms") or {}).get(character) or [])
+        ]
+        same_character = [
+            index
+            for index, entry in style_entries
+            if character in (entry.get("subject_forms") or {})
+            or character in (entry.get("subjects") or [])
+        ]
+        if exact:
+            tier = "exact-character-form"
+            inputs = exact
+        elif same_character:
+            tier = "same-character-compatible"
+            inputs = same_character
+        else:
+            tier = "general-selected-medium"
+            inputs = [index for index, _ in style_entries]
+        assignments[key] = {"inputs": inputs, "tier": tier}
+    return assignments
+
+
+def character_style_coverage(
+    brief: dict[str, Any], manifest: dict[str, Any]
+) -> dict[str, list[int]]:
+    """Return the best available style inputs for each focal character-form."""
+    return {
+        target: assignment["inputs"]
+        for target, assignment in character_style_assignments(brief, manifest).items()
+    }
+
+
+def character_style_coverage_failures(
+    brief: dict[str, Any], manifest: dict[str, Any]
+) -> list[str]:
+    coverage = character_style_coverage(brief, manifest)
+    return [
+        f"missing selected-medium character-style evidence: {target}"
+        for target, inputs in coverage.items()
+        if not inputs
+    ]
+
+
+def _character_style_mapping_clause(
+    brief: dict[str, Any], manifest: dict[str, Any]
+) -> str:
+    assignments = character_style_assignments(brief, manifest)
+    if not assignments:
+        return ""
+    lines = []
+    for target, assignment in assignments.items():
+        inputs = assignment["inputs"]
+        input_labels = ", ".join(f"Input {index}" for index in inputs) or "MISSING"
+        tier = {
+            "exact-character-form": "exact",
+            "same-character-compatible": "same-character",
+            "general-selected-medium": "general",
+        }[assignment["tier"]]
+        lines.append(f"- {target}: {input_labels} ({tier})")
+    return (
+        "\n\nPer-character rendering map:\n"
+        + "\n".join(lines)
+        + "\nMapped inputs control selected-medium contours, marks, folds, and values. "
+        "Exact is preferred. Compatible/general never controls identity, form, costume, "
+        "or anatomy; official does. MISSING blocks the character-style layer."
+    )
 
 
 def _cross_medium_clause(manifest: dict[str, Any], medium: str) -> str:
@@ -156,39 +469,157 @@ def _medium_construction(medium: str, shot: str | None = None) -> str:
             "keep coherent axes, scale, depth, overlap, and ground contact, then "
             "concentrate marks only where they clarify the focal path. Organize the "
             "scene with large silhouettes, authored white-paper intervals, decisive "
-            "flat black masses, and one restrained middle-tone family. Group repeated "
-            "forms into larger shapes, let contours open or break when structure stays "
-            "legible, and make detail fall away clearly from focal plane to distance. "
+            "flat black masses, and one restrained middle-tone family. Before secondary "
+            "marks, reserve contiguous paper-white fields from open scene shapes and keep "
+            "them unfilled. Collapse repeated foliage, architecture, "
+            "and terrain into a few outline, flat-black, or restrained-tone groups. Let "
+            "contours open or break when structure stays legible. Give selective texture "
+            "only to the nearest informative plane; every successive depth layer must lose "
+            "internal marks visibly, so detail falls away clearly. "
+            "Render structural geometry completely but leave surface finish deliberately "
+            "selective. Preserve recognizable materials, weather, and light required by "
+            "the request, while limiting nonfocal surface "
+            "marks to the chosen scene reference's information budget. Do not distribute "
+            "the same finish density across every surface. If a small thumbnail reads mainly as uniform "
+            "fine texture instead of a few clear white, black, and middle-tone masses, "
+            "the rendering fails even when the perspective is correct. "
+            "Complete objects and correct perspective do not excuse a globally engraved finish. "
             "Apply the selected style anchor's same economy consistently across every "
             "scene material instead of completing each surface independently. "
-            "Keep every canonical garment component, overlap, pattern, and accessory "
-            "defined by official identity evidence, but render those same parts with "
-            "the style reference's character contour, fabric and fold treatment, and "
-            "relative paper-white, flat-black, and restrained middle-tone hierarchy. "
-            "Never copy the style source's costume design or let its values redefine "
-            "official garment construction."
+            "Keep every canonical garment component and overlap defined by official "
+            "identity, but redraw it with the style reference's contour, fabric, fold, "
+            "and paper-white, flat-black, and restrained-tone hierarchy. Never copy the "
+            "style source's costume design."
         )
     return (
-        "Make it read first as a late-1990s serialized black-and-white manga "
-        "image, not a polished monochrome illustration or an under-rendered "
-        "coloring-book outline. Match the selected style reference's "
-        "scene-appropriate density band: use economical hand-inked shapes, "
-        "decisive contour hierarchy, open white areas, flat black masses, and "
-        "selective dot tone, while keeping every identity-bearing eye shape, "
-        "bang division, jaw contour, hair silhouette, costume layer, and "
-        "contact cue needed for recognition. Concentrate information at the "
-        "face, hands, interaction, or action focus; let environment density "
-        "follow the shot and narrative function. Avoid both strand-by-strand "
-        "hair, abundant tiny folds, delicate micro-texture, smooth volume "
-        "shading, glossy prestige-line-art refinement, and generic anime faces, "
-        "uniform vector contours, empty architecture, or missing construction. "
-        "Keep every canonical garment component, overlap, pattern, and accessory "
-        "defined by official identity evidence, but render those same parts with the "
-        "style reference's character contour, face, hair, fabric and fold treatment, "
-        "and relative paper-white, flat-black, and restrained middle-tone hierarchy. "
-        "Never copy the style source's costume design or let its values redefine "
-        "official garment construction. Economy means selecting the right marks, not "
-        "minimizing their count."
+        "Make it read first as a late-1990s serialized black-and-white manga image, "
+        "not a polished monochrome illustration or under-rendered coloring-book outline. Follow the "
+        "mapped character-style inputs with economical ink shapes, decisive contour "
+        "hierarchy, open paper-white, flat-black masses, and selective tone. Preserve the "
+        "identity-bearing eye shapes, bangs, jaw, hair silhouette, costume layers, hands, "
+        "contact, and required setting cues. Concentrate marks at the narrative focus "
+        "and let nonfocal detail fall away. Keep every canonical garment component and "
+        "overlap defined by official identity, but redraw it with the style reference's "
+        "paper-white, flat-black, and restrained-tone hierarchy. Never copy the style "
+        "source's costume design. "
+        "Economy means selecting the right marks, "
+        "not merely minimizing them."
+    )
+
+
+def _scene_economy_clause(brief: dict[str, Any]) -> str:
+    traits = set(brief.get("retrieval_traits") or [])
+    if brief.get("medium") != "manga" or not {
+        "scene-economy:authored-negative-space",
+        "detail-falloff:strong",
+    }.issubset(traits):
+        return ""
+    return (
+        "\nScene-density ceiling: the scene reference supplies material grouping, "
+        "weather, value grouping, and distance falloff—not every visible mark. Preserve "
+        "its contiguous paper-white shapes before secondary marks; group repeated forms, "
+        "and visibly simplify each successive depth layer. Keep nonfocal architecture, "
+        "rain, reflections, and texture at or below the reference's economical density. "
+        "Never transfer the scene "
+        "reference's texture frequency, contour density, black coverage, or lighting "
+        "finish onto the character. The character must follow only the character-style "
+        "anchor's face, hair, fabric, fold, and value treatment."
+    )
+
+
+def _manga_finish_calibration(
+    medium: str,
+    intent: str,
+    manifest: dict[str, Any],
+    change_category: str | None = None,
+    change_scope: str | None = None,
+) -> str:
+    if medium != "manga":
+        return ""
+    if (
+        change_category in SCOPED_STYLE_CHANGE_CATEGORIES
+        and change_scope == "character"
+    ):
+        return (
+            "\nCharacter-scope manga calibration: the selected character-style "
+            "reference controls only character contour rhythm, face/hair marks, "
+            "fabric/fold treatment, and garment value hierarchy. The target alone "
+            "controls scene materials, negative space, background density, and scene "
+            "black-white/tone grouping; do not recalibrate or redraw that scene domain."
+        )
+    if (
+        change_category in SCOPED_STYLE_CHANGE_CATEGORIES
+        and change_scope == "scene"
+    ):
+        return (
+            "\nScene-scope manga calibration: the selected scene-style reference "
+            "controls only environmental material abstraction, negative space, "
+            "background density, black-white mass, tone restraint, and distance "
+            "falloff. The target alone controls every character's contour, face/hair, "
+            "fabric/folds, and garment value hierarchy; do not recalibrate or redraw "
+            "that character domain."
+        )
+    if intent == "new":
+        return (
+            "\nManga finish calibration: selected character and scene references "
+            "control contour rhythm, information density, material abstraction, "
+            "negative space, and black-white/tone hierarchy. Concentrate marks at "
+            "identity, action, contact, and setting cues; let nonfocal information "
+            "fall away. Preserve requested scene phenomena, rendered with selective "
+            "reference-matched marks rather than uniform refinement. Monochrome "
+            "output or screen tone alone is insufficient."
+        )
+    style_scopes = {
+        scope
+        for entry in manifest.get("references", [])
+        if entry.get("role") == "style"
+        and (scope := style_scope_for_entry(entry)) is not None
+    }
+    if not style_scopes:
+        return (
+            "\nTarget-only manga preservation: no external style reference is "
+            "attached. Keep the target's existing contour rhythm, information "
+            "density, material abstraction, negative space, and black-white/tone "
+            "hierarchy unchanged outside the named edit. Do not invent or infer a "
+            "separate character-style or scene-style authority."
+        )
+    if style_scopes == {"character"}:
+        return (
+            "\nCharacter-reference manga calibration: the selected character-style "
+            "reference controls only character contour rhythm, face/hair marks, "
+            "fabric/fold treatment, and garment value hierarchy. The target controls "
+            "scene materials, negative space, background density, and scene values."
+        )
+    if style_scopes == {"scene"}:
+        return (
+            "\nScene-reference manga calibration: the selected scene-style reference "
+            "controls only environmental material abstraction, negative space, "
+            "background density, black-white mass, tone restraint, and distance "
+            "falloff. The target controls all character marks and garment values."
+        )
+    return (
+        "\nManga finish calibration: selected character and scene references control "
+        "contour rhythm, information density, material abstraction, negative space, "
+        "and black-white/tone hierarchy. Concentrate marks at identity, action, contact, "
+        "and setting cues; let nonfocal information fall away. Preserve requested scene "
+        "phenomena, rendered with selective reference-matched marks rather than uniform "
+        "refinement. Monochrome output or screen tone alone is insufficient."
+    )
+
+
+def _contact_topology_clause(brief: dict[str, Any]) -> str:
+    """Compile explicit count and visibility requirements for named hand contact."""
+    text = " ".join(
+        str(brief.get(key) or "") for key in ("request", "change_request")
+    )
+    if "双手" not in text:
+        return ""
+    return (
+        "\nNamed contact topology: `双手` requires exactly two distinct, visible hands. "
+        "Both hands must participate in the requested action rather than hiding one "
+        "behind hair, cloth, a body, or the frame. Trace each hand through every named "
+        "prop and body-part contact in one mechanically continuous chain; reject a "
+        "missing hand, an ambiguous fused hand, floating contact, or interpenetration."
     )
 
 
@@ -201,22 +632,41 @@ def _manga_finish_preservation(medium: str) -> str:
     )
 
 
-def _manga_medium_edit_clause(medium: str, change_category: str | None) -> str:
-    if medium != "manga" or change_category != "medium":
+def _manga_medium_edit_clause(
+    medium: str,
+    change_category: str | None,
+    change_scope: str | None,
+) -> str:
+    if (
+        medium != "manga"
+        or change_category not in SCOPED_STYLE_CHANGE_CATEGORIES
+        or change_scope not in CHANGE_SCOPES
+    ):
         return ""
+    if change_scope == "character":
+        return (
+            "\nCharacter-rendering replacement is the named edit. Apply the "
+            "character-style reference only to character contour rhythm, face and "
+            "hair linework, fabric and fold treatment, and the relative paper-white, "
+            "flat-black, and restrained halftone hierarchy of the target's canonical "
+            "garment components. Preserve official costume construction and preserve "
+            "the target's scene materials, water, rocks, vegetation, weather, "
+            "background density, composition, pose, expression, contact, and spatial "
+            "relationships. Do not transfer character mark density onto the scene. "
+            "A garment-value change that leaves the character generic, changes its "
+            "costume design, or redraws the environment fails this scoped edit."
+        )
     return (
-        "\nMedium replacement is the named edit. Preserve identity, pose, "
-        "expression, composition, spatial relationships, and named content, but "
-        "move the finish into the selected style reference's scene-appropriate "
-        "density band. Remove redundant strands, folds, decorative texture, "
-        "smooth shading, and nonfunctional background marks only where they "
-        "exceed that band. Preserve identity-bearing eye and bang shapes, jaw, "
-        "hair silhouette, costume construction, hand contact, and the setting "
-        "cues required by the shot. Rebuild with open white paper, decisive flat "
-        "blacks, selective dot tone, and tapered organic contour hierarchy. "
-        "Merely changing gray to tone, or simplifying into generic sparse line "
-        "art, both fail this edit. Do not impose numeric line, fold, strand, or "
-        "rain-mark caps that are not evidenced by the selected style reference."
+        "\nScene-rendering replacement is the named edit. Apply the scene-style "
+        "reference only to environmental materials, water, rocks, vegetation, "
+        "weather, negative space, black-white mass, tone restraint, and distance "
+        "falloff. Preserve every character's face, hair silhouette and linework, "
+        "costume components, fabric and fold treatment, and existing garment "
+        "paper-white/flat-black/halftone value hierarchy exactly from the target. "
+        "Do not remove character strands or folds, retone clothing, or transfer "
+        "scene texture frequency onto character anatomy. Preserve composition, pose, "
+        "expression, contact, and spatial relationships. A scene correction that "
+        "changes character rendering or garment values fails this scoped edit."
     )
 
 
@@ -332,9 +782,12 @@ def compile_prompt(brief: dict[str, Any], manifest: dict[str, Any]) -> str:
     invariants = [value for value in prompt_invariants if value]
     if invariants:
         invariant_lines = [f"- {value}" for value in invariants]
-    elif medium == "manga" and brief.get("change_category") == "medium":
+    elif (
+        medium == "manga"
+        and brief.get("change_category") in SCOPED_STYLE_CHANGE_CATEGORIES
+    ):
         invariant_lines = [
-            "- Preserve every already-correct identity, pose, composition, spatial relationship, and named content; replace the current rendering finish."
+            "- Preserve every already-correct identity, pose, composition, spatial relationship, named content, and the rendering domain outside brief.change_scope; replace only the declared rendering domain."
         ]
     else:
         invariant_lines = [
@@ -344,12 +797,39 @@ def compile_prompt(brief: dict[str, Any], manifest: dict[str, Any]) -> str:
     cross_medium_clause = _cross_medium_clause(manifest, medium)
     manga_finish_preservation = _manga_finish_preservation(medium)
     manga_medium_edit_clause = _manga_medium_edit_clause(
-        medium, brief.get("change_category")
+        medium,
+        brief.get("change_category"),
+        brief.get("change_scope"),
     )
     manga_wide_edit_lock = _manga_wide_edit_lock(
         medium, intent, brief.get("shot")
     )
-    dominant_material_clause = _dominant_material_clause(brief)
+    change_category = brief.get("change_category")
+    change_scope = brief.get("change_scope")
+    scoped_style_change = (
+        intent in {"edit", "microfix"}
+        and change_category in SCOPED_STYLE_CHANGE_CATEGORIES
+        and change_scope in CHANGE_SCOPES
+    )
+    scene_economy_clause = (
+        ""
+        if scoped_style_change and change_scope == "character"
+        else _scene_economy_clause(brief)
+    )
+    manga_finish_calibration = _manga_finish_calibration(
+        medium,
+        intent,
+        manifest,
+        change_category if scoped_style_change else None,
+        change_scope if scoped_style_change else None,
+    )
+    character_style_mapping_clause = _character_style_mapping_clause(brief, manifest)
+    contact_topology_clause = _contact_topology_clause(brief)
+    dominant_material_clause = (
+        ""
+        if scoped_style_change and change_scope == "character"
+        else _dominant_material_clause(brief)
+    )
     preference_traits = brief.get("preference_traits") or []
     preference_line = (
         "\nLearned approved traits: " + ", ".join(preference_traits) + "."
@@ -373,6 +853,7 @@ def compile_prompt(brief: dict[str, Any], manifest: dict[str, Any]) -> str:
         text = f"""# Microfix specification
 
 Edit the target image. Change only `{category}`: {change}
+Change scope: `{brief.get("change_scope") or "target-only"}`.
 {local_edit_line}
 
 Reference authority:
@@ -383,6 +864,7 @@ Preserve exactly:
 
 Keep the current crop, pose, faces, expressions, character scale, line hierarchy, black-white balance, halftone density, background, and all non-target regions unchanged unless one is the named edit target. Produce one text-free {medium} image with no speech balloons, panel borders, signature, logo, or watermark. Do not redesign the whole image.{preference_line}
 {manga_finish_preservation}
+{manga_medium_edit_clause}
 """
     elif intent == "edit":
         construction_line = (
@@ -396,6 +878,7 @@ Keep the current crop, pose, faces, expressions, character scale, line hierarchy
 
 Requested edit: {change}
 Selected medium: {medium}
+Change scope: {brief.get("change_scope") or "target-only"}
 {local_edit_line}
 
 Identity requirements:
@@ -405,17 +888,20 @@ Canonical prop requirements:
 {chr(10).join(_prop_lines(brief))}
 
 Reference authority:
-{chr(10).join(reference_lines)}{cross_medium_clause}
+{chr(10).join(reference_lines)}{cross_medium_clause}{character_style_mapping_clause}
 
 Preserve:
 {chr(10).join(invariant_lines)}
 
 Use the target as the exact continuity and composition authority. Change only what the request requires. Keep official references limited to identity, any selected-medium style screenshot limited to rendering, and content references limited to their exact focus. No unrequested text, balloons, borders, signature, logo, or watermark.{preference_line}
 {construction_line}
+{contact_topology_clause}
 {manga_finish_preservation}
 {manga_medium_edit_clause}
 {manga_wide_edit_lock}
 {dominant_material_clause}
+{scene_economy_clause}
+{manga_finish_calibration}
 """
     else:
         scene = brief.get("scene") or request
@@ -424,7 +910,7 @@ Use the target as the exact continuity and composition authority. Change only wh
         shot = brief.get("shot")
         construction = _medium_construction(medium, shot)
         deliverable = brief.get("deliverable", "illustration")
-        if medium == "manga" and shot == "wide-shot":
+        if medium == "manga" and deliverable == "illustration":
             deliverable = (
                 "single borderless serialized-manga panel, not a standalone illustration"
             )
@@ -441,16 +927,19 @@ Canonical prop requirements:
 {chr(10).join(_prop_lines(brief))}
 
 Reference authority:
-{chr(10).join(reference_lines)}{cross_medium_clause}
+{chr(10).join(reference_lines)}{cross_medium_clause}{character_style_mapping_clause}
 
-Priority order: requested scene and focal hierarchy first, official identity anchors second, selected-medium rendering third, and exact-focus content evidence fourth. Never blend the roles.
+Priority order: requested scene and focal hierarchy first, official identity anchors second, selected-medium rendering third, and exact-focus content evidence fourth. Never blend the roles. Character-style evidence may affect only the character; scene-style evidence may affect only the environment and must never increase character detail density.
 
 Composition: design a new composition from the request with one clear focal hierarchy. Do not copy a style screenshot's characters, dialogue, panel layout, pose, or story.
 
 Spatial construction: use one coherent depth system; keep body direction, relative scale, overlap, ground contact, and prop attachment mechanically continuous.
+{contact_topology_clause}
 
 Medium construction: {construction}
 {dominant_material_clause}
+{scene_economy_clause}
+{manga_finish_calibration}
 
 Required invariants:
 {chr(10).join(invariant_lines)}

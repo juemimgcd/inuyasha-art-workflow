@@ -11,16 +11,26 @@ description: "Generate, edit, microfix, or art-direct character-accurate Inuyash
   prop, attachment, and scale, including canonical garment components, layering,
   patterns, and accessories. They do not decide how those parts are inked or
   divided into paper-white, flat-black, and halftone values.
-- The bundled medium guide supplies the offline calibration and QA band. Every
-  `new` image and every named `medium` replacement uses one inspected,
-  scene-matched selected-medium original from `origin-photos` for character
-  contour rhythm, face and hair linework, fabric and fold treatment, garment
-  value hierarchy, and scene rendering.
+- Character rendering comes only from selected-medium originals in
+  `origin-photos`, hard-filtered to `reference_domain=character-style`. It
+  controls contour rhythm, face and hair linework, fabric/fold treatment and
+  garment value hierarchy; action, expression, interaction and scene terms do
+  not participate in its ranking.
+- Scene evidence comes only from `origin-photos/.../场景`, indexed as
+  `reference_domain=scene`. Search an exact `scene-id` first for work-specific
+  places such as 食骨之井 or 御神木. A canonical-scene `HIT` must separately
+  record `scene_style_coverage=HIT|INSUFFICIENT` plus a concrete visible
+  inspection basis; evidence, brief, and manifest must agree. Only `HIT` lets
+  the same input control scene rendering. On identity `MISS`/`INSUFFICIENT`, or style coverage
+  `INSUFFICIENT`, ImageGen constructs the needed staging and a separate
+  scene-domain image controls materials, weather, negative space, black-white
+  mass and detail falloff.
 - A separately planned curated `content` image may control only one exact visible
   action, object, creature, effect phase, or spatial fact.
 - A `selected-output` controls accepted continuity only when continuity is asked for.
 - The user target controls the exact instance and every unchanged region of an edit.
-- The request controls the new scene or named change.
+- The request and ImageGen control the new staging, pose, action, expression,
+  interaction, camera and any non-canonical scene construction.
 
 Never select a style image by a fixed volume, page, episode, or file. Retrieve it
 from the current scene need. Never let it control identity or copy its characters,
@@ -121,6 +131,23 @@ Optimize only work the agent controls:
   contours, dense strands, folds, patterns, textures, or background rendering.
   Also reject a generic sparse anime/coloring-book result that lost identity
   anchors, garment construction, contact, or required setting cues.
+- `record_attempt.py --status candidate` is a hard handoff gate: supply exactly
+  one `identity`, `request`, `medium`, and `technical` preview check. Identity,
+  request, and technical must be `pass`; medium may be `warning` when the image
+  remains visibly inside the selected manga language and only a localized,
+  non-dominant density drift remains. Every result needs a concrete visual
+  evidence note. A missing, duplicate, unknown, note-free, misplaced warning,
+  or failed check blocks the
+  candidate before it is persisted or reported as handoff-ready. Record a visual
+  failure as `rejected` with a structured failure instead of weakening this gate.
+- A current split-domain manga candidate at any shot size must also record four
+  concrete `--medium-component-check` rows: `face-hair`, `fabric-fold`,
+  `scene-material`, and `value-hierarchy`. Use `pass`, `warning`, or `fail` for a
+  visible component and evidence-backed `n/a` when it is genuinely outside the frame;
+  value hierarchy is always applicable. These rows check stable character,
+  scene, and value authority boundaries rather than a fixed defect blacklist.
+  A wide shot may mark unreadable character components `n/a`, but it still
+  checks scene rendering and value hierarchy.
 - A candidate with any critical failure is ineligible to win a visual A/B case.
   When both sides have critical failures, record a tie/both-fail instead of
   promoting the relatively less bad image. Explicit later user feedback is
@@ -160,8 +187,10 @@ provenance. Do not rebuild, select, upload, or prepare a new benchmark run from
 them. A future backend comparison must use a new immutable dataset whose identity
 inputs are shot-matched official setting sheets or focused official crops.
 
-For workflow changes that can affect generated-image quality, use the lightweight
-three-case blind A/B gate in `references/visual-eval-v2.json`. Generate exactly
+For workflow changes that can affect generated-image quality, use a lightweight
+three-case blind A/B gate. Use `references/visual-eval-v2.json` for `new` paths
+and `references/visual-edit-eval-v1.json` for target-only or scoped `edit` paths;
+never use an all-`new` dataset to claim an edit-only improvement. Generate exactly
 one baseline and one candidate image for each case: three images per workflow,
 six total. Use the same backend for the whole run. Each dedicated evaluation task
 must contain exactly one recorded generation attempt at `attempts/001`; never
@@ -172,15 +201,18 @@ anatomy/contact, or technical failure.
 
 ```bash
 scripts/run-python scripts/visual_ab_eval.py --check --json
+scripts/run-python scripts/visual_ab_eval.py --check --json \
+  --dataset references/visual-edit-eval-v1.json
 scripts/run-python scripts/visual_ab_eval.py --prepare \
+  --dataset references/visual-edit-eval-v1.json \
   --run-id <run-id> --baseline-label <old-revision> \
   --candidate-label <new-revision> --backend <same-backend>
 ```
 
-Immediately after each image call, use `record_attempt.py` with `--status
-candidate --generator <same-backend>` so attempt 001 snapshots the exact brief,
-compiled and submitted prompts, manifest, output hash, backend, and generation
-time. Bind it to the gate with:
+Immediately after each image call, use `record_attempt.py` with the truthful
+`candidate`, `rejected`, or `error` status and `--generator <same-backend>` so
+attempt 001 snapshots the exact brief, compiled and submitted prompts, manifest,
+output hash when present, backend, and generation time. Bind it to the gate with:
 
 ```bash
 scripts/run-python scripts/visual_ab_eval.py --record \
@@ -189,7 +221,11 @@ scripts/run-python scripts/visual_ab_eval.py --record \
   --attempt-dir <dedicated-task-directory>/attempts/001
 ```
 
-After all six slots are locked, use `--blind`, one immutable `--judge` call per
+Every baseline/candidate pair must use byte-identical ordered inputs; the gate
+checks role, item ID, order, and SHA-256 before blinding. An `error` attempt is
+locked as the one consumed slot, including its inputs and telemetry, but it has
+no visual output and therefore blocks blinding without permitting a retry. After
+all six visual slots are locked, use `--blind`, one immutable `--judge` call per
 case, and `--results --json`. Run, slot, prompt, input, output, blind image,
 mapping, and judgment hashes are rechecked before a verdict is written. Do not
 treat unit tests, retrieval metrics, prompt inspection, or an unscored generation
@@ -200,6 +236,14 @@ review missed, preserve the original result and append the correction with
 `visual_ab_eval.py --record-human-feedback --feedback-failure
 CASE_ID=VARIANT:CATEGORY --note ...`. Read the current decision with
 `--effective-results`; never rewrite the original judgment or `results/result.json`.
+Before activating, packaging, or describing a quality-affecting revision as the
+new workflow, run `visual_ab_eval.py --assert-promoted --run-dir <run-directory>`.
+This command uses the feedback-aware effective verdict and exits nonzero for an
+incomplete run, `keep_baseline`, or any later candidate critical failure.
+For one combined release check, run `validate_workflow.py --visual-run-dir
+<run-directory> --require-visual-promotion`. Plain `validate_workflow.py` now
+reports `validation_scope: structural-only` and explicitly warns that `ok=true`
+does not prove generated-image quality.
 
 ## Route by intent
 
@@ -208,7 +252,9 @@ CASE_ID=VARIANT:CATEGORY --note ...`. Read the current decision with
   selected-medium style image.
 - `edit`: preserve a supplied target. Start target-only when it already provides
   the unchanged identity and medium; otherwise add only the single authority role
-  required by the named change.
+  required by the named change. Every `medium` or `tone` edit must declare
+  `change_scope=character|scene`; never use one scene-style reference to retone
+  character clothing or one character-style reference to redraw the environment.
 - `microfix`: continue an accepted parent task, inherit validated evidence, and
   reopen only one change category. Use crop-and-composite for a bounded region.
 
@@ -225,11 +271,24 @@ Choose one dynamic style image for every new image and named medium replacement.
 Never turn the guide into numeric caps or percentage reductions for strands,
 folds, tones, rain lines, or background marks.
 
+Judge finish drift by severity rather than raw detail count. Use `pass` when the
+shot's detail distribution and medium both match, `warning` when localized extra
+detail remains subordinate to the original manga line/tone/black-white hierarchy,
+and `fail` only when refinement becomes globally dominant or changes the first
+impression into prestige line art, smooth volume rendering, cinematic lighting,
+or another medium. A warning never excuses identity, request, construction, or
+technical defects.
+
 For a manga `wide-shot`, rely on the dedicated scene-economy branch compiled
 from the persisted shot. Preserve spatial structure through silhouette, major
 axes, overlap, scale, route, and ground contact while deliberately omitting
 repeated surface detail. Large white paper, flat black masses, clustered
 forms, and distance-based detail falloff are required authoring decisions.
+Reserve contiguous open scene shapes as untouched paper before secondary marks,
+group repeated materials into a few value families, and visibly reduce internal
+marks at every successive depth layer. Treat only one subordinate local density
+drift as warning territory; multi-material or multi-depth uniform microtexture is
+a medium failure regardless of object completeness or correct perspective.
 Retrieve them through the positive observable traits
 `scene-economy:authored-negative-space` and `detail-falloff:strong`. Use one
 primary rendering anchor and transfer its information budget across the whole
@@ -263,16 +322,32 @@ Inspect the planner's official identity candidates for every focal character.
 Choose the single source whose view and visible construction best match the shot;
 when the needed face, garment overlap, weapon mount, hand, or footwear occupies
 only a small part of a sheet, prepare the smallest focused task-local crop and
-record its source hash, crop box, rendered hash, and focus. Then inspect
-dynamically ranked selected-medium style candidates. Never filter them to a
-predetermined volume or page, character, or character form; rendering retrieval
-is driven primarily by the current scene, shot, interaction, and energy. A small
-explainable subject-form preference may break a close ranking when the original
-also demonstrates the focal character's mark-making or garment value hierarchy;
-it never hard-filters the catalog or grants identity authority. A known
-high-confusion subject visible in a style candidate but absent from the request
-may receive a small explainable ranking penalty; this is never a hard character
-filter or identity authority.
+record its source hash, crop box, rendered hash, and focus. Then inspect the
+character-style domain. Never filter it to a predetermined volume or page.
+For schema-5 `new` tasks using `face`, `profile`, `close-up`, or `medium-shot`,
+pre-generation validation blocks an uncropped official setting sheet when its
+shot facets do not match the requested view. Use `prepare_reference_set.py
+--crop ITEM_ID=X,Y,W,H --focus ITEM_ID=...`; do not compensate with a manga
+style image or an identity collage.
+When the planner adds both `scene-economy:authored-negative-space` and
+`detail-falloff:strong`, the selected scene-style reference must visibly carry
+both positive tags. A weather- or architecture-matched scene without those
+traits is not sufficient scene-style evidence, even if its subject matter is
+more literal.
+Prefer the focal character's exact form when available, but rank only character
+mark-making and value hierarchy; do not score action, interaction, expression,
+camera or scene similarity. For a single-character request, a focused panel of
+that character ranks ahead of an otherwise equal panel containing extra
+characters or indexed objects, but the latter remains an allowed general
+fallback. Next search the scene domain. Exact canonical places
+use `scene-id`; generic places use scene/background/weather traits for rendering
+only. ImageGen owns all actions and complex staging. For scene rendering, a
+requested shot is a soft ranking signal rather than an eligibility filter.
+Prefer an anchor that covers the requested scene family, materials or weather
+plus the needed economy traits over one that matches only camera distance.
+Controlled scene traits explicitly present in structured folders or filenames
+participate in ranking; manual annotations remain for visual distinctions such
+as authored negative space and detail falloff that a filename cannot prove.
 Every named canonical weapon or prop must declare its exact form. The official
 layer issues a separate exact-form prop search; attach a focused official prop
 sheet when needed. A manga action/style image may control foreshortening and
@@ -286,17 +361,27 @@ fact. Expand beyond three candidates only after recording `MISS` or
 `INSUFFICIENT`; never broaden across character form.
 
 After choosing references, fill `brief.scene`, `brief.invariants`, and the
-serial evidence results. Layer 2 must explicitly record `HIT` coverage for
-character mark-making, hair and face linework, fabric and fold treatment,
-garment value hierarchy, and scene rendering. Select one primary style anchor;
-use a second only when a core rendering dimension remains visibly unresolved.
+serial evidence results. Character and scene rendering are separate coverage
+lines. Inspect one combined character-style set with same-character and
+same-form matches ranked first, then select one scene-style anchor. Exact
+character-form matches are preferred rendering evidence, not identity or
+generation eligibility. Use one character-style anchor by default; add a second
+only when inspection records that the first is insufficient for a visible
+character-rendering relationship. An exact canonical scene hit may cover both its structure and scene rendering in one
+input only after recording `--scene-style-coverage ITEM_ID=HIT` and a concrete
+`Coverage basis` in the evidence log. Record
+`INSUFFICIENT` and select one additional scene-style image otherwise. Never
+reuse a scene-domain image as character-style evidence.
 Optional scene-material labels describe where the anchor's information budget
 must transfer, not additional evidence requirements. Pass a non-empty `--focus` for
 each style image that states exactly which of those visible relationships it
-controls. Prepare references, compile, and validate in one local
-execution. A normal single-character input is one style image plus one
-shot-matched official identity image or focused official crop. Hard maximum is
-six. Never add a retired identity-card collage.
+controls. Prepare references, compile, and validate in one local execution. A
+normal single-character input is one character-style image, one scene-style
+image, and one shot-matched official identity image or focused official crop. A
+multi-character task may use a second complementary character-style image when
+the first is visibly insufficient; it does not need one style image per person.
+Hard maximum remains six.
+Never add a retired identity-card collage.
 When exact object evidence contains a form-conflicting character outside the
 needed region, use a focused task-local `content` crop only after visual
 inspection proves the crop excludes that character. Never relax form checks for
@@ -311,11 +396,26 @@ Place the target first. Use:
 - target plus one official identity reference for identity, form, costume, or
   anatomy;
 - target plus the smallest focused official crop for construction/contact;
-- for a general manga-medium correction, target plus one dynamically selected
-  scene-matched manga style image; the bundled guide defines the allowed band but
+- for a manga-medium correction, target plus one dynamically selected
+  scope-matched manga style image; the bundled guide defines the allowed band but
   does not replace visual evidence;
 - target plus at most one dynamically selected style image for any named medium,
   ink, tone, effect, or period treatment.
+
+For `medium` and `tone`, declare exactly one rendering domain. `character`
+selects `origin-photos` character-style evidence and controls face/hair/fabric/fold
+mark-making plus garment value hierarchy. `scene` selects only
+`origin-photos/.../场景` evidence and controls environmental materials, weather,
+negative space, black-white mass and distance falloff. The other domain remains
+locked to the target. If both domains need changes, make two bounded edits; do
+not collapse them into one style input.
+
+Current edit and microfix briefs persist `change_scope_schema_version: 1` so
+both pre-generation and final validation can enforce this rule without rewriting
+historical manifests. Legacy completed tasks with no explicit `style_scope`
+remain readable and continuable by deriving their effective domain from the
+catalog; an explicit wrong scope is never accepted. The schema marker must be
+the JSON integer `1`; booleans, floats, and strings are invalid.
 
 For a target-only first edit, batch task creation, target preparation, prompt
 compilation, exact submission snapshot, and validation in one local command:
@@ -335,13 +435,19 @@ actually needed; original target bytes are the default.
 For a first preview that needs only the supplied target, do not create or search
 for a historical task before generation. The target controls identity,
 composition, spatial facts, and unchanged content; it does not control a medium
-that the user asked to replace. For a manga-medium correction, explicitly allow
-removing secondary strands, folds, patterns, texture, shading, and background
-information only where it exceeds the selected scene-matched density band while
-preserving identity anchors and those structural invariants. Create or update the
+that the user asked to replace. For a manga-medium correction, simplify only the
+declared domain where it exceeds the selected scope-matched density band.
+Character scope may adjust strands, folds and garment values while preserving
+the scene; scene scope may adjust environmental texture, shading and background
+information while preserving every character mark and garment value. Preserve
+identity anchors and structural invariants. Create or update the
 durable task record only after a usable preview exists or when user feedback
 makes continuity necessary. Technical failures without an output do not require
 an empty replacement task.
+For a target-only edit with no style input, the compiled prompt must say that no
+external style authority is attached and preserve the target's existing character
+and scene rendering. Never mention selected character or scene references that
+are absent from the manifest.
 
 For a fragile full-canvas upload, create a manifest-tracked proxy while retaining
 the original path and hash:
@@ -370,6 +476,17 @@ scripts/run-python scripts/continue_art_task.py \
   --change-category anatomy \
   --change "只收窄犬夜叉右肩，其他区域保持不变"
 ```
+
+For a style-bearing continuation, add `--change-scope character` or
+`--change-scope scene`. The continuation resolves the nearest matching style
+authority through the validated parent chain and must fail instead of taking the
+first unrelated style row.
+
+Domain isolation applies to the whole compiled prompt and QA, not only the main
+edit sentence. A character-scoped edit must omit scene-material, scene-economy,
+and global character-plus-scene calibration clauses. A scene-scoped edit must
+lock character marks and garment values to the target. The same scoped
+preservation row is required in both edit and microfix QA.
 
 For a bounded local change, add `--edit-box X,Y,WIDTH,HEIGHT`. The script sends a
 context crop; after generation, run `composite_local_microfix.py`. Final
@@ -415,9 +532,14 @@ scripts/run-python scripts/record_attempt.py \
   --output <candidate.png> \
   --duration-seconds 75 \
   --persist-output \
-  --preview-check identity="pass" \
-  --preview-check request="pass" \
-  --preview-check technical="pass" \
+  --preview-check identity="pass:face, form, costume, and marks match official evidence" \
+  --preview-check request="pass:requested moment and action are visibly present" \
+  --preview-check medium="pass:line, black, tone, and detail density match the selected medium" \
+  --preview-check technical="pass:image is complete and artifact-free" \
+  --medium-component-check face-hair="pass:visible character marks follow the selected character-style evidence" \
+  --medium-component-check fabric-fold="n/a:no readable garment folds are inside this crop" \
+  --medium-component-check scene-material="pass:visible setting marks follow the selected scene-style evidence" \
+  --medium-component-check value-hierarchy="pass:black, white, and tone hierarchy matches the selected manga evidence" \
   --json
 ```
 
@@ -430,8 +552,15 @@ For a modified submission add
 brief and manifest snapshots, both compiled and submitted prompt hashes, plus
 `submitted-prompt.md`.
 
-After explicit acceptance, record the accepted attempt, complete applicable QA,
-read the full workflow contract and quality gate, then run final validation:
+After explicit user approval, complete the six QA dimensions and every applicable
+detailed check first. Every current `new` task declares the structured
+`reference_strategy.mode=split-domain`; compatibility tasks with QA schema 2 use
+the same gate. `character_style` and `scene_style` may carry a documented
+non-blocking `warning`; the other four dimensions must pass. A split-domain task
+cannot be recorded as `accepted` while any dimension is pending or failed, or
+while a warning appears outside the two style dimensions. Then record the
+accepted attempt, read
+the full workflow contract and quality gate, and run final validation:
 
 ```bash
 scripts/run-python scripts/validate_art_task.py \
@@ -440,6 +569,11 @@ scripts/run-python scripts/validate_art_task.py \
 
 Keep attempts append-only. Only repeated explicit feedback may update the stable
 preference profile.
+
+When the user accepts or rejects an already recorded candidate, append a decision
+attempt pointing back to the candidate hash. It must set
+`counts_as_generation: false`; the decision remains auditable without inflating
+generation count, first-preview yield, or latency.
 
 ## Maintenance and deeper resources
 

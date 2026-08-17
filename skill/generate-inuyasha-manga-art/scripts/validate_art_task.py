@@ -23,15 +23,21 @@ from prepare_reference_set import (
 from task_workflow import (
     BRIEF_SCHEMA_VERSION,
     CHANGE_CATEGORIES,
+    CHANGE_SCOPE_SCHEMA_VERSION,
     DEFAULT_EDIT_PRE_GENERATION_TARGET_SECONDS,
     DEFAULT_MAX_TECHNICAL_RETRIES,
     DEFAULT_POST_GENERATION_TARGET_SECONDS,
     INTENT_VALUES,
     RESULT_SCHEMA_VERSION,
+    character_style_coverage_failures,
     elapsed_seconds,
+    is_split_domain_task,
     latency_budget,
     parse_timestamp,
     prompt_limit,
+    qa_acceptance_failures,
+    reference_strategy_failures,
+    scoped_style_failures,
     task_intent,
 )
 from technical_failures import unresolved_exhausted_network_failure
@@ -50,9 +56,9 @@ RENDERING_COVERAGE_FIELDS = (
     "Hair and face linework coverage",
     "Fabric and fold treatment coverage",
     "Garment value hierarchy coverage",
-    "Scene rendering coverage",
 )
 DOMINANT_MATERIAL_COVERAGE_FIELD = "Dominant material rendering coverage"
+FOCUSED_IDENTITY_SHOTS = {"face", "profile", "close-up", "medium-shot"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -85,6 +91,77 @@ def crop_derives_from_source(
     source: Path, rendered: Path, crop_box: tuple[int, int, int, int]
 ) -> bool:
     return image_pixel_hash(rendered) == source_crop_pixel_hash(source, crop_box)
+
+
+def manifest_style_scope_failure(
+    entry: dict,
+    expected_style_scope: str | None,
+    *,
+    require_explicit: bool,
+) -> str | None:
+    """Keep legacy manifests readable while enforcing current scoped records."""
+    recorded_style_scope = entry.get("style_scope")
+    if recorded_style_scope is None and not require_explicit:
+        return None
+    if recorded_style_scope == expected_style_scope:
+        return None
+    return (
+        "style_scope does not match catalog reference_domain for "
+        f"{entry.get('item_id') or '[missing]'}: expected "
+        f"{expected_style_scope or 'no style authority'}"
+    )
+
+
+def identity_focus_failures(brief: dict, row, entry: dict) -> list[str]:
+    """Require a focused official crop when a sheet did not match a face-led shot."""
+    if (
+        int(brief.get("schema_version") or 0) < BRIEF_SCHEMA_VERSION
+        or brief.get("intent") != "new"
+        or brief.get("shot") not in FOCUSED_IDENTITY_SHOTS
+        or entry.get("crop_box") is not None
+    ):
+        return []
+    tags = set(json.loads(row["tags"] or "[]"))
+    shot_types = set(json.loads(row["shot_types"] or "[]"))
+    if "setting-sheet" not in tags or brief.get("shot") in shot_types:
+        return []
+    return [
+        (
+            "focused identity evidence required: official setting sheet "
+            f"{row['item_id']} does not match requested shot {brief.get('shot')}; "
+            "prepare the smallest task-local crop containing the needed face/view "
+            "and record a non-empty focus"
+        )
+    ]
+
+
+def scene_economy_reference_failures(brief: dict, row, entry: dict) -> list[str]:
+    """Require positive economy evidence for environment-dominant scene style."""
+    required = {
+        "scene-economy:authored-negative-space",
+        "detail-falloff:strong",
+    }
+    owns_scene_style = entry.get("role") == "style" or (
+        entry.get("role") == "content"
+        and entry.get("content_kind") == "scene"
+        and entry.get("scene_style_coverage") == "HIT"
+    )
+    if (
+        not owns_scene_style
+        or row["reference_domain"] != "scene"
+        or not required.issubset(set(brief.get("retrieval_traits") or []))
+    ):
+        return []
+    tags = set(json.loads(row["tags"] or "[]"))
+    missing = sorted(required - tags)
+    if not missing:
+        return []
+    return [
+        (
+            "environment-dominant manga scene style lacks required positive economy "
+            f"evidence on {row['item_id']}: {', '.join(missing)}"
+        )
+    ]
 
 
 def output_path(result: dict) -> Path | None:
@@ -219,12 +296,63 @@ def consecutive_technical_errors(
 
 
 def retrieval_result(evidence: str, label: str) -> str:
+    value = evidence_field(evidence, label)
+    return value if value in {"HIT", "MISS", "INSUFFICIENT", "SKIP"} else ""
+
+
+def evidence_field(evidence: str, label: str) -> str:
     match = re.search(
-        rf"^- {re.escape(label)}:\s*`?(HIT|MISS|INSUFFICIENT|SKIP)`?\s*$",
+        rf"^- {re.escape(label)}:\s*(.*?)\s*$",
         evidence,
         flags=re.MULTILINE,
     )
-    return match.group(1) if match else ""
+    return match.group(1).strip().strip("`") if match else ""
+
+
+def scene_style_coverage_evidence_failures(
+    evidence: str,
+    scene_identity_result: str,
+    manifest_coverage: str | None,
+) -> list[str]:
+    """Require the serial evidence record to agree with scene authority state."""
+    failures: list[str] = []
+    coverage = evidence_field(evidence, "Scene style coverage")
+    basis = evidence_field(evidence, "Coverage basis")
+    if scene_identity_result == "HIT":
+        if coverage not in {"HIT", "INSUFFICIENT"}:
+            failures.append(
+                "Scene style coverage must be HIT or INSUFFICIENT after scene identity HIT"
+            )
+        if manifest_coverage is not None and coverage != manifest_coverage:
+            failures.append(
+                "evidence Scene style coverage does not match the canonical scene manifest"
+            )
+        normalized_basis = basis.casefold()
+        if (
+            not basis
+            or normalized_basis.startswith("n/a")
+            or "record visible materials" in normalized_basis
+        ):
+            failures.append(
+                "scene identity HIT requires a concrete Scene style coverage basis"
+            )
+    elif scene_identity_result in {"MISS", "INSUFFICIENT"}:
+        if coverage != "N/A":
+            failures.append(
+                "Scene style coverage must be N/A after scene identity MISS or INSUFFICIENT"
+            )
+        if basis.casefold() != "n/a":
+            failures.append(
+                "Coverage basis must be N/A after scene identity MISS or INSUFFICIENT"
+            )
+    elif scene_identity_result == "SKIP":
+        if coverage != "SKIP":
+            failures.append("generic scene identity requires Scene style coverage SKIP")
+        if basis.casefold() != "n/a":
+            failures.append("generic scene identity requires Coverage basis N/A")
+    else:
+        failures.append("Scene identity result is missing or invalid")
+    return failures
 
 
 def rendering_coverage_failures(
@@ -258,17 +386,25 @@ def rendering_coverage_failures(
         if not (entry.get("focus") or "").strip():
             failures.append(f"style reference has no exact rendering focus: {item_id}")
         instructions = entry.get("instructions") or ""
-        if medium == "manga" and not all(
-            phrase in instructions
-            for phrase in (
-                "face, hair, fabric, and fold mark-making",
-                "relative paper-white, flat-black",
-                "garment construction",
+        if medium == "manga":
+            scope = entry.get("style_scope")
+            required_phrases = (
+                (
+                    "scene rendering",
+                    "negative space",
+                    "Do not copy visible people",
+                )
+                if scope == "scene"
+                else (
+                    "face, hair, fabric, and fold mark-making",
+                    "relative paper-white, flat-black",
+                    "garment construction",
+                )
             )
-        ):
-            failures.append(
-                f"manga style authority instruction is incomplete: {item_id}"
-            )
+            if not all(phrase in instructions for phrase in required_phrases):
+                failures.append(
+                    f"manga {scope or 'legacy'} style authority instruction is incomplete: {item_id}"
+                )
     materials = [
         str(value).strip()
         for value in dominant_scene_materials or []
@@ -339,6 +475,9 @@ def main() -> int:
 
     brief = load_json(task_dir / "brief.json", failures)
     manifest = load_json(task_dir / "reference-manifest.json", failures)
+    qa = load_json(task_dir / "qa.json", failures)
+    split_domain_task = is_split_domain_task(brief, qa)
+    failures.extend(reference_strategy_failures(brief))
     catalog_required = any(
         entry.get("source_id") != "user-supplied"
         for entry in manifest.get("references", [])
@@ -516,6 +655,7 @@ def main() -> int:
     )
     resolved = []
     seen = set()
+    style_catalog_domains: dict[str, str] = {}
     identity_coverage = set()
     identity_card_characters = set()
     retired_identity_card_reported = False
@@ -716,16 +856,42 @@ def main() -> int:
             )
         except SystemExit as exc:
             failures.append(str(exc))
+        if role == "style":
+            style_catalog_domains[item_id] = row["reference_domain"]
+            style_catalog_domains[row["item_id"]] = row["reference_domain"]
+            expected_style_scope = (
+                "scene"
+                if row["reference_domain"] == "scene"
+                else (
+                    "character"
+                    if row["reference_domain"] == "character-style"
+                    else None
+                )
+            )
+            requires_explicit_style_scope = split_domain_task or (
+                brief.get("change_scope_schema_version")
+                == CHANGE_SCOPE_SCHEMA_VERSION
+            )
+            style_scope_failure = manifest_style_scope_failure(
+                entry,
+                expected_style_scope,
+                require_explicit=requires_explicit_style_scope,
+            )
+            if style_scope_failure:
+                failures.append(style_scope_failure)
+        failures.extend(scene_economy_reference_failures(brief, row, entry))
         resolved.append((role, row["item_id"]))
         if role == "identity":
             subjects = set(json.loads(row["subjects"] or "[]"))
             identity_coverage.update(subjects)
             official_identity_characters.update(subjects)
+            failures.extend(identity_focus_failures(brief, row, entry))
         if role == "form":
             form_coverage.update(json.loads(row["subjects"] or "[]"))
         if entry.get("content_hash") != row["content_hash"]:
             failures.append(f"catalog hash mismatch: {item_id}")
         if role == "content":
+            content_kind = entry.get("content_kind", "content")
             focus = (entry.get("focus") or "").strip()
             planned_focus = (brief.get("content_need") or {}).get("focus")
             if not focus:
@@ -763,7 +929,29 @@ def main() -> int:
                     "fallback-medium-original provenance requires cross-medium content"
                 )
             instructions = entry.get("instructions") or ""
-            if (
+            if content_kind == "scene":
+                if row["reference_domain"] != "scene" or expected_cross_medium:
+                    failures.append(
+                        f"canonical scene must be selected-medium scene-domain evidence: {item_id}"
+                    )
+                coverage = entry.get("scene_style_coverage")
+                if coverage not in {"HIT", "INSUFFICIENT"}:
+                    failures.append(
+                        f"canonical scene has invalid scene_style_coverage: {item_id}"
+                    )
+                if "Control only the exact canonical scene" not in instructions:
+                    failures.append(
+                        f"canonical scene authority instruction is missing: {item_id}"
+                    )
+                if coverage == "HIT" and "Human inspection recorded" not in instructions:
+                    failures.append(
+                        f"canonical scene HIT lacks scene-style authority instruction: {item_id}"
+                    )
+                if coverage == "INSUFFICIENT" and "Human inspection recorded" in instructions:
+                    failures.append(
+                        f"canonical scene INSUFFICIENT incorrectly gained scene-style authority: {item_id}"
+                    )
+            elif (
                 "Control only the exact visible content named by Exact focus"
                 not in instructions
             ):
@@ -847,6 +1035,14 @@ def main() -> int:
     style_count = sum(role == "style" for role, _ in resolved)
     target_count = sum(role == "target" for role, _ in resolved)
     failures.extend(
+        scoped_style_failures(
+            brief,
+            manifest,
+            require_scope=args.stage == "pre-generation",
+            catalog_reference_domains=style_catalog_domains,
+        )
+    )
+    failures.extend(
         rendering_coverage_failures(
             evidence,
             references,
@@ -855,20 +1051,25 @@ def main() -> int:
             brief.get("dominant_scene_materials") or [],
         )
     )
-    if intent == "new" and style_count not in {1, 2}:
+    declared_character_style_targets = bool(brief.get("character_style_targets"))
+    allowed_new_style_counts = (
+        {1, 2, 3} if declared_character_style_targets else {1, 2}
+    )
+    if intent == "new" and style_count not in allowed_new_style_counts:
         failures.append(
-            "new tasks require one or two selected-medium style references; the "
+            "new tasks require a bounded selected-medium style set; the "
             "bundled guide is a QA baseline, not a substitute for scene-matched evidence"
         )
     if intent in {"edit", "microfix"} and style_count > 1:
         failures.append(f"{intent} tasks may use at most one style reference")
     if (
         intent in {"edit", "microfix"}
-        and brief.get("change_category") == "medium"
+        and brief.get("change_category") in {"medium", "tone"}
         and style_count != 1
     ):
         failures.append(
-            f"{intent} medium replacements require exactly one scene-matched style reference"
+            f"{intent} {brief.get('change_category')} changes require exactly one "
+            "style reference matching brief.change_scope"
         )
     if intent in {"edit", "microfix"} and target_count != 1:
         failures.append(f"{intent} tasks require exactly one target reference")
@@ -904,6 +1105,112 @@ def main() -> int:
     manifest_styles = [item_id for role, item_id in resolved if role == "style"]
     if brief.get("style_references") != manifest_styles:
         failures.append("brief.style_references does not match the manifest")
+    if split_domain_task:
+        style_scopes = [
+            entry.get("style_scope")
+            for entry in references
+            if entry.get("role") == "style"
+        ]
+        character_style_count = style_scopes.count("character")
+        if declared_character_style_targets:
+            if character_style_count not in {1, 2}:
+                failures.append(
+                    "split-domain task requires one or two character-style references"
+                )
+            failures.extend(
+                character_style_coverage_failures(
+                    brief, {"references": references}
+                )
+            )
+        elif character_style_count != 1:
+            failures.append(
+                "legacy split-domain task requires exactly one character-style reference"
+            )
+        canonical_scene_entries = [
+            entry
+            for entry in references
+            if entry.get("role") == "content"
+            and entry.get("content_kind") == "scene"
+            and entry.get("reference_domain") == "scene"
+        ]
+        canonical_scene_covered = any(
+            entry.get("role") == "content"
+            and entry.get("content_kind") == "scene"
+            and entry.get("reference_domain") == "scene"
+            and entry.get("scene_style_coverage") == "HIT"
+            for entry in references
+        )
+        if not canonical_scene_covered and style_scopes.count("scene") != 1:
+            failures.append(
+                "split-domain task requires one scene-style reference unless an "
+                "exact canonical scene reference covers scene rendering"
+            )
+        if style_scopes.count("scene") > 1 or character_style_count > 2:
+            failures.append("split-domain task exceeds its per-scope style budget")
+        scene_need = (brief.get("content_need") or {}).get("kind") == "scene"
+        scene_identity_result = retrieval_result(evidence, "Scene identity result")
+        scene_style_result = retrieval_result(evidence, "Scene style result")
+        manifest_scene_coverage = (
+            canonical_scene_entries[0].get("scene_style_coverage")
+            if len(canonical_scene_entries) == 1
+            else None
+        )
+        if not scene_need and scene_identity_result != "SKIP":
+            failures.append("generic scene identity result must be SKIP")
+        failures.extend(
+            scene_style_coverage_evidence_failures(
+                evidence,
+                scene_identity_result,
+                manifest_scene_coverage,
+            )
+        )
+        if scene_need:
+            if len(canonical_scene_entries) > 1:
+                failures.append("use at most one canonical scene reference")
+            if canonical_scene_entries:
+                scene_entry = canonical_scene_entries[0]
+                coverage = scene_entry.get("scene_style_coverage")
+                if scene_identity_result != "HIT":
+                    failures.append(
+                        "canonical scene reference requires Scene identity result HIT"
+                    )
+                if brief.get("scene_style_coverage") != coverage:
+                    failures.append(
+                        "brief.scene_style_coverage does not match the manifest"
+                    )
+                if coverage == "HIT":
+                    if style_scopes.count("scene") != 0:
+                        failures.append(
+                            "canonical scene style HIT must not add a duplicate scene-style reference"
+                        )
+                    if scene_style_result != "SKIP":
+                        failures.append(
+                            "Scene style result must be SKIP when canonical coverage is HIT"
+                        )
+                elif coverage == "INSUFFICIENT":
+                    if style_scopes.count("scene") != 1:
+                        failures.append(
+                            "canonical scene style INSUFFICIENT requires one scene-style reference"
+                        )
+                    if scene_style_result != "HIT":
+                        failures.append(
+                            "scene-style fallback requires Scene style result HIT"
+                        )
+            else:
+                if scene_identity_result not in {"MISS", "INSUFFICIENT"}:
+                    failures.append(
+                        "missing canonical scene reference requires Scene identity result MISS or INSUFFICIENT"
+                    )
+                if brief.get("scene_style_coverage") is not None:
+                    failures.append(
+                        "brief.scene_style_coverage must be null without a canonical scene reference"
+                    )
+                if style_scopes.count("scene") != 1 or scene_style_result != "HIT":
+                    failures.append(
+                        "canonical scene MISS or INSUFFICIENT requires one HIT scene-style fallback"
+                    )
+        elif style_scopes.count("scene") == 1 and scene_style_result != "HIT":
+            failures.append("generic scene-style reference requires Scene style result HIT")
     manifest_forms = [item_id for role, item_id in resolved if role == "form"]
     if (brief.get("form_references") or []) != manifest_forms:
         failures.append("brief.form_references does not match the manifest")
@@ -931,21 +1238,22 @@ def main() -> int:
             failures.append(
                 "compiled prompt does not label fallback-medium-original provenance"
             )
-        selected_content_source = "manga-curated" if medium == "manga" else "tv-curated"
-        selected_result = retrieval_result(evidence, "Selected-medium result")
-        fallback_result = retrieval_result(evidence, "Cross-medium fallback result")
-        if content_entry.get("source_id") == selected_content_source:
-            if selected_result != "HIT":
-                failures.append(
-                    "selected-medium content requires a recorded HIT before selection"
-                )
-        else:
-            if selected_result not in {"MISS", "INSUFFICIENT"}:
-                failures.append(
-                    "cross-medium content requires selected-medium MISS or INSUFFICIENT"
-                )
-            if fallback_result != "HIT":
-                failures.append("cross-medium content requires a recorded fallback HIT")
+        if content_entry.get("content_kind") != "scene":
+            selected_content_source = "manga-curated" if medium == "manga" else "tv-curated"
+            selected_result = retrieval_result(evidence, "Selected-medium result")
+            fallback_result = retrieval_result(evidence, "Cross-medium fallback result")
+            if content_entry.get("source_id") == selected_content_source:
+                if selected_result != "HIT":
+                    failures.append(
+                        "selected-medium content requires a recorded HIT before selection"
+                    )
+            else:
+                if selected_result not in {"MISS", "INSUFFICIENT"}:
+                    failures.append(
+                        "cross-medium content requires selected-medium MISS or INSUFFICIENT"
+                    )
+                if fallback_result != "HIT":
+                    failures.append("cross-medium content requires a recorded fallback HIT")
 
     if intent in {"edit", "microfix"} and (not resolved or resolved[0][0] != "target"):
         failures.append("edit tasks require a target reference first")
@@ -957,19 +1265,27 @@ def main() -> int:
         failures.append("comparison must use separate manga and TV tasks")
 
     if args.stage == "final":
-        qa = load_json(task_dir / "qa.json", failures)
+        if split_domain_task:
+            failures.extend(qa_acceptance_failures(qa))
         checks = qa.get("checks", [])
         if not checks:
             failures.append("qa.json contains no checks")
         for check in checks:
             status = check.get("status")
-            if status not in {"pass", "n/a"}:
+            category = check.get("category")
+            if status == "warning" and category != "medium":
+                failures.append(
+                    "QA warning is only allowed for medium: "
+                    f"{check.get('check', '[unnamed check]')}"
+                )
+            elif status not in {"pass", "warning", "n/a"}:
                 failures.append(
                     f"QA is not complete: {check.get('check', '[unnamed check]')}"
                 )
-            if status == "pass" and not check.get("note"):
+            if status in {"pass", "warning"} and not check.get("note"):
                 failures.append(
-                    f"QA pass has no note: {check.get('check', '[unnamed check]')}"
+                    f"QA {status} has no note: "
+                    f"{check.get('check', '[unnamed check]')}"
                 )
         result = load_json(task_dir / "result.json", failures)
         if brief_schema >= BRIEF_SCHEMA_VERSION:

@@ -15,6 +15,7 @@ from workflow_common import (
     FORM_VALUES,
     SHOT_VALUES,
     atomic_write_json,
+    infer_canonical_scene,
     load_config,
     retrieval_traits_for,
     workflow_root,
@@ -128,6 +129,20 @@ def main() -> int:
         )
     if not args.content_query and args.content_provenance != "observed-content":
         raise SystemExit("--content-provenance requires a planned content query")
+    canonical_scene = infer_canonical_scene(args.request)
+    scene_query = (
+        f"scene-id:{canonical_scene['id']}" if canonical_scene else ""
+    )
+    scene_focus = (
+        f"{canonical_scene['label']}的规范结构、比例、固定空间关系与漫画场景画法"
+        if canonical_scene
+        else ""
+    )
+    if canonical_scene and args.content_query:
+        raise SystemExit(
+            "A canonical scene already owns the one exact-content slot; create a "
+            "separate follow-up task for another exact-content lookup"
+        )
     prop_forms = args.prop_form or infer_prop_forms(args.request)
     if len(dict(prop_forms)) != len(prop_forms):
         raise SystemExit("Each prop may have only one --prop-form")
@@ -191,10 +206,15 @@ def main() -> int:
         command.extend(["--prop-form", f"{prop}={form}"])
     for material in scene_materials:
         command.extend(["--scene-material", material])
-    if args.content_query:
-        command.extend(["--content-query", args.content_query])
-        command.extend(["--content-focus", args.content_focus])
+    effective_content_query = scene_query or args.content_query
+    effective_content_focus = scene_focus or args.content_focus
+    if effective_content_query:
+        command.extend(["--content-query", effective_content_query])
+        command.extend(["--content-focus", effective_content_focus])
         command.extend(["--content-provenance", args.content_provenance])
+        command.extend(
+            ["--content-kind", "scene" if canonical_scene else "content"]
+        )
     completed = subprocess.run(command, check=True, capture_output=True, text=True)
     task_dir = Path(completed.stdout.strip().splitlines()[-1]).resolve()
 
@@ -253,16 +273,19 @@ def main() -> int:
         for character, form in args.identity_form
         for value in ("--prefer-subject-form", f"{character}={form}")
     ]
-    style_primary = [
+    style_base = [
         launcher,
         str(SCRIPTS / "browse_curated_styles.py"),
         "--source",
         style_source,
         "--role",
         "rendering",
-        "--intent-text",
-        args.request,
+        "--reference-domain",
+        "character-style",
         *preferred_subject_forms,
+    ]
+    style_primary = [
+        *style_base,
         *common,
         "--limit",
         str(args.candidate_limit),
@@ -270,15 +293,7 @@ def main() -> int:
         "3",
     ]
     style_fallback = [
-        launcher,
-        str(SCRIPTS / "browse_curated_styles.py"),
-        "--source",
-        style_source,
-        "--role",
-        "rendering",
-        "--intent-text",
-        args.request,
-        *preferred_subject_forms,
+        *style_base,
         "--limit",
         str(args.candidate_limit),
         "--columns",
@@ -296,6 +311,8 @@ def main() -> int:
                 "inspect at most three official setting-sheet candidates per focal "
                 "character; choose one shot-matched source or the smallest focused "
                 "crop that preserves the required face, form, costume, or construction; "
+                "schema-5 face/profile/close-up/medium-shot tasks must crop an unmatched "
+                "setting sheet before pre-generation validation; "
                 "each declared canonical prop requires exact-form official coverage and "
                 "may not be inferred from a style screenshot"
             ),
@@ -306,17 +323,167 @@ def main() -> int:
             "primary_commands": [style_primary],
             "fallback_without_shot": [style_fallback] if args.shot else [],
             "selection_budget": (
-                "choose from the current scene ranking, never a fixed volume or "
-                "page; scene, interaction, action, and shot relevance stay primary, "
-                "with only a small focal subject-form preference; choose one primary "
-                "rendering anchor that resolves character mark-making, fabric treatment, "
-                "garment value hierarchy, scene economy, and detail falloff together. "
-                "A second style image is allowed only when a core rendering dimension "
-                "is visibly unresolved; scene-material labels describe transfer scope "
-                "and never create separate reference slots"
+                "inspect one combined character-style candidate set. Same-character and "
+                "same-form matches are ranking preferences, not eligibility gates. Choose "
+                "one anchor by default; add a second complementary anchor only after "
+                "inspection records that the first is insufficient for a visible "
+                "character-rendering relationship. These inputs control only linework, "
+                "face/hair mark simplification, fabric marks, and garment value hierarchy. "
+                "Official evidence remains the identity authority; ignore action, "
+                "interaction, expression, framing, and scene similarity."
             ),
         },
     ]
+    if canonical_scene:
+        scene_identity_command = [
+            launcher,
+            str(SCRIPTS / "browse_curated_styles.py"),
+            "--source",
+            style_source,
+            "--reference-domain",
+            "scene",
+            "--role",
+            "content",
+            "--exact-term",
+            scene_query,
+            "--limit",
+            str(args.candidate_limit),
+            "--columns",
+            "3",
+        ]
+        layers.append(
+            {
+                "layer": len(layers) + 1,
+                "role": "canonical-scene",
+                "need": scene_focus,
+                "source": style_source,
+                "primary_commands": [scene_identity_command],
+                "fallback_without_shot": [],
+                "coverage_gate": {
+                    "required_field": "scene_style_coverage",
+                    "allowed_values": ["HIT", "INSUFFICIENT"],
+                    "prepare_argument": "--scene-style-coverage ITEM_ID=HIT|INSUFFICIENT",
+                },
+                "after_miss_or_insufficient": "ImageGen constructs the canonical scene from the request; do not cross media",
+                "selection_budget": (
+                    "choose at most one exact scene-domain reference. It always controls "
+                    "canonical structure; it controls scene rendering only after an "
+                    "explicit scene_style_coverage=HIT. Otherwise record INSUFFICIENT. "
+                    "It never controls visible characters, pose, action, expression, or framing"
+                ),
+            }
+        )
+        canonical_scene_style_command = [
+            launcher,
+            str(SCRIPTS / "browse_curated_styles.py"),
+            "--source",
+            style_source,
+            "--reference-domain",
+            "scene",
+            "--role",
+            "rendering",
+            "--intent-text",
+            args.request,
+            "--exclude-exact-term",
+            scene_query,
+            *common,
+            "--limit",
+            str(args.candidate_limit),
+            "--columns",
+            "3",
+        ]
+        canonical_scene_style_fallback = [
+            launcher,
+            str(SCRIPTS / "browse_curated_styles.py"),
+            "--source",
+            style_source,
+            "--reference-domain",
+            "scene",
+            "--role",
+            "rendering",
+            "--intent-text",
+            args.request,
+            "--exclude-exact-term",
+            scene_query,
+            "--limit",
+            str(args.candidate_limit),
+            "--columns",
+            "3",
+        ]
+        layers.append(
+            {
+                "layer": len(layers) + 1,
+                "role": "scene-style-fallback",
+                "source": style_source,
+                "run_when": [
+                    "canonical scene result is MISS or INSUFFICIENT",
+                    "canonical scene result is HIT and scene_style_coverage is INSUFFICIENT",
+                ],
+                "skip_when": "canonical scene result is HIT and scene_style_coverage is HIT",
+                "primary_commands": [canonical_scene_style_command],
+                "fallback_without_shot": (
+                    [canonical_scene_style_fallback] if args.shot else []
+                ),
+                "scene_construction": (
+                    "ImageGen when canonical scene identity is MISS or INSUFFICIENT"
+                ),
+                "selection_budget": (
+                    "choose exactly one non-canonical scene-domain rendering anchor "
+                    "when this conditional layer runs"
+                ),
+            }
+        )
+    else:
+        scene_style_command = [
+            launcher,
+            str(SCRIPTS / "browse_curated_styles.py"),
+            "--source",
+            style_source,
+            "--reference-domain",
+            "scene",
+            "--role",
+            "rendering",
+            "--intent-text",
+            args.request,
+            *common,
+            "--limit",
+            str(args.candidate_limit),
+            "--columns",
+            "3",
+        ]
+        scene_style_fallback = [
+            launcher,
+            str(SCRIPTS / "browse_curated_styles.py"),
+            "--source",
+            style_source,
+            "--reference-domain",
+            "scene",
+            "--role",
+            "rendering",
+            "--intent-text",
+            args.request,
+            "--limit",
+            str(args.candidate_limit),
+            "--columns",
+            "3",
+        ]
+        layers.append(
+            {
+                "layer": len(layers) + 1,
+                "role": "scene-style",
+                "source": style_source,
+                "primary_commands": [scene_style_command],
+                "fallback_without_shot": [scene_style_fallback] if args.shot else [],
+                "scene_construction": "ImageGen",
+            "selection_budget": (
+                "choose one scene-domain rendering anchor. It controls materials, "
+                "weather, negative space, black-white mass, and detail falloff; "
+                "when scene-economy traits are present its density is a ceiling and may "
+                "not transfer onto the character; "
+                "ImageGen controls scene construction, staging, and all actions"
+            ),
+            }
+        )
     if args.content_query:
         fallback_content_source = (
             "tv-curated" if args.medium == "manga" else "manga-curated"
@@ -342,7 +509,7 @@ def main() -> int:
 
         layers.append(
             {
-                "layer": 3,
+                "layer": len(layers) + 1,
                 "role": "content",
                 "need": args.content_focus,
                 "selected_medium": {
@@ -407,11 +574,13 @@ def main() -> int:
         )
 
     plan = {
-        "schema_version": 3,
+        "schema_version": 4,
         "task": task_dir.name,
         "gate": "Run one layer, inspect candidates, record HIT/MISS/INSUFFICIENT, then advance.",
         "mode": (
-            "cross-medium-content"
+            "canonical-scene"
+            if canonical_scene
+            else "cross-medium-content"
             if args.content_query
             else ("continuity" if args.continuity else "fast-default")
         ),
@@ -431,13 +600,15 @@ def main() -> int:
             "one blocking check and preview handoff",
         ],
         "continuity_requested": args.continuity,
+        "canonical_scene": canonical_scene,
         "content_need": (
             {
-                "query": args.content_query,
-                "focus": args.content_focus,
+                "query": effective_content_query,
+                "focus": effective_content_focus,
+                "kind": "scene" if canonical_scene else "content",
                 "provenance": args.content_provenance,
             }
-            if args.content_query
+            if effective_content_query
             else None
         ),
         "layers": layers,
@@ -445,7 +616,11 @@ def main() -> int:
     brief_path = task_dir / "brief.json"
     brief = json.loads(brief_path.read_text(encoding="utf-8"))
     brief["retrieval_traits"] = inferred_traits
-    if args.content_query:
+    if canonical_scene:
+        brief["style_strategy"] = f"{args.medium}-character-style-canonical-scene"
+        brief["scene"] = canonical_scene["label"]
+        brief["canonical_scene"] = canonical_scene
+    elif args.content_query:
         brief["style_strategy"] = f"{args.medium}-style-cross-medium-content"
     else:
         brief["style_strategy"] = (

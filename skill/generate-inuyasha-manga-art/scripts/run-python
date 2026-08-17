@@ -1,17 +1,10 @@
-#!/usr/bin/env sh
-set -eu
+#!/bin/zsh
+set -euo pipefail
 
-if [ -n "${INUYASHA_PYTHON:-}" ] && [ -x "$INUYASHA_PYTHON" ]; then
-  exec "$INUYASHA_PYTHON" "$@"
+bundled_python="/Users/jquery/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+
+if [[ -x "$bundled_python" ]]; then
+  exec "$bundled_python" "$@"
 fi
 
-script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-repo_root=$(CDPATH= cd -- "$script_dir/../../.." && pwd)
-if [ -x "$repo_root/.venv/bin/python" ]; then
-  exec "$repo_root/.venv/bin/python" "$@"
-fi
-
-if command -v python3 >/dev/null 2>&1; then
-  exec python3 "$@"
-fi
-exec python "$@"
+exec python3 "$@"
