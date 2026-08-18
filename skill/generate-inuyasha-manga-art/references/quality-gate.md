@@ -1,12 +1,17 @@
 # Output quality gate
 
-Run the applicable checks at full image size. Mark every item `pass`, `fail`, or `n/a` in the task's `qa.json`. Revise one failed category at a time and repeat all invariants.
+Run the applicable checks at full image size. Mark every item `pass`, `warning`,
+`fail`, or `n/a` in the task's `qa.json`. `warning` is non-blocking only for
+medium/style observations; it requires a concrete note and must describe a
+localized drift that does not change the image's first-read medium. Revise one
+failed category at a time and repeat all invariants.
 
 Before generating a revision, record the rejected candidate with `record_attempt.py` and a structured failure category. Do not overwrite the rejected prompt, manifest, QA, or output record. For microfix tasks, also verify that every non-target region remains unchanged in composition and identity. For crop-and-composite microfixes, run `composite_local_microfix.py` first and require exact pixel equality outside the declared `edit_box`.
 
-Before handing off a first preview, record exactly four blocking checks:
-`identity`, `request`, `medium`, and `technical`. Every result must be `pass`.
-Each pass must state the concrete visible evidence used for that judgment.
+Before handing off a first preview, record exactly four checks: `identity`,
+`request`, `medium`, and `technical`. Identity, request, and technical must be
+`pass`; medium may be `warning` for a localized, non-dominant density drift.
+Each pass or warning must state the concrete visible evidence used for that judgment.
 This is smaller than full acceptance QA but is not optional; `candidate` is
 reserved for a visually usable preview. Any failed blocking check requires a
 `rejected` attempt with the corresponding structured failure category.
@@ -23,9 +28,10 @@ reserved for a visually usable preview. Any failed blocking check requires a
 
 ## Six acceptance dimensions
 
-For every new split-domain image, record all six dimensions in `qa.json`. Each
-must be `pass` with a concrete inspection note before `record_attempt.py
---status accepted` is allowed:
+For every new split-domain image, record all six dimensions in `qa.json` with a
+concrete inspection note before `record_attempt.py --status accepted` is allowed.
+`character_style` and `scene_style` may be `warning`; the other four dimensions
+must be `pass`:
 
 1. `character_identity`: official character, form, costume and canonical marks.
 2. `character_style`: character linework, face/hair simplification, fabric/fold
@@ -39,7 +45,8 @@ must be `pass` with a concrete inspection note before `record_attempt.py
 6. `composition_integration`: characters and scene share one camera, perspective,
    scale, occlusion, contact system and focal hierarchy.
 
-A single `fail` or `pending` dimension blocks acceptance. Do not average a failed
+A single `fail` or `pending` dimension blocks acceptance. A warning outside
+`character_style` or `scene_style` also blocks acceptance. Do not average a failed
 identity or scene result into an overall aesthetic score. The list must contain
 exactly these six unique IDs; an extra or duplicate row is invalid and cannot
 override an earlier failure.
@@ -67,6 +74,13 @@ override an earlier failure.
   missing garment construction, or missing interaction/contact cues. Clean and
   controlled is good; neither extra refinement nor extra sparsity is
   automatically more faithful.
+- Use three finish severities. `pass` means detail distribution and manga medium
+  both match the shot. `warning` means a local area is somewhat denser than the
+  chosen reference but remains subordinate to original-style contours, tone,
+  black-white grouping, and focal hierarchy. `fail` means smooth volume,
+  uniformly distributed micro-detail, cinematic lighting, glossy rendering, or
+  another finish changes the image's first impression away from serialized manga.
+  Detail count alone is never sufficient evidence for failure.
 - For a requested manga-medium correction, reject a result that only desaturates,
   removes smooth gray, or substitutes screen tone while preserving the target's
   over-finished surfaces. Also reject a correction that removes identity-bearing
@@ -90,11 +104,17 @@ override an earlier failure.
   keep them subordinate to faces and action readability rather than enforcing a
   universal count.
 - For a manga `wide-shot`, require large silhouettes, genuine untouched paper,
-  decisive flat black, a restrained middle-tone family, and visible detail
-  falloff with distance. Reject leaf-by-leaf foliage, repeated roof-tile or
-  wood-grain rendering, all-over rock strata, and distant objects finished with
-  the same precision as the foreground. Correct perspective does not excuse a
-  monochrome concept-art, engraving, or etching finish.
+  decisive flat black, a restrained middle-tone family, and a readable focal
+  hierarchy. Reserve contiguous paper-white fields before secondary marks,
+  collapse repeated scene forms into a few value groups, and require each
+  successive depth layer to lose internal marks visibly. Detailed architecture, foliage, terrain, rain, or other setting
+  information may remain where it explains place, route, scale, or atmosphere.
+  Record a warning only when one subordinate local region is denser than the reference but the
+  white/black/tone hierarchy still dominates. Fail when repeated micro-detail is
+  distributed uniformly, foreground and distance receive the same precision,
+  or the result reads first as monochrome concept art, engraving, or polished
+  display illustration. Correct perspective and complete requested objects do
+  not reduce such a global medium failure to a warning.
 
 ### TV
 

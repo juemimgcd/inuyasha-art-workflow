@@ -252,6 +252,44 @@
         "official:file:feb144894cb1375186a7",
         "official:file:cc54643e82bb244a2c95"
       ]
+    },
+    {
+      "id": "human-inuyasha-character-style-domain",
+      "intent_text": "雨夜檐下守候，黑发人类形态犬夜叉独坐",
+      "query": {
+        "source": "manga-curated",
+        "reference_domain": "character-style",
+        "role": "rendering",
+        "subject_form": ["犬夜叉=human-form"]
+      },
+      "relevant_item_ids": [
+        "manga-curated:file:4979f0e5da216eff0102",
+        "manga-curated:file:8e60715e27e853faa798"
+      ]
+    },
+    {
+      "id": "rain-eaves-scene-style-domain",
+      "intent_text": "雨夜檐下守候，屋顶和雨幕的漫画场景画法",
+      "query": {
+        "source": "manga-curated",
+        "reference_domain": "scene",
+        "role": "rendering"
+      },
+      "relevant_item_ids": ["manga-curated:file:ac8262fc1bfa13ecd536"]
+    },
+    {
+      "id": "mountain-shrine-wide-scene-style-domain",
+      "intent_text": "深山神社远景，巨树与建筑共同形成场景，强调主动留白和远近细节衰减",
+      "query": {
+        "source": "manga-curated",
+        "reference_domain": "scene",
+        "role": "rendering",
+        "shot": ["wide-shot"]
+      },
+      "relevant_item_ids": [
+        "manga-curated:file:c107ef1437add2a641e4",
+        "manga-curated:file:ac8262fc1bfa13ecd536"
+      ]
     }
   ]
 }

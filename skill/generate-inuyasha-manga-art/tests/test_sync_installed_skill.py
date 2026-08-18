@@ -109,7 +109,14 @@ class SyncInstalledSkillTests(unittest.TestCase):
                 else ".venv/bin/python"
             )
             entrypoint.parent.mkdir(parents=True)
-            entrypoint.symlink_to(Path(sys.executable))
+            if os.name == "nt":
+                entrypoint.symlink_to(Path(sys.executable))
+            else:
+                entrypoint.write_text(
+                    f'#!/bin/sh\nexec "{sys.executable}" "$@"\n',
+                    encoding="utf-8",
+                )
+                entrypoint.chmod(0o755)
             self.assertEqual(
                 sync_tool.validation_python(repository), entrypoint.absolute()
             )
