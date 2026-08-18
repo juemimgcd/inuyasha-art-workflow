@@ -84,10 +84,22 @@ scale. Do not translate these observations into arbitrary percentages or maximum
 counts for strands, folds, tones, rain lines, or background marks.
 
 In a `wide-shot`, start with a few large white, black, and middle-tone shapes.
-Let detail fall away with distance. Untouched paper, broken contours, simplified
+Reserve contiguous open sky, mountain, mist, water, or ground shapes as untouched
+paper before adding secondary marks. Collapse repeated foliage, architecture,
+and terrain into a few value groups, and let every successive depth layer lose
+internal marks visibly. Untouched paper, broken contours, simplified
 materials, and omitted repeated elements are positive authored choices, not
 unfinished regions. If the thumbnail reads mainly as uniform fine texture, the
 scene is outside the target band even when its perspective is correct.
+
+Do not turn this into a raw detail-count test. Establishing shots may resolve
+architecture, foliage, terrain, weather, or effects more fully when those marks
+explain place, route, scale, or atmosphere. A localized dense area that remains
+subordinate to large white/black/tone groups is a non-blocking warning, not a
+medium failure. Fail only when micro-detail becomes globally uniform, distance
+falloff collapses, or smooth volume, glossy finish, cinematic lighting, or
+prestige illustration polish changes the first-read medium. Correct perspective
+or complete requested objects cannot turn that global failure into a warning.
 
 When correcting an existing `wide-shot`, treat its framing, camera distance,
 character scale and placement, major object positions, perspective axes, and
@@ -217,8 +229,9 @@ Approximate hierarchy at final resolution:
 - Keep perspective credible through major axes, overlap, scale, and ground
   contact. Reduce distant objects to outline, flat mass, or one restrained tone.
 - In a wide establishing shot, preserve roof silhouettes, major posts, openings,
-  road or stair direction, and terrain breaks; omit repeated tiles, grain,
-  pebble fields, leaf-by-leaf foliage, and all-over rock strata.
+  road or stair direction, and terrain breaks. Group or omit repeated tiles,
+  grain, pebbles, leaf clusters, and rock strata according to focal function and
+  distance; their presence alone is not a failure.
 - For night, use large black skies with stars, mist, or moon rendered as white interruptions.
 
 ## Period modes
