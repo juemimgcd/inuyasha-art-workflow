@@ -275,7 +275,10 @@
         "reference_domain": "scene",
         "role": "rendering"
       },
-      "relevant_item_ids": ["manga-curated:file:ac8262fc1bfa13ecd536"]
+      "relevant_item_ids": [
+        "manga-curated:file:4f408e84c037d18cc9fb",
+        "manga-curated:file:ac8262fc1bfa13ecd536"
+      ]
     },
     {
       "id": "mountain-shrine-wide-scene-style-domain",
@@ -286,9 +289,22 @@
         "role": "rendering",
         "shot": ["wide-shot"]
       },
+      "relevant_item_ids": ["manga-curated:file:18cc3dfc78b28e7af836"]
+    },
+    {
+      "id": "bone-eaters-well-scene-identity-domain",
+      "intent_text": "食骨之井的规范结构和整体比例",
+      "query": {
+        "source": "manga-curated",
+        "reference_domain": "scene",
+        "role": "content",
+        "query": "scene-id:bone-eaters-well"
+      },
       "relevant_item_ids": [
-        "manga-curated:file:c107ef1437add2a641e4",
-        "manga-curated:file:ac8262fc1bfa13ecd536"
+        "manga-curated:file:41443db099c7d3393a85",
+        "manga-curated:file:66888293995b507c50b4",
+        "manga-curated:file:92518485ea6c29091042",
+        "manga-curated:file:43374f02629515244270"
       ]
     }
   ]
