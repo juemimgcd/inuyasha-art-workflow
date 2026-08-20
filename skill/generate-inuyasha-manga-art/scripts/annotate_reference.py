@@ -16,6 +16,7 @@ from workflow_common import (
 )
 
 VISUAL_TRAIT_VALUES = {
+    "style-anchor": {"certified"},
     "scene-class": {"canonical", "generic"},
     "scene-id": {"bone-eaters-well", "goshinboku"},
     "scene-family": {"architecture", "nature", "settlement", "interior", "canonical-landmark"},

@@ -254,6 +254,23 @@
       ]
     },
     {
+      "id": "kagome-profile-character-style-fallback",
+      "tool": "browse_curated_styles",
+      "intent_text": "戈薇侧身站立，双手托住大型纸灯笼",
+      "query": {
+        "medium": "manga",
+        "reference_domain": "character-style",
+        "role": "rendering",
+        "prefer_subject_form": [
+          "戈薇=default-form",
+          "珊瑚=default-form"
+        ],
+        "view_angle": "profile",
+        "shot": ["upper-body"]
+      },
+      "relevant_item_ids": ["manga-curated:file:7710358cc29002185570"]
+    },
+    {
       "id": "human-inuyasha-character-style-domain",
       "intent_text": "雨夜檐下守候，黑发人类形态犬夜叉独坐",
       "query": {

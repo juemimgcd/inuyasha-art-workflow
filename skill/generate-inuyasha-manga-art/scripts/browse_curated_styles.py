@@ -15,6 +15,8 @@ from workflow_common import (
     FORM_VALUES,
     REFERENCE_DOMAINS,
     SHOT_VALUES,
+    VIEW_ANGLE_VALUES,
+    certified_style_anchor_rank,
     library_signature,
     load_config,
     open_database,
@@ -133,6 +135,14 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--shot", action="append", default=[], choices=SHOT_VALUES)
     parser.add_argument(
+        "--view-angle",
+        choices=VIEW_ANGLE_VALUES,
+        help=(
+            "Preferred character-view applicability. This is a strong ranking "
+            "signal for character-style evidence, never pose authority."
+        ),
+    )
+    parser.add_argument(
         "--role",
         choices=("rendering", "composition", "content", "continuity"),
         help="Require item-level eligibility for this evidence role.",
@@ -203,6 +213,10 @@ def main() -> int:
         term
         for term in dict.fromkeys([*terms, *intent_traits])
         if term.casefold() not in excluded_scoring_terms
+        and not (
+            args.view_angle
+            and term.casefold() == f"view-angle:{args.view_angle}".casefold()
+        )
     ]
     if terms:
         joiner = " AND " if args.match == "all" else " OR "
@@ -340,6 +354,7 @@ def main() -> int:
             subject_forms=pairs,
             preferred_subject_forms=args.prefer_subject_form,
             shots=args.shot,
+            view_angles=[args.view_angle] if args.view_angle else [],
             folders=args.folder,
             contents=args.content,
             penalized_subjects=rendering_conflicts,
@@ -374,6 +389,17 @@ def main() -> int:
             },
         )
         candidate["feedback_rank"] = round(feedback_rank(candidate["feedback"]), 4)
+        candidate["certified_style_anchor"] = bool(
+            certified_style_anchor_rank(
+                candidate,
+                role=args.role,
+                reference_domain=args.reference_domain,
+            )
+        )
+        if candidate["certified_style_anchor"]:
+            candidate["match_reasons"].append(
+                "certified style anchor (same-score tie-breaker)"
+            )
         candidate["inferred_traits"] = inferred_traits
         candidate["scoring_traits"] = [
             trait
@@ -388,6 +414,7 @@ def main() -> int:
     candidates.sort(
         key=lambda candidate: (
             -candidate["score"],
+            -int(candidate["certified_style_anchor"]),
             -candidate["feedback_rank"],
             candidate["relative_path"].casefold(),
         )
@@ -423,6 +450,7 @@ def main() -> int:
             "forms": args.form,
             "preferred_subject_forms": args.prefer_subject_form,
             "shots": args.shot,
+            "view_angle": args.view_angle,
             "role": args.role,
         },
         ensure_ascii=False,
@@ -438,6 +466,7 @@ def main() -> int:
         or args.subject
         or args.form
         or args.shot
+        or args.view_angle
         or args.role
         or args.reference_domain
     )
@@ -470,6 +499,7 @@ def main() -> int:
         "forms": args.form,
         "preferred_subject_forms": args.prefer_subject_form,
         "shots": args.shot,
+        "view_angle": args.view_angle,
         "role": args.role,
         "offset": args.offset,
         "returned": len(candidates),

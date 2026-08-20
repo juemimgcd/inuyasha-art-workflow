@@ -215,6 +215,35 @@ class VisualAbEvalTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "target hash changed"):
                 validate_manifest(case, {"references": references})
 
+    def test_manga_style_datasets_split_new_and_scoped_edit_paths(self) -> None:
+        new_dataset = load_dataset(
+            SKILL_DIR / "references" / "visual-manga-style-eval-v1.json"
+        )
+        edit_dataset = load_dataset(
+            SKILL_DIR / "references" / "visual-manga-style-edit-eval-v1.json"
+        )
+        self.assertTrue(
+            all(case["intent"] == "new" for case in new_dataset["cases"])
+        )
+        self.assertTrue(
+            all(case["medium"] == "manga" for case in new_dataset["cases"])
+        )
+        self.assertTrue(
+            all(case["intent"] == "edit" for case in edit_dataset["cases"])
+        )
+        self.assertTrue(
+            all(
+                case["change_scope"] in {"character", "scene"}
+                for case in edit_dataset["cases"]
+            )
+        )
+        self.assertTrue(
+            all(
+                case["input_contract"]["style"] is not None
+                for case in edit_dataset["cases"]
+            )
+        )
+
     def test_candidate_with_two_blind_wins_is_promoted(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             run_dir, dataset = self.prepare_recorded_run(

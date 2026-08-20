@@ -15,7 +15,9 @@ description: "Generate, edit, microfix, or art-direct character-accurate Inuyash
   `origin-photos`, hard-filtered to `reference_domain=character-style`. It
   controls contour rhythm, face and hair linework, fabric/fold treatment and
   garment value hierarchy; action, expression, interaction and scene terms do
-  not participate in its ranking.
+  not participate in its ranking. A separately persisted `view_angle` does
+  participate because face, bangs, jaw, and hair mark-making must be applicable
+  to the requested direction; it never grants pose or composition authority.
 - Scene evidence comes only from `origin-photos/.../场景`, indexed as
   `reference_domain=scene`. Search an exact `scene-id` first for work-specific
   places such as 食骨之井 or 御神木. A canonical-scene `HIT` must separately
@@ -199,10 +201,23 @@ retry, add a second attempt, or replace a slot. Judge the A/B pairs before openi
 at least two cases and has no critical identity, medium, request,
 anatomy/contact, or technical failure.
 
+When the revision changes manga anchor ranking, rendering-map compilation,
+character/scene finish calibration, or manga-medium QA, use the focused gates
+instead: `references/visual-manga-style-eval-v1.json` for `new` and
+`references/visual-manga-style-edit-eval-v1.json` for scoped `edit`. A revision
+that changes both paths must pass both focused datasets before it is described as
+visually promoted. These focused cases compare face/hair grouping, fabric/fold
+economy, value hierarchy, paper-white, scene grouping, and depth falloff; they do
+not replace identity, request, anatomy/contact, or technical critical checks.
+
 ```bash
 scripts/run-python scripts/visual_ab_eval.py --check --json
 scripts/run-python scripts/visual_ab_eval.py --check --json \
   --dataset references/visual-edit-eval-v1.json
+scripts/run-python scripts/visual_ab_eval.py --check --json \
+  --dataset references/visual-manga-style-eval-v1.json
+scripts/run-python scripts/visual_ab_eval.py --check --json \
+  --dataset references/visual-manga-style-edit-eval-v1.json
 scripts/run-python scripts/visual_ab_eval.py --prepare \
   --dataset references/visual-edit-eval-v1.json \
   --run-id <run-id> --baseline-label <old-revision> \
@@ -318,6 +333,11 @@ scripts/run-python scripts/plan_art_task.py \
   --shot action
 ```
 
+Store camera distance and character direction separately. For example, an
+upper-body profile uses `--shot upper-body --view-angle profile`. The planner
+may infer one unambiguous explicit direction such as `侧脸` or `侧身`, but a
+conflicting or multi-direction request must be split or declared explicitly.
+
 Inspect the planner's official identity candidates for every focal character.
 Choose the single source whose view and visible construction best match the shot;
 when the needed face, garment overlap, weapon mount, hand, or footwear occupies
@@ -329,6 +349,13 @@ pre-generation validation blocks an uncropped official setting sheet when its
 shot facets do not match the requested view. Use `prepare_reference_set.py
 --crop ITEM_ID=X,Y,W,H --focus ITEM_ID=...`; do not compensate with a manga
 style image or an identity collage.
+When `brief.view_angle` is present, official identity evidence must carry that
+exact controlled view facet or be a focused task-local crop of the required
+view. Character-style evidence must also visibly cover the same view angle.
+Viewless fallbacks are crop candidates only and never count as view coverage.
+An image-level view tag on a multi-character panel is ambiguous unless the
+requested character is the only possible owner of that view; do not transfer a
+co-character's profile tag to the focal character.
 When the planner adds both `scene-economy:authored-negative-space` and
 `detail-falloff:strong`, the selected scene-style reference must visibly carry
 both positive tags. A weather- or architecture-matched scene without those
@@ -382,6 +409,17 @@ multi-character task may use a second complementary character-style image when
 the first is visibly insufficient; it does not need one style image per person.
 Hard maximum remains six.
 Never add a retired identity-card collage.
+
+Manually inspected `style-anchor:certified` items are only a same-score
+tie-breaker. Their populated line-weight, tone-density, black-mass,
+face-clarity, view-angle, depth-layout, scene-economy, and detail-falloff traits
+make the choice inspectable, but certification never outranks a better
+character/form/shot or scene/material match and never grants identity or content
+authority. New manga briefs carry `rendering_map` schema 1. Review its positive
+character grouping, focal/near/middle/far plane, paper-white, and value-hierarchy
+relationships after filling scene and material scope; edit it when the request
+needs a more exact mapping. The compiler turns it into concise prompt text and
+validation checks its structure without rewriting historical briefs.
 When exact object evidence contains a form-conflicting character outside the
 needed region, use a focused task-local `content` crop only after visual
 inspection proves the crop excludes that character. Never relax form checks for
@@ -524,6 +562,16 @@ preview awaiting user confirmation, `rejected` only for a failed visual result,
 and `accepted` only after explicit approval. Rejections require a structured
 failure; errors require `technical`; blame a reference only when it visibly caused
 the defect:
+
+For every manga candidate with a selected style input, first build and inspect
+the reference-candidate sheet. It places the candidate beside each scoped style
+authority and writes a hash-locked JSON sidecar; judge only the declared scope,
+not the reference's identity, pose, text, or composition:
+
+```bash
+scripts/run-python scripts/image_sheet.py \
+  --task-dir <task-directory> --candidate <candidate.png>
+```
 
 ```bash
 scripts/run-python scripts/record_attempt.py \

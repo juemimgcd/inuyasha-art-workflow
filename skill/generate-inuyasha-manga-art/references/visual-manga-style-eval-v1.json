@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "inuyasha-manga-style-visual-ab-v1",
+  "description": "Three-case, six-image blind A/B gate focused on original-manga rendering for new images.",
+  "policy": {
+    "variants": ["baseline", "candidate"],
+    "cases_per_variant": 3,
+    "total_images": 6,
+    "single_generation_per_slot": true,
+    "automatic_retry": false,
+    "blind_pairwise_review": true
+  },
+  "promotion": {
+    "minimum_candidate_wins": 2,
+    "maximum_candidate_critical_failures": 0,
+    "ties_keep_baseline": true
+  },
+  "critical_categories": [
+    "identity",
+    "manga_medium",
+    "request_fidelity",
+    "anatomy_contact",
+    "technical"
+  ],
+  "cases": [
+    {
+      "id": "kagome-lantern-profile-rendering",
+      "title": "戈薇灯笼侧身人物画法",
+      "intent": "new",
+      "medium": "manga",
+      "request": "戈薇在无月夜色中侧身站立，双手托住一盏大型纸灯笼，远处只有少量山影、村落和漂浮灯笼；上身纵向黑白原著漫画画面，无文字。",
+      "identity_forms": {"戈薇": "default-form"},
+      "shot": "upper-body",
+      "aspect_ratio": "2:3",
+      "criteria": [
+        "眼型、刘海、下颌、长发外轮廓与水手服结构保持戈薇身份",
+        "头发先读成大片黑形与少量白色分束，不是逐丝精修或均匀矢量轮廓",
+        "校服褶线从肩、领结、肘和托灯接触点出发，次要细褶主动退让",
+        "人物、灯笼和夜景由纸白、实黑与克制中间网点形成明确值阶"
+      ]
+    },
+    {
+      "id": "inuyasha-storm-cliff-full-body-rendering",
+      "title": "犬夜叉暴雨前山崖全身画法",
+      "intent": "new",
+      "medium": "manga",
+      "request": "半妖形态犬夜叉独自站在暴雨前的山崖高处，低机位仰拍全身；一手按住腰侧连鞘、未变化的铁碎牙刀柄，银白长发与火鼠裘宽袖被狂风一致吹向画面一侧；远处乌云压低，敌人绝不入画，只以犬夜叉警觉凝视画外的方向暗示威胁；黑白原著漫画风格。",
+      "identity_forms": {"犬夜叉": "half-demon-form"},
+      "shot": "full-body",
+      "aspect_ratio": "4:5",
+      "criteria": [
+        "犬耳、银白长发、念珠、火鼠裘和未变化铁碎牙形态可辨",
+        "头发、宽袖、身体重心与风向共享一条清楚的动作逻辑",
+        "人物轮廓、宽袖大褶、山崖和云层使用有主次的变粗细墨线",
+        "乌云、纸白天空、衣服网点与山崖黑块保持连载漫画式大值阶，不读成电影灰雾"
+      ]
+    },
+    {
+      "id": "inuyasha-goshinboku-profile-rendering",
+      "title": "御神木箭痕侧面安静画法",
+      "intent": "new",
+      "medium": "manga",
+      "request": "漫画风格单人插图：苏醒后，半妖形态犬夜叉独自站在御神木前，侧面中景，手指按住五十年前封印留下的旧箭痕；未变形铁碎牙佩于腰间。少量树叶落过大片纸白。情绪清醒、克制，不哭泣、不愤怒；表现他失去的五十年与原本可能拥有的人生。无桔梗幻影、额外人物或文字。人物与佩刀还原原著。",
+      "identity_forms": {"犬夜叉": "half-demon-form"},
+      "shot": "profile",
+      "aspect_ratio": "4:5",
+      "criteria": [
+        "侧脸眼、鼻、口、下颌、刘海和犬耳关系保持犬夜叉辨识度",
+        "按住箭痕的手指、树皮接触、身体与佩刀连接连续",
+        "脸和手保持干净，白发以外轮廓和少量分束表达，宽袖只保留功能性大褶",
+        "御神木近处结构清楚，远离接触点后纹理迅速衰减，大片纸白承担静默节奏"
+      ]
+    }
+  ]
+}

@@ -4,6 +4,9 @@ Annotate only distinctions that filenames and folders cannot express. Keep ident
 
 Allowed trait keys:
 
+- `style-anchor`: `certified` — manually inspected for a specific, reusable
+  rendering relationship; this is only a same-score tie-breaker and never adds
+  identity, content, composition, or scene authority
 - `scene-class`: `canonical`, `generic`
 - `scene-id`: `bone-eaters-well`, `goshinboku`
 - `scene-family`: `architecture`, `nature`, `settlement`, `interior`, `canonical-landmark`
@@ -34,6 +37,7 @@ Example:
 ```bash
 scripts/run-python scripts/annotate_reference.py \
   --item-id manga-curated:file:... \
+  --trait style-anchor=certified \
   --trait action=embrace \
   --trait interaction=body-contact \
   --trait scene-energy=quiet \
@@ -44,6 +48,13 @@ scripts/run-python scripts/annotate_reference.py \
 ```
 
 Rebuild the catalog after annotation. Search with `--query "scene-energy:quiet face-clarity:high"` when the trait is relevant. Do not annotate every file merely to fill fields.
+
+Certify only a small inspected set. A certified character anchor still applies
+only to its visible shot, face/hair, fabric/fold, and value relationships; a
+certified scene anchor still applies only to its visible materials, weather,
+negative space, black-white mass, and depth falloff. Certification never makes
+the image a fixed prompt input, and an exact request/shot/material match remains
+more important than the certification tie-breaker.
 
 `scene-id` is an exact identity key for a work-specific canonical place. Search it
 inside `reference_domain=scene` before asking ImageGen to construct the scene.
