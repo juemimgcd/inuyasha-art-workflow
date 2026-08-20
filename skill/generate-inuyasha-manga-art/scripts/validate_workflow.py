@@ -13,7 +13,9 @@ from visual_ab_eval import effective_results
 from visual_ab_eval import load_dataset as load_visual_eval_dataset
 from workflow_common import (
     CONFIG_PATH,
+    FORM_VALUES,
     SKILL_DIR,
+    VIEW_ANGLE_VALUES,
     library_signature,
     load_config,
     workflow_paths,
@@ -31,6 +33,8 @@ REQUIRED_FILES = (
     "references/retrieval-benchmark.json",
     "references/visual-eval-v2.json",
     "references/visual-edit-eval-v1.json",
+    "references/visual-manga-style-eval-v1.json",
+    "references/visual-manga-style-edit-eval-v1.json",
     "scripts/build_reference_index.py",
     "scripts/search_reference_index.py",
     "scripts/browse_curated_styles.py",
@@ -46,6 +50,7 @@ REQUIRED_FILES = (
     "scripts/reference_feedback_report.py",
     "scripts/benchmark_reference_retrieval.py",
     "scripts/visual_ab_eval.py",
+    "scripts/image_sheet.py",
     "scripts/preference_profile.py",
     "scripts/validate_all_tasks.py",
     "scripts/migrate_art_tasks.py",
@@ -170,6 +175,53 @@ def identity_ledger_failures(ledger: dict) -> list[str]:
                 )
             if not any(rules.get(strength) for strength in ("explicit", "context")):
                 failures.append(f"{rule_label} must declare at least one alias")
+        view_traits = profile.get("view_traits", {})
+        if not isinstance(view_traits, dict):
+            failures.append(f"{label}.view_traits must be an object")
+        else:
+            for form, views in view_traits.items():
+                view_label = f"{label}.view_traits.{form}"
+                if form not in forms:
+                    failures.append(f"{view_label} references an unknown form")
+                    continue
+                if not isinstance(views, dict) or not views:
+                    failures.append(f"{view_label} must be a non-empty object")
+                    continue
+                for view_angle, traits in views.items():
+                    trait_label = f"{view_label}.{view_angle}"
+                    if view_angle not in VIEW_ANGLE_VALUES:
+                        failures.append(
+                            f"{trait_label} references an unknown view angle"
+                        )
+                    failures.extend(_string_list_failures(traits, trait_label))
+                    if isinstance(traits, list) and not traits:
+                        failures.append(
+                            f"{trait_label} must declare at least one trait"
+                        )
+        rendering_fallbacks = profile.get("rendering_fallbacks", {})
+        if not isinstance(rendering_fallbacks, dict):
+            failures.append(f"{label}.rendering_fallbacks must be an object")
+        else:
+            for view_angle, mapping in rendering_fallbacks.items():
+                fallback_label = f"{label}.rendering_fallbacks.{view_angle}"
+                if view_angle not in VIEW_ANGLE_VALUES:
+                    failures.append(
+                        f"{fallback_label} references an unknown view angle"
+                    )
+                if not isinstance(mapping, dict) or not mapping:
+                    failures.append(f"{fallback_label} must be a non-empty object")
+                    continue
+                for fallback_subject, fallback_form in mapping.items():
+                    if fallback_subject not in characters:
+                        failures.append(
+                            f"{fallback_label} references unknown subject "
+                            f"{fallback_subject}"
+                        )
+                    if fallback_form not in FORM_VALUES:
+                        failures.append(
+                            f"{fallback_label}.{fallback_subject} references "
+                            f"unknown form {fallback_form}"
+                        )
     return failures
 
 
@@ -213,6 +265,8 @@ def main() -> int:
         failures.append(f"invalid retrieval benchmark dataset: {exc}")
     visual_eval_case_count = 0
     visual_edit_eval_case_count = 0
+    visual_manga_style_eval_case_count = 0
+    visual_manga_style_edit_eval_case_count = 0
     visual_promotion = {
         "checked": False,
         "promotion_passed": None,
@@ -227,7 +281,19 @@ def main() -> int:
             SKILL_DIR / "references/visual-edit-eval-v1.json"
         )
         visual_edit_eval_case_count = len(visual_edit_eval["cases"])
-    except (OSError, ValueError) as exc:
+        visual_manga_style_eval = load_visual_eval_dataset(
+            SKILL_DIR / "references/visual-manga-style-eval-v1.json"
+        )
+        visual_manga_style_eval_case_count = len(
+            visual_manga_style_eval["cases"]
+        )
+        visual_manga_style_edit_eval = load_visual_eval_dataset(
+            SKILL_DIR / "references/visual-manga-style-edit-eval-v1.json"
+        )
+        visual_manga_style_edit_eval_case_count = len(
+            visual_manga_style_edit_eval["cases"]
+        )
+    except (OSError, TypeError, ValueError) as exc:
         failures.append(f"invalid visual evaluation dataset: {exc}")
     if args.visual_run_dir is not None:
         try:
@@ -585,6 +651,8 @@ def main() -> int:
         "retrieval_benchmark_cases": benchmark_case_count,
         "visual_eval_cases": visual_eval_case_count,
         "visual_edit_eval_cases": visual_edit_eval_case_count,
+        "visual_manga_style_eval_cases": visual_manga_style_eval_case_count,
+        "visual_manga_style_edit_eval_cases": visual_manga_style_edit_eval_case_count,
         "validation_scope": (
             "structural-and-visual-promotion"
             if args.require_visual_promotion

@@ -21,6 +21,7 @@ from task_workflow import (
     QA_DIMENSIONS,
     QA_SCHEMA_VERSION,
     SCOPED_STYLE_CHANGE_CATEGORIES,
+    build_rendering_map,
     compile_prompt,
     identity_requirements,
     new_split_domain_reference_strategy,
@@ -29,6 +30,7 @@ from task_workflow import (
 from workflow_common import (
     FORM_VALUES,
     SHOT_VALUES,
+    VIEW_ANGLE_VALUES,
     atomic_write_json,
     atomic_write_text,
     ensure_workflow_dirs,
@@ -263,6 +265,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--change-request")
     parser.add_argument("--aspect-ratio", default="2:3 portrait")
     parser.add_argument("--shot", choices=SHOT_VALUES)
+    parser.add_argument("--view-angle", choices=VIEW_ANGLE_VALUES)
     parser.add_argument(
         "--period-mode", choices=("early-rounded", "classic-balanced", "late-action")
     )
@@ -386,6 +389,14 @@ def main() -> int:
     shot = (parent_brief or {}).get("shot") or args.shot
     if parent_brief and args.shot and args.shot != shot:
         raise SystemExit("A continuation cannot silently change the parent shot")
+    view_angle = (parent_brief or {}).get("view_angle") or args.view_angle
+    if parent_brief and args.view_angle and args.view_angle != view_angle:
+        raise SystemExit(
+            "A continuation cannot silently change the parent view angle"
+        )
+    retrieval_traits = list((parent_brief or {}).get("retrieval_traits") or [])
+    if view_angle and f"view-angle:{view_angle}" not in retrieval_traits:
+        retrieval_traits.append(f"view-angle:{view_angle}")
     root = workflow_root(config, args.workflow_root)
     paths = ensure_workflow_dirs(root)
     date_prefix = datetime.now(timezone.utc).astimezone().strftime("%Y%m%d")
@@ -481,6 +492,8 @@ def main() -> int:
         "scene": (parent_brief or {}).get("scene", ""),
         "dominant_scene_materials": dominant_scene_materials,
         "shot": shot,
+        "view_angle": view_angle,
+        "retrieval_traits": retrieval_traits,
         "aspect_ratio": ((parent_brief or {}).get("aspect_ratio") or args.aspect_ratio),
         "invariants": inherited_invariants,
         "latency_budget": {
@@ -491,6 +504,9 @@ def main() -> int:
             "generation_latency_policy": "observe-only",
         },
     }
+    rendering_map = build_rendering_map(brief)
+    if rendering_map is not None:
+        brief["rendering_map"] = rendering_map
     atomic_write_json(task_dir / "brief.json", brief)
     atomic_write_json(
         task_dir / "reference-manifest.json", {"schema_version": 1, "references": []}

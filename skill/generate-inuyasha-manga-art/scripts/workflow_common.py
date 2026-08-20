@@ -69,6 +69,20 @@ SHOT_VALUES = (
     "action",
     "detail",
 )
+VIEW_ANGLE_VALUES = (
+    "front",
+    "three-quarter-front",
+    "profile",
+    "three-quarter-back",
+    "back",
+    "high-angle",
+    "low-angle",
+    "multi-view",
+)
+VIEW_ANGLE_SHOT_MAP = {
+    "profile": "profile",
+    "back": "back-view",
+}
 SHOT_TOKEN_MAP = {
     "全身": "full-body",
     "上身": "upper-body",
@@ -545,12 +559,14 @@ def retrieval_traits_for_domain(
     """Keep only signals owned by a retrieval domain.
 
     Character style deliberately ignores action, interaction, expression and
-    scene terms. Scene retrieval deliberately ignores character/action terms.
-    Identity remains an exact-facet lookup and receives no intent-score terms.
+    scene terms, but retains view angle because face/hair mark-making must be
+    applicable to the requested view. Scene retrieval deliberately ignores
+    character/action terms. Identity remains an exact-facet lookup and receives
+    no intent-score terms.
     """
     unique = list(dict.fromkeys(traits))
     if reference_domain == "character-style":
-        return []
+        return [trait for trait in unique if trait.startswith("view-angle:")]
     if reference_domain == "scene":
         return [
             trait
@@ -847,6 +863,7 @@ def retrieval_relevance(
     subject_forms: Iterable[tuple[str, str]] = (),
     preferred_subject_forms: Iterable[tuple[str, str]] = (),
     shots: Iterable[str] = (),
+    view_angles: Iterable[str] = (),
     folders: Iterable[str] = (),
     contents: Iterable[str] = (),
     penalized_subjects: Iterable[str] = (),
@@ -854,6 +871,11 @@ def retrieval_relevance(
     shot_weight: int = 4,
 ) -> tuple[int, list[str]]:
     """Score explicit field matches and explain why a candidate ranked highly."""
+    subjects = list(subjects)
+    subject_forms = list(subject_forms)
+    preferred_subject_forms = list(preferred_subject_forms)
+    shots = list(shots)
+    view_angles = list(view_angles)
     tags = {str(value).casefold() for value in item.get("tags", [])}
     filename_terms = {
         str(value).casefold() for value in item.get("filename_terms", [])
@@ -925,6 +947,35 @@ def retrieval_relevance(
         if shot.casefold() in item_shots:
             score += shot_weight
             reasons.append(f"shot exact: {shot}")
+    requested_view_angles = {
+        str(value).casefold() for value in view_angles if str(value).strip()
+    }
+    known_subject_keys = {subject.casefold() for subject in CHARACTER_SUBJECTS}
+    view_angle_subject_ambiguous = (
+        len(item_subjects.intersection(known_subject_keys)) > 1
+    )
+    item_view_angles = {
+        tag.removeprefix("view-angle:")
+        for tag in tags
+        if tag.startswith("view-angle:")
+    }
+    for view_angle in requested_view_angles:
+        shot_alias = VIEW_ANGLE_SHOT_MAP.get(view_angle)
+        exact_view = view_angle in item_view_angles or (
+            shot_alias is not None and shot_alias in item_shots
+        )
+        if exact_view and not view_angle_subject_ambiguous:
+            # View applicability matters more than camera distance for
+            # identity-bearing face, bangs, jaw, and hair mark-making.
+            score += 12
+            reasons.append(f"view angle exact: {view_angle}")
+        elif exact_view:
+            reasons.append(
+                f"view angle ambiguous across co-occurring subjects: {view_angle}"
+            )
+        elif item_view_angles and "multi-view" not in item_view_angles:
+            score -= 8
+            reasons.append(f"view angle mismatch: {view_angle}")
     for folder in folders:
         if folder.casefold() in item_folders:
             score += 3
@@ -977,6 +1028,15 @@ def retrieval_relevance(
             score += 1
             reasons.append(f"note contains: {raw_term}")
     return score, reasons
+
+
+def certified_style_anchor_rank(
+    item: dict[str, Any], *, role: str | None, reference_domain: str | None
+) -> int:
+    """Prefer inspected style anchors only after ordinary relevance ties."""
+    if role != "rendering" or reference_domain not in {"character-style", "scene"}:
+        return 0
+    return int("style-anchor:certified" in set(item.get("tags") or []))
 
 
 def infer_structured_metadata(path: Path, source: dict[str, Any]) -> dict[str, Any]:

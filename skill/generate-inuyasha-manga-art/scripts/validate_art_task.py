@@ -37,11 +37,15 @@ from task_workflow import (
     prompt_limit,
     qa_acceptance_failures,
     reference_strategy_failures,
+    rendering_map_failures,
     scoped_style_failures,
     task_intent,
 )
 from technical_failures import unresolved_exhausted_network_failure
 from workflow_common import (
+    CHARACTER_SUBJECTS,
+    VIEW_ANGLE_SHOT_MAP,
+    VIEW_ANGLE_VALUES,
     library_signature,
     load_config,
     now_iso,
@@ -59,6 +63,16 @@ RENDERING_COVERAGE_FIELDS = (
 )
 DOMINANT_MATERIAL_COVERAGE_FIELD = "Dominant material rendering coverage"
 FOCUSED_IDENTITY_SHOTS = {"face", "profile", "close-up", "medium-shot"}
+
+
+def reference_matches_view_angle(row, view_angle: str | None) -> bool:
+    if not view_angle:
+        return True
+    tags = set(json.loads(row["tags"] or "[]"))
+    shot_types = set(json.loads(row["shot_types"] or "[]"))
+    return f"view-angle:{view_angle}" in tags or (
+        VIEW_ANGLE_SHOT_MAP.get(view_angle) in shot_types
+    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -114,12 +128,23 @@ def manifest_style_scope_failure(
 
 def identity_focus_failures(brief: dict, row, entry: dict) -> list[str]:
     """Require a focused official crop when a sheet did not match a face-led shot."""
+    view_angle = brief.get("view_angle")
     if (
         int(brief.get("schema_version") or 0) < BRIEF_SCHEMA_VERSION
         or brief.get("intent") != "new"
-        or brief.get("shot") not in FOCUSED_IDENTITY_SHOTS
         or entry.get("crop_box") is not None
     ):
+        return []
+    if view_angle and not reference_matches_view_angle(row, view_angle):
+        return [
+            (
+                "focused identity evidence required: official reference "
+                f"{row['item_id']} does not match requested view angle "
+                f"{view_angle}; prepare the smallest task-local crop containing "
+                "that exact face/view and record a non-empty focus"
+            )
+        ]
+    if brief.get("shot") not in FOCUSED_IDENTITY_SHOTS:
         return []
     tags = set(json.loads(row["tags"] or "[]"))
     shot_types = set(json.loads(row["shot_types"] or "[]"))
@@ -131,6 +156,47 @@ def identity_focus_failures(brief: dict, row, entry: dict) -> list[str]:
             f"{row['item_id']} does not match requested shot {brief.get('shot')}; "
             "prepare the smallest task-local crop containing the needed face/view "
             "and record a non-empty focus"
+        )
+    ]
+
+
+def character_style_view_coverage_failures(
+    brief: dict, rows: list[tuple[object, dict]]
+) -> list[str]:
+    """Require at least one unambiguous character-style anchor for the view."""
+    view_angle = brief.get("view_angle")
+    if (
+        int(brief.get("schema_version") or 0) < BRIEF_SCHEMA_VERSION
+        or brief.get("intent") != "new"
+        or not view_angle
+    ):
+        return []
+    candidate_ids = []
+    for row, entry in rows:
+        if (
+            entry.get("role") != "style"
+            or row["reference_domain"] != "character-style"
+        ):
+            continue
+        candidate_ids.append(row["item_id"])
+        row_subjects = set(json.loads(row["subjects"] or "[]"))
+        view_owners = row_subjects.intersection(CHARACTER_SUBJECTS)
+        focused_crop = entry.get("crop_box") is not None and bool(
+            str(entry.get("focus") or "").strip()
+        )
+        if reference_matches_view_angle(row, view_angle) and (
+            len(view_owners) <= 1 or focused_crop
+        ):
+            return []
+    return [
+        (
+            "character-style view coverage is insufficient: none of "
+            f"{candidate_ids or ['[missing]']} unambiguously matches requested "
+            f"view angle {view_angle}; "
+            "image-level view tags on a multi-character panel do not prove which "
+            "character owns that view. Select an unambiguous same-view selected-"
+            "medium character anchor or record the layer as INSUFFICIENT before "
+            "curating a focused fallback"
         )
     ]
 
@@ -478,6 +544,7 @@ def main() -> int:
     qa = load_json(task_dir / "qa.json", failures)
     split_domain_task = is_split_domain_task(brief, qa)
     failures.extend(reference_strategy_failures(brief))
+    failures.extend(rendering_map_failures(brief))
     catalog_required = any(
         entry.get("source_id") != "user-supplied"
         for entry in manifest.get("references", [])
@@ -493,6 +560,17 @@ def main() -> int:
         failures.append("brief schema is legacy; migrate or archive this task")
     raw_intent = brief.get("intent")
     intent = task_intent(brief)
+    view_angle = brief.get("view_angle")
+    if view_angle is not None and view_angle not in VIEW_ANGLE_VALUES:
+        failures.append(
+            "brief.view_angle must be one of: " + ", ".join(VIEW_ANGLE_VALUES)
+        )
+    if view_angle and f"view-angle:{view_angle}" not in set(
+        brief.get("retrieval_traits") or []
+    ):
+        failures.append(
+            "brief.view_angle must also be persisted as a matching retrieval trait"
+        )
     if brief_schema >= BRIEF_SCHEMA_VERSION and raw_intent not in INTENT_VALUES:
         failures.append(f"brief.intent must be one of: {', '.join(INTENT_VALUES)}")
     if intent == "microfix":
@@ -661,6 +739,7 @@ def main() -> int:
     retired_identity_card_reported = False
     official_identity_characters = set()
     form_coverage = set()
+    character_style_view_rows: list[tuple[object, dict]] = []
     for expected_order, entry in enumerate(references, 1):
         item_id = entry.get("item_id", "")
         role = entry.get("role", "")
@@ -880,6 +959,8 @@ def main() -> int:
             if style_scope_failure:
                 failures.append(style_scope_failure)
         failures.extend(scene_economy_reference_failures(brief, row, entry))
+        if role == "style" and row["reference_domain"] == "character-style":
+            character_style_view_rows.append((row, entry))
         resolved.append((role, row["item_id"]))
         if role == "identity":
             subjects = set(json.loads(row["subjects"] or "[]"))
@@ -1018,6 +1099,11 @@ def main() -> int:
             elif row["kind"] == "image" and file_hash(rendered) != row["content_hash"]:
                 failures.append(f"prepared reference content changed: {rendered}")
     connection.close()
+    failures.extend(
+        character_style_view_coverage_failures(
+            brief, character_style_view_rows
+        )
+    )
 
     duplicate_identity_authority = (
         identity_card_characters & official_identity_characters

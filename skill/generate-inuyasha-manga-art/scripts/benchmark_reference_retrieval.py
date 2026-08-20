@@ -16,6 +16,8 @@ from workflow_common import load_config, workflow_root
 SKILL_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_DATASET = SKILL_DIR / "references" / "retrieval-benchmark.json"
 SEARCH_SCRIPT = Path(__file__).resolve().with_name("search_reference_index.py")
+BROWSE_SCRIPT = Path(__file__).resolve().with_name("browse_curated_styles.py")
+SUPPORTED_TOOLS = {"search_reference_index", "browse_curated_styles"}
 REPEATABLE_FLAGS = {
     "subject_form": "--subject-form",
     "subject": "--subject",
@@ -23,6 +25,7 @@ REPEATABLE_FLAGS = {
     "shot": "--shot",
     "folder": "--folder",
     "content": "--content",
+    "prefer_subject_form": "--prefer-subject-form",
 }
 SCALAR_FLAGS = {
     "source": "--source",
@@ -32,6 +35,7 @@ SCALAR_FLAGS = {
     "kind": "--kind",
     "query": "--query",
     "match": "--match",
+    "view_angle": "--view-angle",
 }
 
 
@@ -79,6 +83,9 @@ def load_dataset(path: Path) -> dict[str, Any]:
             )
         if not isinstance(case.get("query"), dict):
             raise TypeError(f"benchmark case {case_id} requires query")
+        tool = case.get("tool", "search_reference_index")
+        if tool not in SUPPORTED_TOOLS:
+            raise ValueError(f"benchmark case {case_id} uses unknown tool: {tool}")
     return data
 
 
@@ -108,9 +115,11 @@ def metric_summary(ranks: list[int | None], ks: list[int]) -> dict[str, float]:
 def search_command(
     case: dict[str, Any], root: Path, limit: int
 ) -> list[str]:
+    tool = case.get("tool", "search_reference_index")
+    script = BROWSE_SCRIPT if tool == "browse_curated_styles" else SEARCH_SCRIPT
     command = [
         sys.executable,
-        str(SEARCH_SCRIPT),
+        str(script),
         "--workflow-root",
         str(root),
         "--intent-text",
@@ -125,6 +134,8 @@ def search_command(
         if value not in (None, ""):
             command.extend([flag, str(value)])
     for key, flag in REPEATABLE_FLAGS.items():
+        if key == "prefer_subject_form" and tool != "browse_curated_styles":
+            continue
         for value in query.get(key, []):
             command.extend([flag, str(value)])
     return command
@@ -143,7 +154,8 @@ def run_case(case: dict[str, Any], root: Path, limit: int) -> dict[str, Any]:
         raise RuntimeError(
             completed.stderr.strip() or completed.stdout.strip() or case["id"]
         )
-    candidates = json.loads(completed.stdout or "[]")
+    payload = json.loads(completed.stdout or "[]")
+    candidates = payload.get("candidates", []) if isinstance(payload, dict) else payload
     returned_ids = [candidate["item_id"] for candidate in candidates]
     relevant_ids = set(case["relevant_item_ids"])
     rank = first_relevant_rank(returned_ids, relevant_ids)

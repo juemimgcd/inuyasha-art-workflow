@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "id": "inuyasha-manga-style-edit-visual-ab-v1",
+  "description": "Three-case, six-image blind A/B gate focused on scoped original-manga rendering corrections.",
+  "policy": {
+    "variants": ["baseline", "candidate"],
+    "cases_per_variant": 3,
+    "total_images": 6,
+    "single_generation_per_slot": true,
+    "automatic_retry": false,
+    "blind_pairwise_review": true
+  },
+  "promotion": {
+    "minimum_candidate_wins": 2,
+    "maximum_candidate_critical_failures": 0,
+    "ties_keep_baseline": true
+  },
+  "critical_categories": [
+    "identity",
+    "manga_medium",
+    "request_fidelity",
+    "anatomy_contact",
+    "technical"
+  ],
+  "cases": [
+    {
+      "id": "kagome-character-medium-economy",
+      "title": "戈薇人物域原著画法修正",
+      "intent": "edit",
+      "medium": "manga",
+      "request": "这个戈薇画得太精致了，重绘戈薇，还原犬夜叉原作漫画的画风；保留夜空、灯笼、村落、构图、动作、道具和场景渲染不变。",
+      "change_category": "medium",
+      "change_scope": "character",
+      "identity_forms": {"戈薇": "default-form"},
+      "shot": "upper-body",
+      "aspect_ratio": "2:3",
+      "input_contract": {
+        "target_sha256": "e9a2ff77ae1dd9b48b9969d35f1146ce021f52ca4d18158354bb8376e8f822d3",
+        "style": {
+          "item_id": "manga-curated:file:637872ad4e0dd2aa442b",
+          "style_scope": "character",
+          "content_sha256": "637872ad4e0dd2aa442bf95469604f0ff50e03d636e156d6e403839e1c5741bf"
+        }
+      },
+      "criteria": [
+        "戈薇的眼型、刘海、下颌、长发轮廓与校服部件没有被简化成通用动漫人物",
+        "长发改为大片黑形和少量必要分束，校服褶线集中于结构和托灯接触点",
+        "人物皮肤纸白、头发实黑与校服中间网点层级接近固定人物画风输入",
+        "夜空、灯笼、村落、人物姿势、双手接触和全部场景画法保持目标图"
+      ]
+    },
+    {
+      "id": "human-inuyasha-character-tone-hierarchy",
+      "title": "人类犬夜叉人物值阶修正",
+      "intent": "edit",
+      "medium": "manga",
+      "request": "只把犬夜叉的交领宽袖上衣与袴改为原著漫画中的深灰网点和深色块；必须明显深于纸白皮肤与水面，但与纯黑头发分层。保持衣服结构、脸、黑发、构图、表情、双手、水珠、溪水、石头和树叶画法完全不变。",
+      "change_category": "tone",
+      "change_scope": "character",
+      "identity_forms": {"犬夜叉": "human-form"},
+      "shot": "medium-shot",
+      "aspect_ratio": "2:3 portrait",
+      "input_contract": {
+        "target_sha256": "ea5f25af970b638bd3b3ebae06de116cbf13cd6381995c228afe8159e4669a7f",
+        "style": {
+          "item_id": "manga-curated:file:4979f0e5da216eff0102",
+          "style_scope": "character",
+          "content_sha256": "4979f0e5da216eff01023384691f0470a6d2ee6fb62cce141ae39463dffd7e85"
+        }
+      },
+      "criteria": [
+        "上衣与袴形成深色网点和块面，并与纸白皮肤、水面和纯黑头发清楚分层",
+        "人物脸、黑发轮廓、念珠、服装结构、双手和姿势保持目标图",
+        "人物网点不是平滑体积阴影，也没有把场景纹理频率带入服装",
+        "溪水、石头、树叶、构图和场景黑白分配保持目标图"
+      ]
+    },
+    {
+      "id": "human-inuyasha-scene-depth-economy",
+      "title": "溪谷场景域远近衰减修正",
+      "intent": "edit",
+      "medium": "manga",
+      "request": "只把溪水、石头和树叶改为原著漫画式纸白、短线、简洁黑白块与明确远近衰减，删除细密写实纹理。犬夜叉的脸、黑发及其水珠、衣服部件与既有深色网点、双手、姿势、构图完全不变。",
+      "change_category": "medium",
+      "change_scope": "scene",
+      "identity_forms": {"犬夜叉": "human-form"},
+      "shot": "medium-shot",
+      "aspect_ratio": "2:3 portrait",
+      "input_contract": {
+        "target_sha256": "83b88399c23f8a2869f8d9a807d2290e16ae97b1fd8ea9a1f14331bd0c62c182",
+        "style": {
+          "item_id": "manga-curated:file:ac8262fc1bfa13ecd536",
+          "style_scope": "scene",
+          "content_sha256": "ac8262fc1bfa13ecd536baf7102f46d2af166e45571250b5f38ce37af72256ca"
+        }
+      },
+      "criteria": [
+        "近处溪水、石头和树叶以少量方向线与黑白块说明材质，中远层明显减少内部线条",
+        "场景保留足够的水路、岩石、植被和接地结构，没有删成空洞线稿",
+        "人物脸、黑发与水珠、服装部件与网点、双手和姿势保持目标图",
+        "构图、镜头距离、人物尺度和整体黑白分配没有被重新戏剧化"
+      ]
+    }
+  ]
+}

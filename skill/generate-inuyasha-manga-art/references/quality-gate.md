@@ -16,6 +16,12 @@ This is smaller than full acceptance QA but is not optional; `candidate` is
 reserved for a visually usable preview. Any failed blocking check requires a
 `rejected` attempt with the corresponding structured failure category.
 
+For a manga candidate with one or more selected style inputs, generate the
+hash-locked comparison sheet with `image_sheet.py --task-dir ... --candidate ...`
+before assigning the medium and component checks. Compare each row only against
+its declared character or scene scope. The sheet supports the judgment; it does
+not let a style image control identity, pose, content, text, or composition.
+
 ## Contents
 
 - [Six acceptance dimensions](#six-acceptance-dimensions)

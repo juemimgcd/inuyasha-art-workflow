@@ -16,6 +16,9 @@ from workflow_common import (
     KNOWN_SUBJECTS,
     REFERENCE_DOMAINS,
     SHOT_VALUES,
+    VIEW_ANGLE_SHOT_MAP,
+    VIEW_ANGLE_VALUES,
+    certified_style_anchor_rank,
     library_signature,
     load_config,
     open_database,
@@ -136,6 +139,15 @@ def parse_args() -> argparse.Namespace:
         default=[],
         choices=SHOT_VALUES,
         help="Exact indexed shot type; repeat to accept alternatives.",
+    )
+    parser.add_argument(
+        "--view-angle",
+        choices=VIEW_ANGLE_VALUES,
+        help=(
+            "Require an exact controlled view-angle tag or its documented shot "
+            "facet equivalent. Use a shotless/viewless fallback only to prepare "
+            "a focused crop, never to claim view coverage."
+        ),
     )
     parser.add_argument("--volume", type=int)
     parser.add_argument("--page", type=int)
@@ -286,6 +298,22 @@ def main() -> int:
     else:
         add_json_facet("forms", args.exclude_form, "all", negate=True)
     add_json_facet("shot_types", args.shot, "any")
+    if args.view_angle:
+        view_conditions = [
+            (
+                "EXISTS (SELECT 1 FROM json_each(items.tags) AS view_tag "
+                "WHERE view_tag.value = ? COLLATE NOCASE)"
+            )
+        ]
+        parameters.append(f"view-angle:{args.view_angle}")
+        shot_alias = VIEW_ANGLE_SHOT_MAP.get(args.view_angle)
+        if shot_alias:
+            view_conditions.append(
+                "EXISTS (SELECT 1 FROM json_each(items.shot_types) AS view_shot "
+                "WHERE view_shot.value = ? COLLATE NOCASE)"
+            )
+            parameters.append(shot_alias)
+        clauses.append(f"({' OR '.join(view_conditions)})")
 
     terms = [term.casefold() for term in args.query.split() if term.strip()]
     inferred_traits = retrieval_traits_for(
@@ -361,6 +389,7 @@ def main() -> int:
                 for form in forms
             ],
             shots=args.shot,
+            view_angles=[args.view_angle] if args.view_angle else [],
             folders=args.folder,
             contents=args.content,
             penalized_subjects=rendering_conflicts,
@@ -381,6 +410,17 @@ def main() -> int:
             },
         )
         item["feedback_rank"] = round(feedback_rank(item["feedback"]), 4)
+        item["certified_style_anchor"] = bool(
+            certified_style_anchor_rank(
+                item,
+                role=args.role,
+                reference_domain=args.reference_domain,
+            )
+        )
+        if item["certified_style_anchor"]:
+            item["match_reasons"].append(
+                "certified style anchor (same-score tie-breaker)"
+            )
         item["inferred_traits"] = inferred_traits
         item["scoring_traits"] = intent_traits
         item["style_conflict_subjects"] = sorted(
@@ -390,6 +430,7 @@ def main() -> int:
     output.sort(
         key=lambda item: (
             -item["score"],
+            -int(item["certified_style_anchor"]),
             -item["feedback_rank"],
             item["relative_path"].casefold(),
         )

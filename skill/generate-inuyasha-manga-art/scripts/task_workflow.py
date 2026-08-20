@@ -17,6 +17,7 @@ ATTEMPT_SCHEMA_VERSION = 2
 LATENCY_SCHEMA_VERSION = 2
 QA_SCHEMA_VERSION = 2
 REFERENCE_STRATEGY_SCHEMA_VERSION = 1
+RENDERING_MAP_SCHEMA_VERSION = 1
 SPLIT_DOMAIN_REFERENCE_STRATEGY = {
     "schema_version": REFERENCE_STRATEGY_SCHEMA_VERSION,
     "mode": "split-domain",
@@ -81,6 +82,154 @@ def reference_strategy_failures(brief: dict[str, Any]) -> list[str]:
         failures.append(
             "brief.reference_strategy.canonical_scene_style must be coverage-gated"
         )
+    return failures
+
+
+def build_rendering_map(brief: dict[str, Any]) -> dict[str, Any] | None:
+    """Derive a compact, editable manga rendering plan from the task brief.
+
+    The map names positive relationships only. It does not select references or
+    grant authority; the manifest remains the source of truth for that.
+    """
+    if brief.get("medium") != "manga":
+        return None
+    intent = task_intent(brief)
+    shot = brief.get("shot")
+    category = brief.get("change_category")
+    scope = brief.get("change_scope")
+    scoped_change = (
+        intent in {"edit", "microfix"}
+        and category in SCOPED_STYLE_CHANGE_CATEGORIES
+        and scope in CHANGE_SCOPES
+    )
+    character_authority = (
+        "character-style"
+        if intent == "new" or (scoped_change and scope == "character")
+        else "target"
+    )
+    scene_authority = (
+        "scene-style"
+        if intent == "new" or (scoped_change and scope == "scene")
+        else "target"
+    )
+    materials = [
+        str(value).strip()
+        for value in brief.get("dominant_scene_materials") or []
+        if str(value).strip()
+    ]
+    material_phrase = ", ".join(materials) if materials else "the requested setting"
+    character_focal = shot in {
+        "face",
+        "profile",
+        "close-up",
+        "medium-shot",
+        "upper-body",
+        "two-shot",
+    }
+    environment_dominant = shot == "wide-shot" or {
+        "scene-economy:authored-negative-space",
+        "detail-falloff:strong",
+    }.issubset(set(brief.get("retrieval_traits") or []))
+    if environment_dominant:
+        focal_plane = (
+            f"resolve the route, major axes, overlap, scale, and ground contact in "
+            f"{material_phrase}"
+        )
+        near_plane = (
+            f"use decisive contours and a few directional material marks for "
+            f"{material_phrase}"
+        )
+        middle_plane = "group repeated forms into a few outline, black, and tone masses"
+        far_plane = "reduce each successive depth layer to fewer internal marks"
+        paper_white = "reserve contiguous open sky, mist, water, or ground as paper white"
+    elif character_focal:
+        focal_plane = "fully resolve the focal face, hands, contact, and costume overlaps"
+        near_plane = f"state only the setting cues needed to locate {material_phrase}"
+        middle_plane = "group the remaining setting into a few quiet shapes"
+        far_plane = "leave distant setting open or in one restrained tone"
+        paper_white = "protect clean paper around the focal face and silhouette"
+    else:
+        focal_plane = "fully resolve the requested action, contact, and spatial relationship"
+        near_plane = f"state {material_phrase} with selective structural marks"
+        middle_plane = "group nonfocal forms into clear silhouettes and one tone family"
+        far_plane = "let distant forms lose interior marks visibly"
+        paper_white = "keep deliberate paper-white intervals between focal groups"
+    return {
+        "schema_version": RENDERING_MAP_SCHEMA_VERSION,
+        "character": {
+            "authority": character_authority,
+            "resolve": (
+                "identity-bearing eyes, bangs, jaw, hair silhouette, costume layers, "
+                "hands, and contact chains"
+            ),
+            "group": (
+                "hair into readable lock masses and fabric into broad folds from "
+                "support or contact points"
+            ),
+            "quiet": "keep skin clean and let secondary strands and folds fall away",
+        },
+        "scene": {
+            "authority": scene_authority,
+            "focal_plane": focal_plane,
+            "near_plane": near_plane,
+            "middle_plane": middle_plane,
+            "far_plane": far_plane,
+            "paper_white": paper_white,
+        },
+        "value_hierarchy": {
+            "paper_white": "skin, highlights, and authored negative space",
+            "flat_black": "major hair, night, silhouette, or effect masses supported by evidence",
+            "middle_tone": "one restrained separator for garments, atmosphere, or distance",
+        },
+    }
+
+
+def rendering_map_failures(brief: dict[str, Any]) -> list[str]:
+    """Validate a declared rendering map while leaving historical briefs readable."""
+    rendering_map = brief.get("rendering_map")
+    if rendering_map is None:
+        return []
+    if brief.get("medium") != "manga":
+        return ["brief.rendering_map is valid only for manga tasks"]
+    if not isinstance(rendering_map, dict):
+        return ["brief.rendering_map must be an object"]
+    failures: list[str] = []
+    if rendering_map.get("schema_version") != RENDERING_MAP_SCHEMA_VERSION:
+        failures.append(
+            f"brief.rendering_map.schema_version must be {RENDERING_MAP_SCHEMA_VERSION}"
+        )
+    sections = {
+        "character": ("authority", "resolve", "group", "quiet"),
+        "scene": (
+            "authority",
+            "focal_plane",
+            "near_plane",
+            "middle_plane",
+            "far_plane",
+            "paper_white",
+        ),
+        "value_hierarchy": ("paper_white", "flat_black", "middle_tone"),
+    }
+    for section, fields in sections.items():
+        value = rendering_map.get(section)
+        if not isinstance(value, dict):
+            failures.append(f"brief.rendering_map.{section} must be an object")
+            continue
+        for field in fields:
+            if not isinstance(value.get(field), str) or not value[field].strip():
+                failures.append(
+                    f"brief.rendering_map.{section}.{field} must be a non-empty string"
+                )
+    for section in ("character", "scene"):
+        value = rendering_map.get(section)
+        if isinstance(value, dict) and value.get("authority") not in {
+            "character-style",
+            "scene-style",
+            "target",
+        }:
+            failures.append(
+                f"brief.rendering_map.{section}.authority is invalid"
+            )
     return failures
 
 
@@ -772,6 +921,85 @@ def _dominant_material_clause(brief: dict[str, Any]) -> str:
     )
 
 
+def _rendering_map_clause(brief: dict[str, Any]) -> str:
+    """Compile the stored rendering map into a short positive instruction block."""
+    rendering_map = brief.get("rendering_map")
+    if brief.get("medium") != "manga" or not isinstance(rendering_map, dict):
+        return ""
+    character = rendering_map.get("character") or {}
+    scene = rendering_map.get("scene") or {}
+    values = rendering_map.get("value_hierarchy") or {}
+    intent = task_intent(brief)
+    category = brief.get("change_category")
+    scope = brief.get("change_scope")
+    scoped_change = (
+        intent in {"edit", "microfix"}
+        and category in SCOPED_STYLE_CHANGE_CATEGORIES
+        and scope in CHANGE_SCOPES
+    )
+    if intent == "microfix":
+        if not scoped_change:
+            return ""
+        if scope == "character":
+            return (
+                "\nRendering map: resolve "
+                + str(character.get("resolve", "")).strip()
+                + "; "
+                + str(character.get("quiet", "")).strip()
+                + ". Keep scene marks and values target-locked."
+            )
+        return (
+            "\nRendering map: "
+            + str(scene.get("focal_plane", "")).strip()
+            + "; "
+            + str(scene.get("far_plane", "")).strip()
+            + "; "
+            + str(scene.get("paper_white", "")).strip()
+            + ". Keep character marks and garment values target-locked."
+        )
+    lines = ["\nScene-aware rendering map:"]
+    if not scoped_change or scope == "character":
+        lines.append(
+            "- Character: resolve "
+            + str(character.get("resolve", "")).strip()
+            + "; group "
+            + str(character.get("group", "")).strip()
+            + "; "
+            + str(character.get("quiet", "")).strip()
+            + "."
+        )
+    else:
+        lines.append("- Character: keep the target's character rendering unchanged.")
+    if not scoped_change or scope == "scene":
+        lines.append(
+            "- Depth: "
+            + "; ".join(
+                str(scene.get(field, "")).strip()
+                for field in (
+                    "focal_plane",
+                    "near_plane",
+                    "middle_plane",
+                    "far_plane",
+                    "paper_white",
+                )
+                if str(scene.get(field, "")).strip()
+            )
+            + "."
+        )
+    else:
+        lines.append("- Scene: keep the target's scene rendering unchanged.")
+    lines.append(
+        "- Values: paper white for "
+        + str(values.get("paper_white", "")).strip()
+        + "; flat black for "
+        + str(values.get("flat_black", "")).strip()
+        + "; middle tone as "
+        + str(values.get("middle_tone", "")).strip()
+        + "."
+    )
+    return "\n".join(lines)
+
+
 def compile_prompt(brief: dict[str, Any], manifest: dict[str, Any]) -> str:
     """Compile a bounded prompt whose detail level follows the task intent."""
     intent = task_intent(brief)
@@ -830,6 +1058,7 @@ def compile_prompt(brief: dict[str, Any], manifest: dict[str, Any]) -> str:
         if scoped_style_change and change_scope == "character"
         else _dominant_material_clause(brief)
     )
+    rendering_map_clause = _rendering_map_clause(brief)
     preference_traits = brief.get("preference_traits") or []
     preference_line = (
         "\nLearned approved traits: " + ", ".join(preference_traits) + "."
@@ -858,6 +1087,7 @@ Change scope: `{brief.get("change_scope") or "target-only"}`.
 
 Reference authority:
 {chr(10).join(reference_lines)}{cross_medium_clause}
+{rendering_map_clause}
 
 Preserve exactly:
 {chr(10).join(invariant_lines)}
@@ -889,6 +1119,7 @@ Canonical prop requirements:
 
 Reference authority:
 {chr(10).join(reference_lines)}{cross_medium_clause}{character_style_mapping_clause}
+{rendering_map_clause}
 
 Preserve:
 {chr(10).join(invariant_lines)}
@@ -908,6 +1139,7 @@ Use the target as the exact continuity and composition authority. Change only wh
         aspect = brief.get("aspect_ratio") or "portrait"
         period = brief.get("period_mode") or "classic-balanced"
         shot = brief.get("shot")
+        view_angle = brief.get("view_angle")
         construction = _medium_construction(medium, shot)
         deliverable = brief.get("deliverable", "illustration")
         if medium == "manga" and deliverable == "illustration":
@@ -919,6 +1151,7 @@ Use the target as the exact continuity and composition authority. Change only wh
 
 {goal_line}Scene and exact moment: {scene}
 Format: {aspect}; {deliverable}; {period}.
+Camera distance: {shot or "unspecified"}; character view angle: {view_angle or "unspecified"}. Keep these as separate constraints.
 
 Identity requirements:
 {chr(10).join(_identity_lines(brief))}
@@ -937,6 +1170,7 @@ Spatial construction: use one coherent depth system; keep body direction, relati
 {contact_topology_clause}
 
 Medium construction: {construction}
+{rendering_map_clause}
 {dominant_material_clause}
 {scene_economy_clause}
 {manga_finish_calibration}

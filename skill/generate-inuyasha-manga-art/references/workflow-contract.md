@@ -51,7 +51,10 @@ Pre-generation validation rejects any identity-card entry while final validation
 continues to understand historical manifests without rewriting them.
 
 Free-text retrieval remains a fallback filter inside a domain. Character-style
-ranking ignores action, interaction, expression and scene traits. Scene ranking
+ranking ignores action, interaction, expression and scene traits, but retains a
+separately declared view angle because face, bangs, jaw, and hair mark-making
+must be applicable to the requested direction. View angle remains rendering
+applicability only and never controls pose or composition. Scene ranking
 ignores characters, forms, actions and interactions, using exact `scene-id` for
 canonical places and scene/background/effect traits for rendering. Return
 `match_reasons` so the inspected candidate set shows why each item ranked. Do
@@ -139,6 +142,15 @@ failures. Ties preserve the baseline. Unit tests, valid schemas, retrieval score
 or prompt improvements are necessary diagnostics but never substitute for this
 visual gate when claiming an image-quality improvement.
 
+For revisions that change manga style-anchor ranking, the structured rendering
+map, manga prompt finish calibration, or manga-medium QA, use the dedicated
+three-case datasets `references/visual-manga-style-eval-v1.json` for `new` and
+`references/visual-manga-style-edit-eval-v1.json` for scoped `edit`. Changes that
+affect both paths require two independently promoted runs. These datasets keep
+the same immutable six-slot, paired-input, blind-review, critical-failure, and
+promotion contract. General-path promotion cannot substitute for the relevant
+manga-style run, and a manga-style run for one intent cannot promote the other.
+
 An explicit later user rejection may supersede the effective promotion without
 changing the immutable blind artifacts. Append a result-hash-bound event to
 `human-feedback.jsonl`, name the affected case, variant, and critical category,
@@ -172,6 +184,15 @@ request, an official setting sheet whose shot facets do not match the request
 must be prepared as the smallest focused face/view crop. Pre-generation
 validation rejects the uncropped sheet; a character-style image cannot replace
 this identity evidence.
+For any schema-5 `new` task carrying `brief.view_angle`, an uncropped official
+identity reference must carry the exact controlled `view-angle:*` tag or its
+documented shot-facet equivalent. The selected character-style row must cover
+the same angle. Pre-generation validation rejects a mismatched identity or
+character-style row; a general front or upper-body match is not profile coverage.
+An image-level view tag on a multi-character panel is not subject-bound evidence:
+when an unrequested co-character is present, it cannot prove that the focal
+character owns the tagged view. Record coverage as insufficient unless a focused
+crop or structured subject-view association removes that ambiguity.
 
 For a strictly local microfix, the prepared target may be a task-local context
 crop of the accepted source target. Record the original target path and hash,
@@ -195,12 +216,21 @@ New tasks use:
 
 - `brief.json` schema 5 with `intent`, `parent_task_id`, `change_category`,
   `change_request`, optional `change_scope`, optional
-  `change_scope_schema_version`, optional `shot`, optional `content_need`, and
+  `change_scope_schema_version`, optional `shot`, optional `view_angle`, optional `content_need`, and
   `content_references`. It may also declare `props`, exact `prop_forms`, and
   `dominant_scene_materials`. Every current `new` task declares structured
   `reference_strategy` schema 1 with `mode: split-domain`, required character and
   scene style scopes, and coverage-gated canonical scene style. New tasks persist the planner's explicit `--shot`;
   legacy briefs without it remain valid.
+  `shot` stores camera distance or panel function; `view_angle` separately stores
+  character direction such as `front`, `three-quarter-front`, or `profile`.
+  Historical briefs with only `shot` remain valid. New manga briefs also declare
+  optional-compatible `rendering_map` schema 1:
+  character resolution/grouping/quiet zones, focal/near/middle/far scene planes,
+  paper-white placement, and paper-white/flat-black/middle-tone hierarchy. It is
+  a positive rendering plan compiled from the request and selected scope, not a
+  reference selector or new authority source. Historical briefs without it
+  remain valid.
 - `reference-manifest.json` schema 1.
 - `qa.json` schema 2 for new split-domain tasks. It contains exactly six required
   acceptance dimensions: character identity, character style, scene identity,
@@ -351,10 +381,14 @@ style-layer `HIT` resolves rendering only and never counts as a content-layer
 selected-medium style evidence. The selected content reference must have one
 non-empty exact `focus`, and the normal budget is one image.
 
-Start identity and ordinary content layers with exact subject + form + shot. If
-the shot is empty or insufficient, remove only the shot. Never broaden identity
-or content across form. Character-style retrieval uses the hard domain and a
-preferred focal form but no action or scene score. Scene-style retrieval uses
+Start identity and ordinary content layers with exact subject + form + shot and,
+when declared, exact view angle. If the camera-distance shot is insufficient,
+remove only that shot while retaining view angle. A viewless identity fallback
+may be inspected only to prepare the smallest focused crop of the required view;
+it never counts as view coverage. Never broaden identity or content across form.
+Character-style retrieval uses the hard domain and a preferred focal form but no
+action or scene score; a declared view angle is a strong applicability signal and
+the selected character anchor must visibly cover it. Scene-style retrieval uses
 the hard scene domain and only
 scene, background, weather and distance-detail traits. Requested shot is a soft
 scene-rendering score only: it must not eliminate a closer material, weather or

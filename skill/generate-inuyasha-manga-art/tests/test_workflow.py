@@ -20,6 +20,7 @@ from benchmark_reference_retrieval import (
     first_relevant_rank,
     load_dataset,
     metric_summary,
+    search_command,
 )
 from browse_curated_styles import hard_facet_filters
 from composite_local_microfix import composite_local_edit, outside_edit_box_equal
@@ -30,9 +31,10 @@ from continue_art_task import (
     recorded_attempt_source,
     scoped_style_from_ancestry,
 )
+from image_sheet import build_style_comparison_sheet
 from init_art_task import main as init_art_task_main
 from init_art_task import qa_items
-from plan_art_task import infer_prop_forms
+from plan_art_task import character_style_fallbacks, infer_prop_forms
 from plan_art_task import main as plan_art_task_main
 from preference_profile import write_profile
 from prepare_generation_submission import (
@@ -67,6 +69,7 @@ from start_response_window import main as start_response_window_main
 from task_workflow import (
     CHANGE_CATEGORIES,
     CHANGE_SCOPE_SCHEMA_VERSION,
+    build_rendering_map,
     character_style_assignments,
     character_style_coverage_failures,
     compile_prompt,
@@ -78,12 +81,14 @@ from task_workflow import (
     qa_acceptance_failures,
     reference_performance,
     reference_strategy_failures,
+    rendering_map_failures,
     scoped_style_failures,
     style_scope_for_entry,
 )
 from technical_failures import transport_retry_exhausted
 from validate_art_task import (
     candidate_source_failures,
+    character_style_view_coverage_failures,
     consecutive_technical_errors,
     crop_derives_from_source,
     identity_focus_failures,
@@ -99,6 +104,7 @@ from validate_workflow import identity_ledger_failures
 from workflow_common import (
     CONFIG_PATH,
     annotation_shot_types,
+    certified_style_anchor_rank,
     eligible_reference_roles,
     infer_canonical_scene,
     infer_retrieval_traits,
@@ -223,6 +229,13 @@ class MetadataTests(unittest.TestCase):
         self.assertEqual(
             retrieval_traits_for_domain(traits, "scene"),
             ["background:architecture", "background:night", "effect-type:rain"],
+        )
+
+    def test_character_style_keeps_view_angle_but_drops_action_and_scene(self) -> None:
+        traits = infer_retrieval_traits("戈薇在雨夜侧身托住灯笼")
+        self.assertEqual(
+            retrieval_traits_for_domain(traits, "character-style"),
+            ["view-angle:profile"],
         )
 
     def test_canonical_scene_inference_is_exact_and_named(self) -> None:
@@ -451,6 +464,60 @@ class MetadataTests(unittest.TestCase):
             role="rendering",
         )
         self.assertGreater(same_form_score, unrelated_shot_score)
+
+    def test_exact_view_angle_outranks_mismatched_camera_distance_anchor(self) -> None:
+        base = {
+            "filename_terms": [],
+            "subjects": ["戈薇"],
+            "subject_forms": {"戈薇": ["default-form"]},
+            "folder_tags": [],
+            "content_label": "",
+            "relative_path": "reference.png",
+            "note": "",
+            "eligible_roles": ["rendering"],
+        }
+        profile_score, profile_reasons = retrieval_relevance(
+            {
+                **base,
+                "tags": ["view-angle:profile"],
+                "shot_types": ["two-shot"],
+            },
+            preferred_subject_forms=[("戈薇", "default-form")],
+            shots=["upper-body"],
+            view_angles=["profile"],
+            role="rendering",
+        )
+        front_score, front_reasons = retrieval_relevance(
+            {
+                **base,
+                "tags": ["view-angle:front"],
+                "shot_types": ["upper-body"],
+            },
+            preferred_subject_forms=[("戈薇", "default-form")],
+            shots=["upper-body"],
+            view_angles=["profile"],
+            role="rendering",
+        )
+        self.assertGreater(profile_score, front_score)
+        self.assertIn("view angle exact: profile", profile_reasons)
+        self.assertIn("view angle mismatch: profile", front_reasons)
+        ambiguous_score, ambiguous_reasons = retrieval_relevance(
+            {
+                **base,
+                "subjects": ["犬夜叉", "戈薇"],
+                "tags": ["view-angle:profile"],
+                "shot_types": ["two-shot"],
+            },
+            preferred_subject_forms=[("戈薇", "default-form")],
+            shots=["upper-body"],
+            view_angles=["profile"],
+            role="rendering",
+        )
+        self.assertLess(ambiguous_score, profile_score)
+        self.assertIn(
+            "view angle ambiguous across co-occurring subjects: profile",
+            ambiguous_reasons,
+        )
 
     def test_single_character_style_prefers_focused_panel_softly(self) -> None:
         base = {
@@ -1804,6 +1871,118 @@ class IntentWorkflowTests(unittest.TestCase):
             [],
         )
 
+    def test_declared_profile_requires_matching_identity_or_focused_crop(self) -> None:
+        brief = {
+            "schema_version": 5,
+            "intent": "new",
+            "shot": "upper-body",
+            "view_angle": "profile",
+        }
+        row = {
+            "item_id": "official:file:front-kagome",
+            "tags": json.dumps(["official", "setting-sheet", "view-angle:front"]),
+            "shot_types": json.dumps(["upper-body"]),
+        }
+        failures = identity_focus_failures(brief, row, {"crop_box": None})
+        self.assertEqual(len(failures), 1)
+        self.assertIn("requested view angle profile", failures[0])
+        self.assertEqual(
+            identity_focus_failures(
+                brief,
+                row,
+                {"crop_box": [10, 10, 100, 100], "focus": "戈薇侧脸"},
+            ),
+            [],
+        )
+
+    def test_declared_profile_blocks_mismatched_character_style(self) -> None:
+        brief = {
+            "schema_version": 5,
+            "intent": "new",
+            "view_angle": "profile",
+            "characters": ["戈薇"],
+        }
+        front = {
+            "item_id": "manga-curated:file:front-kagome",
+            "reference_domain": "character-style",
+            "subjects": json.dumps(["戈薇"]),
+            "tags": json.dumps(["view-angle:front"]),
+            "shot_types": json.dumps(["upper-body"]),
+        }
+        profile = {
+            **front,
+            "item_id": "manga-curated:file:profile-kagome",
+            "tags": json.dumps(["view-angle:profile"]),
+        }
+        entry = {"role": "style"}
+        self.assertEqual(
+            len(character_style_view_coverage_failures(brief, [(front, entry)])),
+            1,
+        )
+        self.assertEqual(
+            character_style_view_coverage_failures(brief, [(profile, entry)]),
+            [],
+        )
+        general_profile = {
+            **profile,
+            "subjects": json.dumps(["珊瑚"]),
+        }
+        self.assertEqual(
+            character_style_view_coverage_failures(
+                brief, [(general_profile, entry)]
+            ),
+            [],
+        )
+        ambiguous = {
+            **profile,
+            "subjects": json.dumps(["犬夜叉", "戈薇"]),
+        }
+        ambiguous_failures = character_style_view_coverage_failures(
+            brief, [(ambiguous, entry)]
+        )
+        self.assertEqual(len(ambiguous_failures), 1)
+        self.assertIn("multi-character panel", ambiguous_failures[0])
+        self.assertEqual(
+            character_style_view_coverage_failures(
+                brief,
+                [
+                    (
+                        ambiguous,
+                        {
+                            "role": "style",
+                            "crop_box": [10, 10, 80, 100],
+                            "focus": "戈薇侧脸",
+                        },
+                    )
+                ],
+            ),
+            [],
+        )
+        self.assertEqual(
+            len(
+                character_style_view_coverage_failures(
+                    brief,
+                    [
+                        (
+                            ambiguous,
+                            {
+                                "role": "style",
+                                "crop_box": [10, 10, 80, 100],
+                                "focus": "",
+                            },
+                        )
+                    ],
+                )
+            ),
+            1,
+        )
+        self.assertEqual(
+            character_style_view_coverage_failures(
+                brief, [(front, entry), (general_profile, entry)]
+            ),
+            [],
+        )
+
     def test_retry_limit_depends_on_failures_not_elapsed_time(self) -> None:
         self.assertFalse(technical_retry_limit_reached(0, 1))
         self.assertFalse(technical_retry_limit_reached(1, 1))
@@ -1995,6 +2174,36 @@ class IntentWorkflowTests(unittest.TestCase):
                     "composition_integration",
                 ],
             )
+
+    def test_new_task_persists_view_angle_separately_from_shot(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            arguments = [
+                "init_art_task.py",
+                "--workflow-root",
+                directory,
+                "--slug",
+                "kagome-profile-fields",
+                "--medium",
+                "manga",
+                "--request",
+                "戈薇侧身托住灯笼",
+                "--identity-form",
+                "戈薇=default-form",
+                "--shot",
+                "upper-body",
+                "--view-angle",
+                "profile",
+            ]
+            output = io.StringIO()
+            with patch("sys.argv", arguments), redirect_stdout(output):
+                self.assertEqual(init_art_task_main(), 0)
+            task_dir = Path(output.getvalue().strip().splitlines()[-1])
+            brief = json.loads((task_dir / "brief.json").read_text(encoding="utf-8"))
+            self.assertEqual(brief["shot"], "upper-body")
+            self.assertEqual(brief["view_angle"], "profile")
+            prompt = (task_dir / "prompt.md").read_text(encoding="utf-8")
+            self.assertIn("Camera distance: upper-body", prompt)
+            self.assertIn("character view angle: profile", prompt)
 
     def test_six_dimension_qa_blocks_pending_and_requires_notes(self) -> None:
         dimension_ids = [
@@ -2194,6 +2403,20 @@ class IntentWorkflowTests(unittest.TestCase):
             [("铁碎牙", "untransformed-form")],
         )
 
+    def test_kagome_profile_uses_ledger_rendering_fallback_only(self) -> None:
+        self.assertEqual(
+            character_style_fallbacks(
+                [("戈薇", "default-form")], "profile"
+            ),
+            [("珊瑚", "default-form")],
+        )
+        self.assertEqual(
+            character_style_fallbacks(
+                [("戈薇", "default-form")], "front"
+            ),
+            [],
+        )
+
     def test_continuity_plan_has_shotless_fallback_without_identity_filter(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             arguments = [
@@ -2274,10 +2497,139 @@ class IntentWorkflowTests(unittest.TestCase):
             parse_trait("scene-economy=authored-negative-space"),
             "scene-economy:authored-negative-space",
         )
+        self.assertEqual(
+            parse_trait("style-anchor=certified"),
+            "style-anchor:certified",
+        )
         self.assertNotIn(
             "scene-economy:authored-negative-space",
             retrieval_traits_for("雨夜神社", "wide-shot", medium="tv"),
         )
+
+    def test_certified_style_anchor_is_only_a_rendering_tie_breaker(self) -> None:
+        item = {"tags": ["style-anchor:certified"]}
+        self.assertEqual(
+            certified_style_anchor_rank(
+                item, role="rendering", reference_domain="character-style"
+            ),
+            1,
+        )
+        self.assertEqual(
+            certified_style_anchor_rank(
+                item, role="content", reference_domain="character-style"
+            ),
+            0,
+        )
+        self.assertEqual(
+            certified_style_anchor_rank(
+                item, role="rendering", reference_domain="identity"
+            ),
+            0,
+        )
+
+    def test_rendering_map_tracks_character_scene_depth_and_values(self) -> None:
+        brief = {
+            "medium": "manga",
+            "intent": "new",
+            "shot": "wide-shot",
+            "dominant_scene_materials": ["石阶", "巨树"],
+            "retrieval_traits": [
+                "scene-economy:authored-negative-space",
+                "detail-falloff:strong",
+            ],
+        }
+        rendering_map = build_rendering_map(brief)
+        self.assertEqual(rendering_map["schema_version"], 1)
+        self.assertEqual(rendering_map["character"]["authority"], "character-style")
+        self.assertEqual(rendering_map["scene"]["authority"], "scene-style")
+        self.assertIn("石阶, 巨树", rendering_map["scene"]["focal_plane"])
+        self.assertIn("successive depth layer", rendering_map["scene"]["far_plane"])
+        self.assertEqual(rendering_map_failures({**brief, "rendering_map": rendering_map}), [])
+        broken = json.loads(json.dumps(rendering_map))
+        broken["value_hierarchy"]["flat_black"] = ""
+        self.assertIn(
+            "brief.rendering_map.value_hierarchy.flat_black must be a non-empty string",
+            rendering_map_failures({**brief, "rendering_map": broken}),
+        )
+
+    def test_compiled_prompt_uses_stored_rendering_map(self) -> None:
+        brief = {
+            "medium": "manga",
+            "intent": "new",
+            "request": "犬夜叉站在雨后石阶上",
+            "scene": "雨后石阶",
+            "shot": "wide-shot",
+            "deliverable": "illustration",
+            "aspect_ratio": "4:5",
+            "period_mode": "classic-balanced",
+            "identity_forms": {"犬夜叉": "half-demon-form"},
+            "character_style_targets": {"犬夜叉": "half-demon-form"},
+            "prop_forms": {},
+            "invariants": ["不添加文字"],
+            "dominant_scene_materials": ["石阶", "雨幕"],
+            "retrieval_traits": [
+                "scene-economy:authored-negative-space",
+                "detail-falloff:strong",
+            ],
+        }
+        brief["rendering_map"] = build_rendering_map(brief)
+        prompt = compile_prompt(brief, {"references": []})
+        self.assertIn("Scene-aware rendering map:", prompt)
+        self.assertIn("石阶, 雨幕", prompt)
+        self.assertIn("Values: paper white", prompt)
+
+    def test_style_comparison_sheet_locks_candidate_and_style_hashes(self) -> None:
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory) / "task"
+            references = task / "references"
+            references.mkdir(parents=True)
+            candidate = task / "candidate.png"
+            style = references / "style.png"
+            Image.new("RGB", (80, 120), "white").save(candidate)
+            Image.new("RGB", (120, 80), "black").save(style)
+            brief = {
+                "task_id": "comparison-test",
+                "medium": "manga",
+                "intent": "edit",
+                "rendering_map": build_rendering_map(
+                    {
+                        "medium": "manga",
+                        "intent": "edit",
+                        "change_category": "medium",
+                        "change_scope": "character",
+                        "shot": "upper-body",
+                    }
+                ),
+            }
+            (task / "brief.json").write_text(
+                json.dumps(brief, ensure_ascii=False), encoding="utf-8"
+            )
+            (task / "reference-manifest.json").write_text(
+                json.dumps(
+                    {
+                        "references": [
+                            {
+                                "order": 2,
+                                "role": "style",
+                                "style_scope": "character",
+                                "item_id": "manga-curated:file:test",
+                                "rendered_path": str(style),
+                                "content_hash": file_hash(style),
+                                "focus": "face, hair, and fabric grouping",
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            sheet, sidecar = build_style_comparison_sheet(task, candidate)
+            self.assertTrue(sheet.is_file())
+            metadata = json.loads(sidecar.read_text(encoding="utf-8"))
+            self.assertEqual(metadata["candidate"]["sha256"], file_hash(candidate))
+            self.assertEqual(metadata["style_rows"][0]["sha256"], file_hash(style))
+            self.assertEqual(metadata["style_rows"][0]["style_scope"], "character")
 
     def test_environment_dominant_medium_shot_adds_scene_economy_traits(self) -> None:
         traits = retrieval_traits_for(
@@ -2737,6 +3089,59 @@ class IntentWorkflowTests(unittest.TestCase):
         initializer = source.split("command = [", 1)[1].split("completed =", 1)[0]
         self.assertIn('command.extend(["--shot", args.shot])', initializer)
         self.assertIn('"--prefer-subject-form"', source)
+
+    def test_planner_infers_profile_and_routes_it_to_identity_and_style(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            arguments = [
+                "plan_art_task.py",
+                "--workflow-root",
+                directory,
+                "--slug",
+                "kagome-profile-routing",
+                "--request",
+                "戈薇侧身站立，双手托住大型纸灯笼",
+                "--identity-form",
+                "戈薇=default-form",
+                "--shot",
+                "upper-body",
+            ]
+            output = io.StringIO()
+            with patch("sys.argv", arguments), redirect_stdout(output):
+                self.assertEqual(plan_art_task_main(), 0)
+            result = json.loads(output.getvalue())
+            task_dir = Path(result["task_dir"])
+            plan = json.loads(Path(result["retrieval_plan"]).read_text(encoding="utf-8"))
+            brief = json.loads((task_dir / "brief.json").read_text(encoding="utf-8"))
+            self.assertEqual(plan["schema_version"], 5)
+            self.assertEqual(plan["view_angle"], "profile")
+            self.assertEqual(
+                plan["character_style_fallbacks"],
+                [{"subject": "珊瑚", "form": "default-form"}],
+            )
+            self.assertEqual(brief["view_angle"], "profile")
+            prompt = (task_dir / "prompt.md").read_text(encoding="utf-8")
+            self.assertIn("额头到短而克制的鼻尖", prompt)
+            identity = plan["layers"][0]
+            primary = identity["primary_commands"][0]
+            self.assertEqual(primary[primary.index("--shot") + 1], "upper-body")
+            self.assertEqual(primary[primary.index("--view-angle") + 1], "profile")
+            viewless = identity["fallback_without_view_angle"][0]
+            self.assertNotIn("--view-angle", viewless)
+            character_style = plan["layers"][1]["primary_commands"][0]
+            self.assertEqual(
+                character_style[character_style.index("--view-angle") + 1],
+                "profile",
+            )
+            self.assertIn("--intent-text", character_style)
+            preferred_pairs = [
+                character_style[index + 1]
+                for index, value in enumerate(character_style)
+                if value == "--prefer-subject-form"
+            ]
+            self.assertEqual(
+                preferred_pairs,
+                ["戈薇=default-form", "珊瑚=default-form"],
+            )
 
     def test_manga_edit_preserves_two_sided_finish_band(self) -> None:
         prompt = compile_prompt(self.brief("edit"), {"references": []})
@@ -3596,6 +4001,66 @@ class IntentWorkflowTests(unittest.TestCase):
         failures = identity_ledger_failures(ledger)
         self.assertTrue(any("positive integers" in failure for failure in failures))
         self.assertTrue(any("unknown form" in failure for failure in failures))
+
+    def test_identity_ledger_validates_view_traits_and_rendering_fallbacks(self) -> None:
+        ledger = {
+            "schema_version": 1,
+            "characters": {
+                "犬夜叉": {
+                    "common": [],
+                    "forms": {"half-demon-form": []},
+                    "view_traits": "broken",
+                    "exclusions": [],
+                },
+                "戈薇": {
+                    "common": [],
+                    "forms": {"default-form": []},
+                    "view_traits": {
+                        "missing-form": {"profile": []},
+                        "default-form": {
+                            "sideways": ["侧脸"],
+                            "profile": [],
+                        },
+                    },
+                    "rendering_fallbacks": {
+                        "profile": {
+                            "不存在的人物": "default-form",
+                            "犬夜叉": "not-a-form",
+                        }
+                    },
+                    "exclusions": [],
+                },
+            },
+        }
+        failures = identity_ledger_failures(ledger)
+        self.assertTrue(any("view_traits must be an object" in item for item in failures))
+        self.assertTrue(any("unknown view angle" in item for item in failures))
+        self.assertTrue(any("at least one trait" in item for item in failures))
+        self.assertTrue(any("unknown subject" in item for item in failures))
+        self.assertTrue(any("unknown form not-a-form" in item for item in failures))
+
+    def test_retrieval_benchmark_can_run_real_style_browser(self) -> None:
+        case = {
+            "id": "profile-browser",
+            "tool": "browse_curated_styles",
+            "intent_text": "戈薇侧身托住灯笼",
+            "query": {
+                "medium": "manga",
+                "reference_domain": "character-style",
+                "role": "rendering",
+                "prefer_subject_form": [
+                    "戈薇=default-form",
+                    "珊瑚=default-form",
+                ],
+                "view_angle": "profile",
+                "shot": ["upper-body"],
+            },
+            "relevant_item_ids": ["manga-curated:file:profile-sango"],
+        }
+        command = search_command(case, Path("/tmp/workflow"), 3)
+        self.assertIn("browse_curated_styles.py", command[1])
+        self.assertEqual(command.count("--prefer-subject-form"), 2)
+        self.assertEqual(command[command.index("--view-angle") + 1], "profile")
 
     def test_archived_attempts_do_not_affect_reference_ranking(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

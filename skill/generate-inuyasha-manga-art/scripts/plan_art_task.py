@@ -10,10 +10,11 @@ import sys
 from pathlib import Path
 
 from init_art_task import parse_identity_form
-from task_workflow import IDENTITY_LEDGERS_PATH, read_json
+from task_workflow import IDENTITY_LEDGERS_PATH, build_rendering_map, read_json
 from workflow_common import (
     FORM_VALUES,
     SHOT_VALUES,
+    VIEW_ANGLE_VALUES,
     atomic_write_json,
     infer_canonical_scene,
     load_config,
@@ -62,6 +63,28 @@ def infer_prop_forms(request: str) -> list[tuple[str, str]]:
     return inferred
 
 
+def character_style_fallbacks(
+    identity_forms: list[tuple[str, str]], view_angle: str | None
+) -> list[tuple[str, str]]:
+    """Return ledger-declared rendering-only fallback subjects for one view."""
+    if not view_angle or not IDENTITY_LEDGERS_PATH.is_file():
+        return []
+    profiles = read_json(IDENTITY_LEDGERS_PATH).get("characters", {})
+    fallbacks: list[tuple[str, str]] = []
+    for character, _ in identity_forms:
+        mapping = profiles.get(character, {}).get("rendering_fallbacks", {})
+        for subject, form in (mapping.get(view_angle) or {}).items():
+            if form not in FORM_VALUES:
+                raise SystemExit(
+                    f"Invalid rendering fallback form for {character}: "
+                    f"{subject}={form}"
+                )
+            pair = (subject, form)
+            if pair not in identity_forms and pair not in fallbacks:
+                fallbacks.append(pair)
+    return fallbacks
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workflow-root", type=Path)
@@ -90,6 +113,14 @@ def main() -> int:
         help="Name scene-material scope that inherits the primary style anchor's economy.",
     )
     parser.add_argument("--shot", choices=SHOT_VALUES)
+    parser.add_argument(
+        "--view-angle",
+        choices=VIEW_ANGLE_VALUES,
+        help=(
+            "Character view direction, stored separately from camera distance. "
+            "When omitted, one unambiguous explicit request cue is inferred."
+        ),
+    )
     parser.add_argument("--aspect-ratio", default="2:3 portrait")
     parser.add_argument(
         "--continuity",
@@ -148,6 +179,29 @@ def main() -> int:
         raise SystemExit("Each prop may have only one --prop-form")
     scene_materials = list(dict.fromkeys(args.scene_material))
     inferred_traits = retrieval_traits_for(args.request, args.shot, medium=args.medium)
+    inferred_view_angles = list(
+        dict.fromkeys(
+            trait.removeprefix("view-angle:")
+            for trait in inferred_traits
+            if trait.startswith("view-angle:")
+        )
+    )
+    if args.view_angle and inferred_view_angles and any(
+        value != args.view_angle for value in inferred_view_angles
+    ):
+        raise SystemExit(
+            "--view-angle conflicts with an explicit view direction in --request"
+        )
+    if not args.view_angle and len(inferred_view_angles) > 1:
+        raise SystemExit(
+            "The request contains multiple view directions; pass one explicit "
+            "--view-angle or split the image into separate tasks"
+        )
+    view_angle = args.view_angle or (
+        inferred_view_angles[0] if inferred_view_angles else None
+    )
+    if view_angle and f"view-angle:{view_angle}" not in inferred_traits:
+        inferred_traits.append(f"view-angle:{view_angle}")
     config = load_config()
     root = workflow_root(config, args.workflow_root)
     check = subprocess.run(
@@ -196,6 +250,8 @@ def main() -> int:
     ]
     if args.shot:
         command.extend(["--shot", args.shot])
+    if view_angle:
+        command.extend(["--view-angle", view_angle])
     for character, form in args.identity_form:
         if form not in FORM_VALUES:
             raise SystemExit(f"Unsupported form: {form}")
@@ -223,8 +279,10 @@ def main() -> int:
     launcher = sys.executable
     official_commands = []
     official_fallback_commands = []
+    official_view_fallback_commands = []
+    official_unfaceted_fallback_commands = []
     for character, form in args.identity_form:
-        primary = [
+        base = [
             launcher,
             str(SCRIPTS / "search_reference_index.py"),
             "--source",
@@ -238,12 +296,23 @@ def main() -> int:
             "--limit",
             str(args.candidate_limit),
         ]
-        parts = list(primary)
+        parts = list(base)
         if args.shot:
             parts.extend(["--shot", args.shot])
+        if view_angle:
+            parts.extend(["--view-angle", view_angle])
         official_commands.append(parts)
         if args.shot:
-            official_fallback_commands.append(primary)
+            shotless = list(base)
+            if view_angle:
+                shotless.extend(["--view-angle", view_angle])
+            official_fallback_commands.append(shotless)
+        if view_angle:
+            viewless = list(base)
+            if args.shot:
+                viewless.extend(["--shot", args.shot])
+            official_view_fallback_commands.append(viewless)
+            official_unfaceted_fallback_commands.append(list(base))
     for prop, form in prop_forms:
         official_commands.append(
             [
@@ -268,9 +337,12 @@ def main() -> int:
     common = []
     if args.shot:
         common.extend(["--shot", args.shot])
+    rendering_fallbacks = character_style_fallbacks(
+        args.identity_form, view_angle
+    )
     preferred_subject_forms = [
         value
-        for character, form in args.identity_form
+        for character, form in [*args.identity_form, *rendering_fallbacks]
         for value in ("--prefer-subject-form", f"{character}={form}")
     ]
     style_base = [
@@ -282,8 +354,12 @@ def main() -> int:
         "rendering",
         "--reference-domain",
         "character-style",
+        "--intent-text",
+        args.request,
         *preferred_subject_forms,
     ]
+    if view_angle:
+        style_base.extend(["--view-angle", view_angle])
     style_primary = [
         *style_base,
         *common,
@@ -307,11 +383,16 @@ def main() -> int:
             "prepare_arguments": [],
             "primary_commands": official_commands,
             "fallback_without_shot": official_fallback_commands,
+            "fallback_without_view_angle": official_view_fallback_commands,
+            "fallback_without_shot_or_view_angle": official_unfaceted_fallback_commands,
             "selection_budget": (
                 "inspect at most three official setting-sheet candidates per focal "
                 "character; choose one shot-matched source or the smallest focused "
                 "crop that preserves the required face, form, costume, or construction; "
-                "schema-5 face/profile/close-up/medium-shot tasks must crop an unmatched "
+                "a declared view angle must match an exact controlled view facet. "
+                "Viewless fallbacks may be inspected only to prepare the smallest "
+                "focused crop and never count as view coverage; schema-5 "
+                "face/profile/close-up/medium-shot tasks must crop an unmatched "
                 "setting sheet before pre-generation validation; "
                 "each declared canonical prop requires exact-form official coverage and "
                 "may not be inferred from a style screenshot"
@@ -329,6 +410,11 @@ def main() -> int:
                 "inspection records that the first is insufficient for a visible "
                 "character-rendering relationship. These inputs control only linework, "
                 "face/hair mark simplification, fabric marks, and garment value hierarchy. "
+                "A declared view angle is a strong applicability signal and must be "
+                "visibly covered before selection; it never grants pose authority. "
+                "Ledger-declared rendering fallbacks may prefer a compatible same-view "
+                "subject only for contour and face/hair mark-making; official evidence "
+                "still owns the focal character's identity. "
                 "Official evidence remains the identity authority; ignore action, "
                 "interaction, expression, framing, and scene similarity."
             ),
@@ -574,7 +660,7 @@ def main() -> int:
         )
 
     plan = {
-        "schema_version": 4,
+        "schema_version": 5,
         "task": task_dir.name,
         "gate": "Run one layer, inspect candidates, record HIT/MISS/INSUFFICIENT, then advance.",
         "mode": (
@@ -586,6 +672,11 @@ def main() -> int:
         ),
         "candidate_limit": args.candidate_limit,
         "inferred_retrieval_traits": inferred_traits,
+        "view_angle": view_angle,
+        "character_style_fallbacks": [
+            {"subject": subject, "form": form}
+            for subject, form in rendering_fallbacks
+        ],
         "prop_forms": dict(prop_forms),
         "dominant_scene_materials": scene_materials,
         "timing_policy": {
@@ -628,6 +719,9 @@ def main() -> int:
             if args.continuity
             else f"two-layer-{args.medium}-fast"
         )
+    rendering_map = build_rendering_map(brief)
+    if rendering_map is not None:
+        brief["rendering_map"] = rendering_map
     atomic_write_json(brief_path, brief)
     atomic_write_json(task_dir / "retrieval-plan.json", plan)
     print(
