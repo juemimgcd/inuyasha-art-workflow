@@ -9,7 +9,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from workflow_common import atomic_write_text, resolve_recorded_path
+from workflow_common import (
+    atomic_write_text,
+    eligible_character_style_candidate,
+    resolve_recorded_path,
+)
 
 BRIEF_SCHEMA_VERSION = 5
 RESULT_SCHEMA_VERSION = 3
@@ -141,15 +145,21 @@ def build_rendering_map(brief: dict[str, Any]) -> dict[str, Any] | None:
         )
         middle_plane = "group repeated forms into a few outline, black, and tone masses"
         far_plane = "reduce each successive depth layer to fewer internal marks"
-        paper_white = "reserve contiguous open sky, mist, water, or ground as paper white"
+        paper_white = (
+            "reserve contiguous open sky, mist, water, or ground as paper white"
+        )
     elif character_focal:
-        focal_plane = "fully resolve the focal face, hands, contact, and costume overlaps"
+        focal_plane = (
+            "fully resolve the focal face, hands, contact, and costume overlaps"
+        )
         near_plane = f"state only the setting cues needed to locate {material_phrase}"
         middle_plane = "group the remaining setting into a few quiet shapes"
         far_plane = "leave distant setting open or in one restrained tone"
         paper_white = "protect clean paper around the focal face and silhouette"
     else:
-        focal_plane = "fully resolve the requested action, contact, and spatial relationship"
+        focal_plane = (
+            "fully resolve the requested action, contact, and spatial relationship"
+        )
         near_plane = f"state {material_phrase} with selective structural marks"
         middle_plane = "group nonfocal forms into clear silhouettes and one tone family"
         far_plane = "let distant forms lose interior marks visibly"
@@ -227,9 +237,7 @@ def rendering_map_failures(brief: dict[str, Any]) -> list[str]:
             "scene-style",
             "target",
         }:
-            failures.append(
-                f"brief.rendering_map.{section}.authority is invalid"
-            )
+            failures.append(f"brief.rendering_map.{section}.authority is invalid")
     return failures
 
 
@@ -264,7 +272,9 @@ def qa_acceptance_failures(qa: Any) -> list[str]:
     }
     expected = {dimension_id for dimension_id, _ in QA_DIMENSIONS}
     if set(by_id) != expected:
-        failures.append("qa.dimensions must contain exactly the six required dimensions")
+        failures.append(
+            "qa.dimensions must contain exactly the six required dimensions"
+        )
     for dimension_id, label in QA_DIMENSIONS:
         row = by_id.get(dimension_id) or {}
         status = row.get("status")
@@ -299,6 +309,8 @@ def qa_acceptance_failures(qa: Any) -> list[str]:
                 f"{check.get('check', '[unnamed check]')}"
             )
     return failures
+
+
 DEFAULT_NEW_PRE_GENERATION_TARGET_SECONDS = 90
 DEFAULT_EDIT_PRE_GENERATION_TARGET_SECONDS = 30
 DEFAULT_POST_GENERATION_TARGET_SECONDS = 30
@@ -442,8 +454,7 @@ def scoped_style_failures(
         or contract_version != CHANGE_SCOPE_SCHEMA_VERSION
     ):
         failures.append(
-            "brief.change_scope_schema_version must be "
-            f"{CHANGE_SCOPE_SCHEMA_VERSION}"
+            f"brief.change_scope_schema_version must be {CHANGE_SCOPE_SCHEMA_VERSION}"
         )
         return failures
     if scope is not None and scope not in CHANGE_SCOPES:
@@ -511,7 +522,7 @@ def _reference_lines(manifest: dict[str, Any]) -> list[str]:
 def character_style_assignments(
     brief: dict[str, Any], manifest: dict[str, Any]
 ) -> dict[str, dict[str, Any]]:
-    """Prefer exact style evidence without turning rendering into identity lookup."""
+    """Require exact focal character-form style evidence for current tasks."""
     targets = brief.get("character_style_targets") or {}
     style_entries = [
         (index, entry)
@@ -519,6 +530,13 @@ def character_style_assignments(
         if entry.get("role") == "style" and entry.get("style_scope") == "character"
     ]
     assignments: dict[str, dict[str, Any]] = {}
+    strict_exact = brief.get("schema_version") == 5
+    if strict_exact:
+        style_entries = [
+            (index, entry)
+            for index, entry in style_entries
+            if strict_character_style_entry(entry, targets)
+        ]
     for character, form in targets.items():
         key = f"{character}={form}"
         exact = [
@@ -535,6 +553,9 @@ def character_style_assignments(
         if exact:
             tier = "exact-character-form"
             inputs = exact
+        elif strict_exact:
+            tier = "missing-exact-character-form"
+            inputs = []
         elif same_character:
             tier = "same-character-compatible"
             inputs = same_character
@@ -543,6 +564,19 @@ def character_style_assignments(
             inputs = [index for index, _ in style_entries]
         assignments[key] = {"inputs": inputs, "tier": tier}
     return assignments
+
+
+def strict_character_style_entry(
+    entry: dict[str, Any], targets: dict[str, str]
+) -> bool:
+    """Require every depicted known character to be a requested exact form."""
+    return eligible_character_style_candidate(
+        entry,
+        [
+            (str(subject), str(form))
+            for subject, form in targets.items()
+        ],
+    )
 
 
 def character_style_coverage(
@@ -559,11 +593,22 @@ def character_style_coverage_failures(
     brief: dict[str, Any], manifest: dict[str, Any]
 ) -> list[str]:
     coverage = character_style_coverage(brief, manifest)
-    return [
+    failures = [
         f"missing selected-medium character-style evidence: {target}"
         for target, inputs in coverage.items()
         if not inputs
     ]
+    if brief.get("schema_version") == 5:
+        targets = brief.get("character_style_targets") or {}
+        failures.extend(
+            f"ineligible character-style evidence at Input {index}: "
+            "contains an unrequested character or wrong form"
+            for index, entry in enumerate(manifest.get("references", []), 1)
+            if entry.get("role") == "style"
+            and entry.get("style_scope") == "character"
+            and not strict_character_style_entry(entry, targets)
+        )
+    return failures
 
 
 def _character_style_mapping_clause(
@@ -578,6 +623,7 @@ def _character_style_mapping_clause(
         input_labels = ", ".join(f"Input {index}" for index in inputs) or "MISSING"
         tier = {
             "exact-character-form": "exact",
+            "missing-exact-character-form": "missing-exact",
             "same-character-compatible": "same-character",
             "general-selected-medium": "general",
         }[assignment["tier"]]
@@ -586,8 +632,10 @@ def _character_style_mapping_clause(
         "\n\nPer-character rendering map:\n"
         + "\n".join(lines)
         + "\nMapped inputs control selected-medium contours, marks, folds, and values. "
-        "Exact is preferred. Compatible/general never controls identity, form, costume, "
-        "or anatomy; official does. MISSING blocks the character-style layer."
+        "Current tasks require an exact requested character-form row for every focal "
+        "character; another character or form is never a rendering substitute. "
+        "Official evidence separately controls identity, form, costume, and anatomy. "
+        "MISSING blocks the character-style layer."
     )
 
 
@@ -696,10 +744,7 @@ def _manga_finish_calibration(
             "controls scene materials, negative space, background density, and scene "
             "black-white/tone grouping; do not recalibrate or redraw that scene domain."
         )
-    if (
-        change_category in SCOPED_STYLE_CHANGE_CATEGORIES
-        and change_scope == "scene"
-    ):
+    if change_category in SCOPED_STYLE_CHANGE_CATEGORIES and change_scope == "scene":
         return (
             "\nScene-scope manga calibration: the selected scene-style reference "
             "controls only environmental material abstraction, negative space, "
@@ -758,9 +803,7 @@ def _manga_finish_calibration(
 
 def _contact_topology_clause(brief: dict[str, Any]) -> str:
     """Compile explicit count and visibility requirements for named hand contact."""
-    text = " ".join(
-        str(brief.get(key) or "") for key in ("request", "change_request")
-    )
+    text = " ".join(str(brief.get(key) or "") for key in ("request", "change_request"))
     if "双手" not in text:
         return ""
     return (
@@ -1029,9 +1072,7 @@ def compile_prompt(brief: dict[str, Any], manifest: dict[str, Any]) -> str:
         brief.get("change_category"),
         brief.get("change_scope"),
     )
-    manga_wide_edit_lock = _manga_wide_edit_lock(
-        medium, intent, brief.get("shot")
-    )
+    manga_wide_edit_lock = _manga_wide_edit_lock(medium, intent, brief.get("shot"))
     change_category = brief.get("change_category")
     change_scope = brief.get("change_scope")
     scoped_style_change = (
@@ -1143,9 +1184,7 @@ Use the target as the exact continuity and composition authority. Change only wh
         construction = _medium_construction(medium, shot)
         deliverable = brief.get("deliverable", "illustration")
         if medium == "manga" and deliverable == "illustration":
-            deliverable = (
-                "single borderless serialized-manga panel, not a standalone illustration"
-            )
+            deliverable = "single borderless serialized-manga panel, not a standalone illustration"
         goal_line = f"Goal: {request}\n" if scene.strip() != request else ""
         text = f"""# Generation specification
 

@@ -17,6 +17,7 @@ from workflow_common import (
     SHOT_VALUES,
     VIEW_ANGLE_VALUES,
     certified_style_anchor_rank,
+    eligible_character_style_candidate,
     library_signature,
     load_config,
     open_database,
@@ -41,6 +42,16 @@ def parse_preferred_subject_form(value: str) -> tuple[str, str]:
             "preferred subject form must look like CHARACTER=FORM"
         )
     return subject, form
+
+
+def candidate_sort_key(candidate: dict) -> tuple:
+    """Return the stable inspected-candidate order."""
+    return (
+        -candidate["score"],
+        -int(candidate["certified_style_anchor"]),
+        -candidate["feedback_rank"],
+        candidate["relative_path"].casefold(),
+    )
 
 
 def hard_facet_filters(
@@ -129,8 +140,9 @@ def parse_args() -> argparse.Namespace:
         type=parse_preferred_subject_form,
         default=[],
         help=(
-            "Small boost for a rendering candidate that depicts a focal "
-            "character-form; never hard-filters or grants identity authority."
+            "Require exact focal character-form candidates for character-style "
+            "rendering, then rank only inside that eligible set; this grants "
+            "no identity authority."
         ),
     )
     parser.add_argument("--shot", action="append", default=[], choices=SHOT_VALUES)
@@ -200,9 +212,7 @@ def main() -> int:
             else None
         ),
     )
-    intent_traits = retrieval_traits_for_domain(
-        inferred_traits, args.reference_domain
-    )
+    intent_traits = retrieval_traits_for_domain(inferred_traits, args.reference_domain)
     rendering_conflicts = (
         style_conflict_subjects(args.intent_text)
         if args.role == "rendering" and args.reference_domain != "scene"
@@ -279,7 +289,11 @@ def main() -> int:
             parameters.extend(values)
     pairs: list[tuple[str, str]] = []
     if args.subject and args.form:
-        if len(args.subject) > 1 and len(args.form) > 1 and len(args.subject) != len(args.form):
+        if (
+            len(args.subject) > 1
+            and len(args.form) > 1
+            and len(args.subject) != len(args.form)
+        ):
             raise SystemExit(
                 "Multiple --subject and --form values must be one shared form or equal-length pairs"
             )
@@ -302,13 +316,25 @@ def main() -> int:
         clauses.append(f"({joiner.join(pair_clauses)})")
     elif args.form:
         clauses.append(
-            "(" + " OR ".join(
+            "("
+            + " OR ".join(
                 "EXISTS (SELECT 1 FROM json_each(forms) AS facet "
                 "WHERE facet.value = ? COLLATE NOCASE)"
                 for _ in args.form
-            ) + ")"
+            )
+            + ")"
         )
         parameters.extend(args.form)
+
+    strict_character_style = bool(
+        args.role == "rendering" and args.reference_domain == "character-style"
+    )
+    requested_character_style_forms = args.prefer_subject_form or pairs
+    if strict_character_style and not requested_character_style_forms:
+        raise SystemExit(
+            "Character-style rendering requires at least one exact requested "
+            "character-form via --prefer-subject-form or --subject with --form"
+        )
 
     connection = open_database(database, read_only=True)
     rows = connection.execute(
@@ -324,9 +350,6 @@ def main() -> int:
         """,
         parameters,
     ).fetchall()
-    total = connection.execute(
-        f"SELECT COUNT(*) FROM items WHERE {' AND '.join(clauses)}", parameters
-    ).fetchone()[0]
     connection.close()
     if not rows:
         raise SystemExit(f"No images from {source_id} matched this page or query")
@@ -346,6 +369,10 @@ def main() -> int:
             "eligible_roles",
         ):
             candidate[field] = json.loads(candidate[field])
+        if strict_character_style and not eligible_character_style_candidate(
+            candidate, requested_character_style_forms
+        ):
+            continue
         candidate["score"], candidate["match_reasons"] = retrieval_relevance(
             candidate,
             query_terms=scoring_terms,
@@ -411,14 +438,8 @@ def main() -> int:
         )
         candidates.append(candidate)
 
-    candidates.sort(
-        key=lambda candidate: (
-            -candidate["score"],
-            -int(candidate["certified_style_anchor"]),
-            -candidate["feedback_rank"],
-            candidate["relative_path"].casefold(),
-        )
-    )
+    candidates.sort(key=candidate_sort_key)
+    total = len(candidates)
     candidates = candidates[args.offset : args.offset + args.limit]
     if not candidates:
         raise SystemExit(f"No images from {source_id} matched this page or query")

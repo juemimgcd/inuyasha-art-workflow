@@ -19,6 +19,7 @@ from workflow_common import (
     VIEW_ANGLE_SHOT_MAP,
     VIEW_ANGLE_VALUES,
     certified_style_anchor_rank,
+    eligible_character_style_candidate,
     library_signature,
     load_config,
     open_database,
@@ -289,6 +290,19 @@ def main() -> int:
             for subject, form in zip(args.subject, args.form):
                 paired_forms.setdefault(subject, []).append(form)
     add_subject_form_groups(paired_forms)
+    strict_character_style = bool(
+        args.role == "rendering" and args.reference_domain == "character-style"
+    )
+    requested_character_style_forms = [
+        (subject, form)
+        for subject, forms in paired_forms.items()
+        for form in forms
+    ]
+    if strict_character_style and not requested_character_style_forms:
+        raise SystemExit(
+            "Character-style rendering requires at least one exact requested "
+            "character-form via --subject-form or --subject with --form"
+        )
     if args.form and not args.subject:
         add_json_facet("forms", args.form, "any")
     if args.exclude_form and args.subject:
@@ -378,6 +392,10 @@ def main() -> int:
             "eligible_roles",
         ):
             item[field] = json.loads(item[field])
+        if strict_character_style and not eligible_character_style_candidate(
+            item, requested_character_style_forms
+        ):
+            continue
         item.pop("search_text", None)
         item["score"], item["match_reasons"] = retrieval_relevance(
             item,

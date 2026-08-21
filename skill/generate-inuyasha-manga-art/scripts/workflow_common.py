@@ -142,7 +142,7 @@ KNOWN_SUBJECTS = (
 CHARACTER_SUBJECTS = frozenset(
     subject
     for subject in KNOWN_SUBJECTS
-    if subject not in {"铁碎牙", "天生牙", "食骨之井", "普通人物", "和尚", "场景"}
+    if subject not in {"铁碎牙", "天生牙", "食骨之井", "场景"}
 )
 REFERENCE_DOMAINS = (
     "identity",
@@ -164,6 +164,46 @@ SCENE_ECONOMY_CUE_PREFIXES = (
     "effect-type:",
     "content-object:",
 )
+
+
+def eligible_character_style_candidate(
+    item: dict[str, Any], requested_subject_forms: Iterable[tuple[str, str]]
+) -> bool:
+    """Return whether a style candidate depicts only requested exact forms.
+
+    Character and form are hard eligibility constraints for character-style
+    rendering. Ranking may order the eligible set by view, shot, or feedback,
+    but an unrequested known character or a wrong requested form is never a
+    candidate. Canonical props and other non-character subjects are unaffected.
+    """
+    requested_pairs = list(requested_subject_forms)
+    item_forms = {
+        str(subject).casefold(): {str(value).casefold() for value in forms}
+        for subject, forms in item.get("subject_forms", {}).items()
+    }
+    requested_subjects = {subject.casefold() for subject, _ in requested_pairs}
+    requested_forms_by_subject: dict[str, set[str]] = {}
+    for subject, form in requested_pairs:
+        requested_forms_by_subject.setdefault(subject.casefold(), set()).add(
+            form.casefold()
+        )
+    known_character_subjects = {subject.casefold() for subject in CHARACTER_SUBJECTS}
+    depicted_subjects = item.get("subjects") or item_forms.keys()
+    item_character_subjects = {
+        str(subject).casefold() for subject in depicted_subjects
+    }.intersection(known_character_subjects)
+    return (
+        bool(item_character_subjects)
+        and item_character_subjects.issubset(requested_subjects)
+        and all(
+            bool(
+                item_forms.get(subject, set()).intersection(
+                    requested_forms_by_subject[subject]
+                )
+            )
+            for subject in item_character_subjects
+        )
+    )
 
 
 def load_json(path: Path) -> Any:
@@ -796,8 +836,9 @@ def infer_retrieval_traits(text: str) -> list[str]:
 def style_conflict_subjects(text: str) -> set[str]:
     """Return high-confusion subjects absent from the rendering request.
 
-    Rendering retrieval stays identity-independent: callers use these only as
-    a soft, explainable ranking penalty, never as a filter or identity boost.
+    Current character-style retrieval excludes unrequested characters before
+    ranking. These penalties remain explainable compatibility signals for
+    non-character-style and historical callers, never identity authority.
     """
     requested = infer_subjects(text)
     conflicts: set[str] = set()

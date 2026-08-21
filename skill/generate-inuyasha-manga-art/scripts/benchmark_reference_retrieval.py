@@ -11,7 +11,11 @@ import time
 from pathlib import Path
 from typing import Any
 
-from workflow_common import load_config, workflow_root
+from workflow_common import (
+    eligible_character_style_candidate,
+    load_config,
+    workflow_root,
+)
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_DATASET = SKILL_DIR / "references" / "retrieval-benchmark.json"
@@ -78,14 +82,45 @@ def load_dataset(path: Path) -> dict[str, Any]:
             raise ValueError(f"benchmark case {case_id} requires intent_text")
         relevant = case.get("relevant_item_ids")
         if not isinstance(relevant, list) or not relevant:
-            raise ValueError(
-                f"benchmark case {case_id} requires relevant_item_ids"
-            )
+            raise ValueError(f"benchmark case {case_id} requires relevant_item_ids")
         if not isinstance(case.get("query"), dict):
             raise TypeError(f"benchmark case {case_id} requires query")
+        query = case["query"]
         tool = case.get("tool", "search_reference_index")
         if tool not in SUPPORTED_TOOLS:
             raise ValueError(f"benchmark case {case_id} uses unknown tool: {tool}")
+        strict_pairs = case.get("strict_subject_forms", [])
+        if not isinstance(strict_pairs, list) or any(
+            not isinstance(pair, list)
+            or len(pair) != 2
+            or not all(isinstance(value, str) and value for value in pair)
+            for pair in strict_pairs
+        ):
+            raise ValueError(
+                f"benchmark case {case_id} strict_subject_forms must contain [subject, form] pairs"
+            )
+        if (
+            query.get("reference_domain") == "character-style"
+            and query.get("role") == "rendering"
+        ):
+            requested_pair_values = query.get("prefer_subject_form") or query.get(
+                "subject_form"
+            )
+            if not isinstance(requested_pair_values, list) or not requested_pair_values:
+                raise ValueError(
+                    f"benchmark case {case_id} character-style rendering requires "
+                    "exact requested character-form pairs"
+                )
+            requested_pairs = {
+                tuple(value.split("=", 1))
+                for value in requested_pair_values
+                if isinstance(value, str) and "=" in value
+            }
+            if requested_pairs != {tuple(pair) for pair in strict_pairs}:
+                raise ValueError(
+                    f"benchmark case {case_id} strict_subject_forms must exactly "
+                    "match its requested character-form pairs"
+                )
     return data
 
 
@@ -112,9 +147,7 @@ def metric_summary(ranks: list[int | None], ks: list[int]) -> dict[str, float]:
     return metrics
 
 
-def search_command(
-    case: dict[str, Any], root: Path, limit: int
-) -> list[str]:
+def search_command(case: dict[str, Any], root: Path, limit: int) -> list[str]:
     tool = case.get("tool", "search_reference_index")
     script = BROWSE_SCRIPT if tool == "browse_curated_styles" else SEARCH_SCRIPT
     command = [
@@ -159,12 +192,21 @@ def run_case(case: dict[str, Any], root: Path, limit: int) -> dict[str, Any]:
     returned_ids = [candidate["item_id"] for candidate in candidates]
     relevant_ids = set(case["relevant_item_ids"])
     rank = first_relevant_rank(returned_ids, relevant_ids)
+    strict_pairs = [tuple(pair) for pair in case.get("strict_subject_forms", [])]
+    strict_violations = [
+        candidate["item_id"]
+        for candidate in candidates
+        if strict_pairs
+        and not eligible_character_style_candidate(candidate, strict_pairs)
+    ]
     return {
         "id": case["id"],
         "intent_text": case["intent_text"],
         "relevant_item_ids": case["relevant_item_ids"],
         "rank": rank,
         "top_item_ids": returned_ids,
+        "strict_subject_forms": case.get("strict_subject_forms", []),
+        "strict_violations": strict_violations,
         "inferred_traits": (
             candidates[0].get("inferred_traits", []) if candidates else []
         ),
@@ -193,6 +235,11 @@ def main() -> int:
         for name, minimum in thresholds.items()
         if metrics.get(name, 0) < minimum
     ]
+    failures.extend(
+        f"{case['id']} returned ineligible character/form items: {case['strict_violations']}"
+        for case in cases
+        if case["strict_violations"]
+    )
     result = {
         "ok": not failures,
         "dataset": str(args.dataset.expanduser().resolve()),
