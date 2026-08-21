@@ -63,28 +63,6 @@ def infer_prop_forms(request: str) -> list[tuple[str, str]]:
     return inferred
 
 
-def character_style_fallbacks(
-    identity_forms: list[tuple[str, str]], view_angle: str | None
-) -> list[tuple[str, str]]:
-    """Return ledger-declared rendering-only fallback subjects for one view."""
-    if not view_angle or not IDENTITY_LEDGERS_PATH.is_file():
-        return []
-    profiles = read_json(IDENTITY_LEDGERS_PATH).get("characters", {})
-    fallbacks: list[tuple[str, str]] = []
-    for character, _ in identity_forms:
-        mapping = profiles.get(character, {}).get("rendering_fallbacks", {})
-        for subject, form in (mapping.get(view_angle) or {}).items():
-            if form not in FORM_VALUES:
-                raise SystemExit(
-                    f"Invalid rendering fallback form for {character}: "
-                    f"{subject}={form}"
-                )
-            pair = (subject, form)
-            if pair not in identity_forms and pair not in fallbacks:
-                fallbacks.append(pair)
-    return fallbacks
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workflow-root", type=Path)
@@ -161,9 +139,7 @@ def main() -> int:
     if not args.content_query and args.content_provenance != "observed-content":
         raise SystemExit("--content-provenance requires a planned content query")
     canonical_scene = infer_canonical_scene(args.request)
-    scene_query = (
-        f"scene-id:{canonical_scene['id']}" if canonical_scene else ""
-    )
+    scene_query = f"scene-id:{canonical_scene['id']}" if canonical_scene else ""
     scene_focus = (
         f"{canonical_scene['label']}的规范结构、比例、固定空间关系与漫画场景画法"
         if canonical_scene
@@ -186,8 +162,10 @@ def main() -> int:
             if trait.startswith("view-angle:")
         )
     )
-    if args.view_angle and inferred_view_angles and any(
-        value != args.view_angle for value in inferred_view_angles
+    if (
+        args.view_angle
+        and inferred_view_angles
+        and any(value != args.view_angle for value in inferred_view_angles)
     ):
         raise SystemExit(
             "--view-angle conflicts with an explicit view direction in --request"
@@ -268,9 +246,7 @@ def main() -> int:
         command.extend(["--content-query", effective_content_query])
         command.extend(["--content-focus", effective_content_focus])
         command.extend(["--content-provenance", args.content_provenance])
-        command.extend(
-            ["--content-kind", "scene" if canonical_scene else "content"]
-        )
+        command.extend(["--content-kind", "scene" if canonical_scene else "content"])
     completed = subprocess.run(command, check=True, capture_output=True, text=True)
     task_dir = Path(completed.stdout.strip().splitlines()[-1]).resolve()
 
@@ -331,18 +307,15 @@ def main() -> int:
             ]
         )
     style_source = "manga-curated" if args.medium == "manga" else "tv-curated"
-    # Rendering evidence is identity-independent. Filtering it by the focal
-    # character or form wrongly turns a scene/shot style search into another
-    # identity lookup and often produces a false MISS.
+    # Character-style evidence is eligible only when it depicts a requested
+    # focal character in the exact requested form.  View and shot rank only
+    # inside that set; no other character or form is an automatic fallback.
     common = []
     if args.shot:
         common.extend(["--shot", args.shot])
-    rendering_fallbacks = character_style_fallbacks(
-        args.identity_form, view_angle
-    )
     preferred_subject_forms = [
         value
-        for character, form in [*args.identity_form, *rendering_fallbacks]
+        for character, form in args.identity_form
         for value in ("--prefer-subject-form", f"{character}={form}")
     ]
     style_base = [
@@ -404,17 +377,19 @@ def main() -> int:
             "primary_commands": [style_primary],
             "fallback_without_shot": [style_fallback] if args.shot else [],
             "selection_budget": (
-                "inspect one combined character-style candidate set. Same-character and "
-                "same-form matches are ranking preferences, not eligibility gates. Choose "
+                "inspect one combined character-style candidate set containing only "
+                "requested focal characters in their exact requested forms; any panel "
+                "with an unrequested known character or wrong form is ineligible before "
+                "ranking. Choose "
                 "one anchor by default; add a second complementary anchor only after "
                 "inspection records that the first is insufficient for a visible "
                 "character-rendering relationship. These inputs control only linework, "
                 "face/hair mark simplification, fabric marks, and garment value hierarchy. "
                 "A declared view angle is a strong applicability signal and must be "
                 "visibly covered before selection; it never grants pose authority. "
-                "Ledger-declared rendering fallbacks may prefer a compatible same-view "
-                "subject only for contour and face/hair mark-making; official evidence "
-                "still owns the focal character's identity. "
+                "If the exact-character-form set is empty or visibly insufficient, record "
+                "MISS or INSUFFICIENT and curate same-character, same-form evidence; never "
+                "broaden to another character or form. "
                 "Official evidence remains the identity authority; ignore action, "
                 "interaction, expression, framing, and scene similarity."
             ),
@@ -561,13 +536,13 @@ def main() -> int:
                 "primary_commands": [scene_style_command],
                 "fallback_without_shot": [scene_style_fallback] if args.shot else [],
                 "scene_construction": "ImageGen",
-            "selection_budget": (
-                "choose one scene-domain rendering anchor. It controls materials, "
-                "weather, negative space, black-white mass, and detail falloff; "
-                "when scene-economy traits are present its density is a ceiling and may "
-                "not transfer onto the character; "
-                "ImageGen controls scene construction, staging, and all actions"
-            ),
+                "selection_budget": (
+                    "choose one scene-domain rendering anchor. It controls materials, "
+                    "weather, negative space, black-white mass, and detail falloff; "
+                    "when scene-economy traits are present its density is a ceiling and may "
+                    "not transfer onto the character; "
+                    "ImageGen controls scene construction, staging, and all actions"
+                ),
             }
         )
     if args.content_query:
@@ -673,10 +648,7 @@ def main() -> int:
         "candidate_limit": args.candidate_limit,
         "inferred_retrieval_traits": inferred_traits,
         "view_angle": view_angle,
-        "character_style_fallbacks": [
-            {"subject": subject, "form": form}
-            for subject, form in rendering_fallbacks
-        ],
+        "character_style_fallbacks": [],
         "prop_forms": dict(prop_forms),
         "dominant_scene_materials": scene_materials,
         "timing_policy": {

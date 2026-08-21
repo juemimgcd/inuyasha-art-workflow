@@ -254,7 +254,7 @@
       ]
     },
     {
-      "id": "kagome-profile-character-style-fallback",
+      "id": "kagome-profile-character-style-strict",
       "tool": "browse_curated_styles",
       "intent_text": "戈薇侧身站立，双手托住大型纸灯笼",
       "query": {
@@ -262,13 +262,18 @@
         "reference_domain": "character-style",
         "role": "rendering",
         "prefer_subject_form": [
-          "戈薇=default-form",
-          "珊瑚=default-form"
+          "戈薇=default-form"
         ],
         "view_angle": "profile",
         "shot": ["upper-body"]
       },
-      "relevant_item_ids": ["manga-curated:file:7710358cc29002185570"]
+      "relevant_item_ids": [
+        "manga-curated:file:0fbb062a365b8cfa7992",
+        "manga-curated:file:2fbd35cc27786e5559d3",
+        "manga-curated:file:bbdfde415b9957d7bdd1",
+        "manga-curated:file:be6446ad75ea8ddab71b"
+      ],
+      "strict_subject_forms": [["戈薇", "default-form"]]
     },
     {
       "id": "human-inuyasha-character-style-domain",
@@ -282,7 +287,26 @@
       "relevant_item_ids": [
         "manga-curated:file:4979f0e5da216eff0102",
         "manga-curated:file:8e60715e27e853faa798"
-      ]
+      ],
+      "strict_subject_forms": [["犬夜叉", "human-form"]]
+    },
+    {
+      "id": "human-inuyasha-profile-character-style-strict",
+      "tool": "browse_curated_styles",
+      "intent_text": "人类形态犬夜叉侧脸在秋雨中缓慢上坡",
+      "query": {
+        "source": "manga-curated",
+        "reference_domain": "character-style",
+        "role": "rendering",
+        "prefer_subject_form": ["犬夜叉=human-form"],
+        "view_angle": "profile",
+        "shot": ["full-body"]
+      },
+      "relevant_item_ids": [
+        "manga-curated:file:4979f0e5da216eff0102",
+        "manga-curated:file:8e60715e27e853faa798"
+      ],
+      "strict_subject_forms": [["犬夜叉", "human-form"]]
     },
     {
       "id": "rain-eaves-scene-style-domain",

@@ -12,7 +12,11 @@ description: "Generate, edit, microfix, or art-direct character-accurate Inuyash
   patterns, and accessories. They do not decide how those parts are inked or
   divided into paper-white, flat-black, and halftone values.
 - Character rendering comes only from selected-medium originals in
-  `origin-photos`, hard-filtered to `reference_domain=character-style`. It
+  `origin-photos`, hard-filtered to `reference_domain=character-style`. It must
+  also depict a requested focal character in that character's exact requested
+  form, with no unrequested known character in the panel. If that eligible set
+  is empty or visibly insufficient, record `MISS` or `INSUFFICIENT`; never
+  substitute another character or form automatically. It
   controls contour rhythm, face and hair linework, fabric/fold treatment and
   garment value hierarchy; action, expression, interaction and scene terms do
   not participate in its ranking. A separately persisted `view_angle` does
@@ -361,12 +365,14 @@ When the planner adds both `scene-economy:authored-negative-space` and
 both positive tags. A weather- or architecture-matched scene without those
 traits is not sufficient scene-style evidence, even if its subject matter is
 more literal.
-Prefer the focal character's exact form when available, but rank only character
-mark-making and value hierarchy; do not score action, interaction, expression,
-camera or scene similarity. For a single-character request, a focused panel of
-that character ranks ahead of an otherwise equal panel containing extra
-characters or indexed objects, but the latter remains an allowed general
-fallback. Next search the scene domain. Exact canonical places
+Treat focal character and exact form as eligibility, not score. Character-style
+candidates must depict at least one requested focal character in the exact
+requested form and must not contain any unrequested known character. Only then
+rank view applicability, shot, character mark-making and value hierarchy; do not
+score action, interaction, expression, camera or scene similarity. If no eligible
+candidate covers the requested view, record `MISS` or `INSUFFICIENT` and curate
+same-character, same-form evidence. Never broaden across character or form. Next
+search the scene domain. Exact canonical places
 use `scene-id`; generic places use scene/background/weather traits for rendering
 only. ImageGen owns all actions and complex staging. For scene rendering, a
 requested shot is a soft ranking signal rather than an eligibility filter.
@@ -389,10 +395,10 @@ fact. Expand beyond three candidates only after recording `MISS` or
 
 After choosing references, fill `brief.scene`, `brief.invariants`, and the
 serial evidence results. Character and scene rendering are separate coverage
-lines. Inspect one combined character-style set with same-character and
-same-form matches ranked first, then select one scene-style anchor. Exact
-character-form matches are preferred rendering evidence, not identity or
-generation eligibility. Use one character-style anchor by default; add a second
+lines. Inspect only the exact-character-form eligible set, then select one
+scene-style anchor. Exact character-form is a character-style eligibility gate
+while official evidence remains the sole identity authority. Use one
+character-style anchor by default; add a second
 only when inspection records that the first is insufficient for a visible
 character-rendering relationship. An exact canonical scene hit may cover both its structure and scene rendering in one
 input only after recording `--scene-style-coverage ITEM_ID=HIT` and a concrete

@@ -22,7 +22,10 @@ from benchmark_reference_retrieval import (
     metric_summary,
     search_command,
 )
-from browse_curated_styles import hard_facet_filters
+from browse_curated_styles import (
+    candidate_sort_key,
+    hard_facet_filters,
+)
 from composite_local_microfix import composite_local_edit, outside_edit_box_equal
 from continue_art_task import (
     context_box_for,
@@ -34,7 +37,7 @@ from continue_art_task import (
 from image_sheet import build_style_comparison_sheet
 from init_art_task import main as init_art_task_main
 from init_art_task import qa_items
-from plan_art_task import character_style_fallbacks, infer_prop_forms
+from plan_art_task import infer_prop_forms
 from plan_art_task import main as plan_art_task_main
 from preference_profile import write_profile
 from prepare_generation_submission import (
@@ -83,6 +86,7 @@ from task_workflow import (
     reference_strategy_failures,
     rendering_map_failures,
     scoped_style_failures,
+    strict_character_style_entry,
     style_scope_for_entry,
 )
 from technical_failures import transport_retry_exhausted
@@ -105,6 +109,7 @@ from workflow_common import (
     CONFIG_PATH,
     annotation_shot_types,
     certified_style_anchor_rank,
+    eligible_character_style_candidate,
     eligible_reference_roles,
     infer_canonical_scene,
     infer_retrieval_traits,
@@ -211,7 +216,9 @@ class PortabilityTests(unittest.TestCase):
 
 class MetadataTests(unittest.TestCase):
     def test_reference_domains_split_identity_character_style_and_scene(self) -> None:
-        self.assertEqual(reference_domain_for("official", ["犬夜叉/正面.png"]), "identity")
+        self.assertEqual(
+            reference_domain_for("official", ["犬夜叉/正面.png"]), "identity"
+        )
         self.assertEqual(
             reference_domain_for("manga-curated", ["犬夜叉/人物.png"], ["犬夜叉"]),
             "character-style",
@@ -270,16 +277,16 @@ class MetadataTests(unittest.TestCase):
         self.assertNotIn("effect-type:wind", traits)
 
     def test_intent_traits_cover_sleeves_weapons_and_grave_scenes(self) -> None:
-        traits = infer_retrieval_traits(
-            "犬夜叉把双手藏在袖中，在墓碑前挥动铁碎牙"
-        )
+        traits = infer_retrieval_traits("犬夜叉把双手藏在袖中，在墓碑前挥动铁碎牙")
         self.assertIn("action:sleeve-hidden-hands", traits)
         self.assertIn("action:swing-weapon", traits)
         self.assertIn("content-object:grave", traits)
         self.assertIn("content-object:tessaiga", traits)
         self.assertIn("content-object:robe-sleeve", traits)
 
-    def test_intent_traits_cover_reversed_mother_child_estate_and_first_snow(self) -> None:
+    def test_intent_traits_cover_reversed_mother_child_estate_and_first_snow(
+        self,
+    ) -> None:
         traits = infer_retrieval_traits(
             "幼年犬夜叉和十六夜在雪天的府邸，刚刚开始下雪；"
             "幼年犬夜叉抬头看向天上零星落下的雪花，"
@@ -345,11 +352,11 @@ class MetadataTests(unittest.TestCase):
         )
         self.assertEqual(score, 5)
         self.assertGreater(score, 4)
-        self.assertIn(
-            "preferred subject-form exact: 犬夜叉=child-form", reasons
-        )
+        self.assertIn("preferred subject-form exact: 犬夜叉=child-form", reasons)
 
-    def test_character_style_preferred_form_keeps_shot_out_of_hard_filters(self) -> None:
+    def test_character_style_preferred_form_keeps_shot_out_of_hard_filters(
+        self,
+    ) -> None:
         filters = hard_facet_filters(
             reference_domain="character-style",
             role="rendering",
@@ -358,6 +365,105 @@ class MetadataTests(unittest.TestCase):
             shots=["full-body"],
         )
         self.assertEqual(filters, (("subjects", []),))
+
+    def test_character_style_eligibility_requires_exact_character_and_form(
+        self,
+    ) -> None:
+        requested = [("犬夜叉", "human-form")]
+        self.assertTrue(
+            eligible_character_style_candidate(
+                {
+                    "subjects": ["犬夜叉"],
+                    "subject_forms": {"犬夜叉": ["human-form"]},
+                },
+                requested,
+            )
+        )
+        self.assertTrue(
+            eligible_character_style_candidate(
+                {"subject_forms": {"犬夜叉": ["human-form"]}},
+                requested,
+            )
+        )
+        self.assertFalse(
+            eligible_character_style_candidate(
+                {
+                    "subjects": ["犬夜叉"],
+                    "subject_forms": {"犬夜叉": ["half-demon-form"]},
+                },
+                requested,
+            )
+        )
+        self.assertFalse(
+            eligible_character_style_candidate(
+                {
+                    "subjects": ["犬夜叉", "戈薇"],
+                    "subject_forms": {
+                        "犬夜叉": ["human-form"],
+                        "戈薇": ["child-form"],
+                    },
+                },
+                [("犬夜叉", "human-form"), ("戈薇", "default-form")],
+            )
+        )
+        self.assertFalse(
+            eligible_character_style_candidate(
+                {
+                    "subjects": ["七宝"],
+                    "subject_forms": {"七宝": ["default-form"]},
+                },
+                requested,
+            )
+        )
+        self.assertFalse(
+            eligible_character_style_candidate(
+                {
+                    "subjects": ["犬夜叉", "戈薇"],
+                    "subject_forms": {
+                        "犬夜叉": ["human-form"],
+                        "戈薇": ["default-form"],
+                    },
+                },
+                requested,
+            )
+        )
+        for unrequested_subject in ("和尚", "普通人物"):
+            with self.subTest(unrequested_subject=unrequested_subject):
+                self.assertFalse(
+                    eligible_character_style_candidate(
+                        {
+                            "subjects": ["犬夜叉", unrequested_subject],
+                            "subject_forms": {
+                                "犬夜叉": ["human-form"],
+                                unrequested_subject: ["default-form"],
+                            },
+                        },
+                        requested,
+                    )
+                )
+
+    def test_candidate_sort_keeps_general_relevance_order(self) -> None:
+        candidates = [
+            {
+                "item_id": "lower",
+                "score": 5,
+                "certified_style_anchor": False,
+                "feedback_rank": 0.0,
+                "relative_path": "lower.png",
+            },
+            {
+                "item_id": "higher",
+                "score": 12,
+                "certified_style_anchor": False,
+                "feedback_rank": 0.0,
+                "relative_path": "higher.png",
+            },
+        ]
+        ranked = sorted(
+            candidates,
+            key=candidate_sort_key,
+        )
+        self.assertEqual([item["item_id"] for item in ranked], ["higher", "lower"])
 
     def test_scene_rendering_keeps_shot_as_soft_ranking_signal(self) -> None:
         filters = hard_facet_filters(
@@ -371,9 +477,7 @@ class MetadataTests(unittest.TestCase):
 
     def test_scene_filename_semantics_become_controlled_tags(self) -> None:
         source = {"default_tags": ["manga", "curated"]}
-        tags = infer_tags(
-            Path("场景/场景__不适用__远景__山间寺庙__01.png"), source
-        )
+        tags = infer_tags(Path("场景/场景__不适用__远景__山间寺庙__01.png"), source)
         self.assertIn("background:nature", tags)
         self.assertIn("background:architecture", tags)
 
@@ -547,9 +651,7 @@ class MetadataTests(unittest.TestCase):
             role="rendering",
         )
         self.assertGreater(focused_score, shared_score)
-        self.assertIn(
-            "preferred subject focus: extra subjects present", shared_reasons
-        )
+        self.assertIn("preferred subject focus: extra subjects present", shared_reasons)
 
     def test_benchmark_covers_real_reversed_mother_child_rendering_path(self) -> None:
         dataset = load_dataset(
@@ -582,9 +684,7 @@ class MetadataTests(unittest.TestCase):
 
     def test_item_role_tag_can_remove_identity_authority(self) -> None:
         self.assertEqual(
-            eligible_reference_roles(
-                ["identity"], ["reference-role:content-only"]
-            ),
+            eligible_reference_roles(["identity"], ["reference-role:content-only"]),
             [],
         )
         self.assertEqual(
@@ -763,9 +863,7 @@ class ReferenceValidationTests(unittest.TestCase):
             source="official",
             subjects=["铁碎牙"],
             forms=["transformed-form", "untransformed-form"],
-            subject_forms={
-                "铁碎牙": ["transformed-form", "untransformed-form"]
-            },
+            subject_forms={"铁碎牙": ["transformed-form", "untransformed-form"]},
         )
         validate_reference(
             row,
@@ -1310,11 +1408,7 @@ class ReferenceValidationTests(unittest.TestCase):
             )
             (task / "reference-manifest.json").write_text(
                 json.dumps(
-                    {
-                        "references": [
-                            {"role": "target", "rendered_path": str(target)}
-                        ]
-                    }
+                    {"references": [{"role": "target", "rendered_path": str(target)}]}
                 ),
                 encoding="utf-8",
             )
@@ -1368,11 +1462,7 @@ class ReferenceValidationTests(unittest.TestCase):
             )
             (task / "reference-manifest.json").write_text(
                 json.dumps(
-                    {
-                        "references": [
-                            {"role": "target", "rendered_path": str(target)}
-                        ]
-                    }
+                    {"references": [{"role": "target", "rendered_path": str(target)}]}
                 ),
                 encoding="utf-8",
             )
@@ -1478,7 +1568,9 @@ class ReferenceValidationTests(unittest.TestCase):
         self.assertEqual(continuation_intent(None, True), "edit")
         self.assertEqual(continuation_intent({"attempt": 1}, False), "edit")
 
-    def test_continuation_finds_nearest_matching_style_domain_in_parent_chain(self) -> None:
+    def test_continuation_finds_nearest_matching_style_domain_in_parent_chain(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             tasks = Path(directory)
             root = tasks / "root-task"
@@ -1509,9 +1601,7 @@ class ReferenceValidationTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (child / "brief.json").write_text(
-                json.dumps(
-                    {"task_id": "child-task", "parent_task_id": "root-task"}
-                ),
+                json.dumps({"task_id": "child-task", "parent_task_id": "root-task"}),
                 encoding="utf-8",
             )
             (child / "reference-manifest.json").write_text(
@@ -1545,11 +1635,7 @@ class ReferenceValidationTests(unittest.TestCase):
             )
             (parent / "reference-manifest.json").write_text(
                 json.dumps(
-                    {
-                        "references": [
-                            {"role": "style", "item_id": "legacy-style"}
-                        ]
-                    }
+                    {"references": [{"role": "style", "item_id": "legacy-style"}]}
                 ),
                 encoding="utf-8",
             )
@@ -1578,21 +1664,17 @@ class ReferenceValidationTests(unittest.TestCase):
             "character",
         )
         self.assertIsNone(style_scope_for_entry({"reference_domain": "identity"}))
-        self.assertEqual(
-            style_scope_for_entry({}, "character-style"), "character"
-        )
+        self.assertEqual(style_scope_for_entry({}, "character-style"), "character")
         self.assertIsNone(
-            style_scope_for_entry(
-                {"style_scope": "invalid"}, "character-style"
-            )
+            style_scope_for_entry({"style_scope": "invalid"}, "character-style")
         )
 
-    def test_manifest_style_scope_preserves_legacy_but_enforces_current_records(self) -> None:
+    def test_manifest_style_scope_preserves_legacy_but_enforces_current_records(
+        self,
+    ) -> None:
         legacy = {"role": "style", "item_id": "legacy-character-style"}
         self.assertIsNone(
-            manifest_style_scope_failure(
-                legacy, "character", require_explicit=False
-            )
+            manifest_style_scope_failure(legacy, "character", require_explicit=False)
         )
         current_failure = manifest_style_scope_failure(
             legacy, "character", require_explicit=True
@@ -1605,9 +1687,7 @@ class ReferenceValidationTests(unittest.TestCase):
             "style_scope": "scene",
         }
         self.assertIsNotNone(
-            manifest_style_scope_failure(
-                wrong, "character", require_explicit=False
-            )
+            manifest_style_scope_failure(wrong, "character", require_explicit=False)
         )
         correct = {
             "role": "style",
@@ -1615,9 +1695,7 @@ class ReferenceValidationTests(unittest.TestCase):
             "style_scope": "character",
         }
         self.assertIsNone(
-            manifest_style_scope_failure(
-                correct, "character", require_explicit=True
-            )
+            manifest_style_scope_failure(correct, "character", require_explicit=True)
         )
 
 
@@ -1842,9 +1920,7 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertTrue(
             any(
                 "only non-blocking for medium" in failure
-                for failure in preview_handoff_failures(
-                    "candidate", misplaced_warning
-                )
+                for failure in preview_handoff_failures("candidate", misplaced_warning)
             )
         )
 
@@ -1928,9 +2004,7 @@ class IntentWorkflowTests(unittest.TestCase):
             "subjects": json.dumps(["珊瑚"]),
         }
         self.assertEqual(
-            character_style_view_coverage_failures(
-                brief, [(general_profile, entry)]
-            ),
+            character_style_view_coverage_failures(brief, [(general_profile, entry)]),
             [],
         )
         ambiguous = {
@@ -2024,7 +2098,9 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertIn("Both hands must participate", prompt)
         self.assertIn("every named prop and body-part contact", prompt)
 
-    def test_wide_manga_prompt_uses_scene_economy_instead_of_generic_guard(self) -> None:
+    def test_wide_manga_prompt_uses_scene_economy_instead_of_generic_guard(
+        self,
+    ) -> None:
         brief = self.brief("new")
         brief["shot"] = "wide-shot"
         prompt = compile_prompt(brief, {"references": []})
@@ -2044,9 +2120,7 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertNotIn("repeated roof tiles", prompt)
         self.assertIn("uniform fine texture", prompt)
         self.assertIn("the rendering fails", prompt)
-        self.assertIn(
-            "Complete objects and correct perspective do not excuse", prompt
-        )
+        self.assertIn("Complete objects and correct perspective do not excuse", prompt)
         self.assertNotIn("empty architecture", prompt)
         self.assertNotIn("Economy means selecting the right marks", prompt)
 
@@ -2061,7 +2135,10 @@ class IntentWorkflowTests(unittest.TestCase):
             )
         )
         self.assertTrue(
-            any(category == "composition" and "未绘区域" in check for category, check in checks)
+            any(
+                category == "composition" and "未绘区域" in check
+                for category, check in checks
+            )
         )
 
     def test_manga_style_authority_includes_scene_simplification(self) -> None:
@@ -2146,7 +2223,10 @@ class IntentWorkflowTests(unittest.TestCase):
             task_dir = Path(output.getvalue().strip().splitlines()[-1])
             brief = json.loads((task_dir / "brief.json").read_text(encoding="utf-8"))
             self.assertEqual(brief["shot"], "wide-shot")
-            self.assertIn("serialized manga establishing shot", (task_dir / "prompt.md").read_text(encoding="utf-8"))
+            self.assertIn(
+                "serialized manga establishing shot",
+                (task_dir / "prompt.md").read_text(encoding="utf-8"),
+            )
             evidence = (task_dir / "evidence-log.md").read_text(encoding="utf-8")
             self.assertIn("- Character mark-making coverage:", evidence)
             self.assertIn("- Garment value hierarchy coverage:", evidence)
@@ -2265,9 +2345,7 @@ class IntentWorkflowTests(unittest.TestCase):
             note="前景略密但黑白块和网点层级仍正确",
         )
         self.assertEqual(qa_acceptance_failures(qa), [])
-        qa["dimensions"][0].update(
-            status="warning", note="人物身份不能以 warning 放行"
-        )
+        qa["dimensions"][0].update(status="warning", note="人物身份不能以 warning 放行")
         self.assertTrue(
             any(
                 "warning is not allowed" in failure
@@ -2275,14 +2353,14 @@ class IntentWorkflowTests(unittest.TestCase):
             )
         )
 
-    def test_scene_style_coverage_evidence_must_match_manifest_and_have_basis(self) -> None:
+    def test_scene_style_coverage_evidence_must_match_manifest_and_have_basis(
+        self,
+    ) -> None:
         contradictory = """- Scene identity result: HIT
 - Scene style coverage: INSUFFICIENT
 - Coverage basis: 屋顶、雨线与留白不足
 """
-        failures = scene_style_coverage_evidence_failures(
-            contradictory, "HIT", "HIT"
-        )
+        failures = scene_style_coverage_evidence_failures(contradictory, "HIT", "HIT")
         self.assertTrue(any("does not match" in failure for failure in failures))
 
         placeholder = """- Scene identity result: HIT
@@ -2328,8 +2406,9 @@ class IntentWorkflowTests(unittest.TestCase):
                 "--change-request",
                 "恢复犬夜叉深色衣服",
             ]
-            with patch("sys.argv", arguments), self.assertRaisesRegex(
-                SystemExit, "require --change-scope"
+            with (
+                patch("sys.argv", arguments),
+                self.assertRaisesRegex(SystemExit, "require --change-scope"),
             ):
                 init_art_task_main()
 
@@ -2375,9 +2454,7 @@ class IntentWorkflowTests(unittest.TestCase):
             brief = json.loads((task_dir / "brief.json").read_text(encoding="utf-8"))
             self.assertEqual(brief["props"], ["铁碎牙"])
             self.assertEqual(brief["prop_forms"]["铁碎牙"], "transformed-form")
-            self.assertEqual(
-                brief["dominant_scene_materials"], ["树干树皮与聚类树叶"]
-            )
+            self.assertEqual(brief["dominant_scene_materials"], ["树干树皮与聚类树叶"])
             prompt = (task_dir / "prompt.md").read_text(encoding="utf-8")
             self.assertIn("Canonical prop requirements", prompt)
             self.assertIn("缠绕刀柄 → 圆形护手 → 单一连续宽刃 → 刀尖", prompt)
@@ -2403,21 +2480,9 @@ class IntentWorkflowTests(unittest.TestCase):
             [("铁碎牙", "untransformed-form")],
         )
 
-    def test_kagome_profile_uses_ledger_rendering_fallback_only(self) -> None:
-        self.assertEqual(
-            character_style_fallbacks(
-                [("戈薇", "default-form")], "profile"
-            ),
-            [("珊瑚", "default-form")],
-        )
-        self.assertEqual(
-            character_style_fallbacks(
-                [("戈薇", "default-form")], "front"
-            ),
-            [],
-        )
-
-    def test_continuity_plan_has_shotless_fallback_without_identity_filter(self) -> None:
+    def test_continuity_plan_has_shotless_fallback_without_identity_filter(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             arguments = [
                 "plan_art_task.py",
@@ -2437,7 +2502,9 @@ class IntentWorkflowTests(unittest.TestCase):
             with patch("sys.argv", arguments), redirect_stdout(output):
                 self.assertEqual(plan_art_task_main(), 0)
             result = json.loads(output.getvalue())
-            plan = json.loads(Path(result["retrieval_plan"]).read_text(encoding="utf-8"))
+            plan = json.loads(
+                Path(result["retrieval_plan"]).read_text(encoding="utf-8")
+            )
             task_dir = Path(result["task_dir"])
             brief = json.loads((task_dir / "brief.json").read_text(encoding="utf-8"))
             qa = json.loads((task_dir / "qa.json").read_text(encoding="utf-8"))
@@ -2471,9 +2538,13 @@ class IntentWorkflowTests(unittest.TestCase):
             with patch("sys.argv", arguments), redirect_stdout(output):
                 self.assertEqual(plan_art_task_main(), 0)
             result = json.loads(output.getvalue())
-            plan = json.loads(Path(result["retrieval_plan"]).read_text(encoding="utf-8"))
+            plan = json.loads(
+                Path(result["retrieval_plan"]).read_text(encoding="utf-8")
+            )
             identity_layer = next(
-                layer for layer in plan["layers"] if layer.get("role") == "canonical-scene"
+                layer
+                for layer in plan["layers"]
+                if layer.get("role") == "canonical-scene"
             )
             style_layer = next(
                 layer
@@ -2544,7 +2615,9 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertEqual(rendering_map["scene"]["authority"], "scene-style")
         self.assertIn("石阶, 巨树", rendering_map["scene"]["focal_plane"])
         self.assertIn("successive depth layer", rendering_map["scene"]["far_plane"])
-        self.assertEqual(rendering_map_failures({**brief, "rendering_map": rendering_map}), [])
+        self.assertEqual(
+            rendering_map_failures({**brief, "rendering_map": rendering_map}), []
+        )
         broken = json.loads(json.dumps(rendering_map))
         broken["value_hierarchy"]["flat_black"] = ""
         self.assertIn(
@@ -2653,13 +2726,16 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertIn("scene-economy:authored-negative-space", traits)
         self.assertIn("detail-falloff:strong", traits)
 
-    def test_character_style_assignment_prefers_exact_and_allows_general_fallback(self) -> None:
+    def test_current_character_style_assignment_requires_exact_form_per_character(
+        self,
+    ) -> None:
         brief = {
+            "schema_version": 5,
             "character_style_targets": {
                 "犬夜叉": "child-form",
                 "十六夜": "default-form",
                 "杀生丸": "default-form",
-            }
+            },
         }
         manifest = {
             "references": [
@@ -2671,10 +2747,21 @@ class IntentWorkflowTests(unittest.TestCase):
             ]
         }
         assignments = character_style_assignments(brief, manifest)
-        self.assertEqual(assignments["犬夜叉=child-form"]["tier"], "exact-character-form")
-        self.assertEqual(assignments["十六夜=default-form"]["tier"], "general-selected-medium")
-        self.assertEqual(assignments["杀生丸=default-form"]["inputs"], [1])
-        self.assertEqual(character_style_coverage_failures(brief, manifest), [])
+        self.assertEqual(
+            assignments["犬夜叉=child-form"]["tier"], "exact-character-form"
+        )
+        self.assertEqual(
+            assignments["十六夜=default-form"]["tier"],
+            "missing-exact-character-form",
+        )
+        self.assertEqual(assignments["杀生丸=default-form"]["inputs"], [])
+        self.assertEqual(
+            character_style_coverage_failures(brief, manifest),
+            [
+                "missing selected-medium character-style evidence: 十六夜=default-form",
+                "missing selected-medium character-style evidence: 杀生丸=default-form",
+            ],
+        )
         manifest["references"].append(
             {
                 "role": "style",
@@ -2683,9 +2770,50 @@ class IntentWorkflowTests(unittest.TestCase):
             }
         )
         assignments = character_style_assignments(brief, manifest)
-        self.assertEqual(assignments["十六夜=default-form"]["tier"], "exact-character-form")
+        self.assertEqual(
+            assignments["十六夜=default-form"]["tier"], "exact-character-form"
+        )
 
-    def test_medium_shot_prompt_maps_each_character_without_sample_blacklist(self) -> None:
+    def test_current_character_style_entry_rejects_unrequested_cocharacter(
+        self,
+    ) -> None:
+        targets = {"犬夜叉": "human-form"}
+        entry = {
+            "role": "style",
+            "style_scope": "character",
+            "subjects": ["犬夜叉", "戈薇"],
+            "subject_forms": {
+                "犬夜叉": ["human-form"],
+                "戈薇": ["default-form"],
+            },
+        }
+        self.assertFalse(strict_character_style_entry(entry, targets))
+        failures = character_style_coverage_failures(
+            {"schema_version": 5, "character_style_targets": targets},
+            {"references": [entry]},
+        )
+        self.assertIn(
+            "ineligible character-style evidence at Input 1: contains an unrequested character or wrong form",
+            failures,
+        )
+        for unrequested_subject in ("和尚", "普通人物"):
+            with self.subTest(unrequested_subject=unrequested_subject):
+                self.assertFalse(
+                    strict_character_style_entry(
+                        {
+                            "subjects": ["犬夜叉", unrequested_subject],
+                            "subject_forms": {
+                                "犬夜叉": ["human-form"],
+                                unrequested_subject: ["default-form"],
+                            },
+                        },
+                        targets,
+                    )
+                )
+
+    def test_medium_shot_prompt_maps_each_character_without_sample_blacklist(
+        self,
+    ) -> None:
         brief = self.brief("new")
         brief["shot"] = "medium-shot"
         brief["character_style_targets"] = {
@@ -2736,7 +2864,9 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertNotIn("serialized-manga contour", prompt)
         self.assertNotIn("Manga finish calibration", prompt)
 
-    def test_manga_candidate_components_allow_evidence_backed_na_at_any_shot(self) -> None:
+    def test_manga_candidate_components_allow_evidence_backed_na_at_any_shot(
+        self,
+    ) -> None:
         self.assertTrue(
             requires_manga_medium_components(
                 {
@@ -2858,9 +2988,7 @@ class IntentWorkflowTests(unittest.TestCase):
             with patch("sys.argv", accepted_args), redirect_stdout(io.StringIO()):
                 self.assertEqual(record_attempt_main(), 0)
             accepted = json.loads(
-                (task / "attempts" / "002" / "attempt.json").read_text(
-                    encoding="utf-8"
-                )
+                (task / "attempts" / "002" / "attempt.json").read_text(encoding="utf-8")
             )
             result = json.loads((task / "result.json").read_text(encoding="utf-8"))
             self.assertEqual(accepted["accepted_from_attempt"], 1)
@@ -2882,9 +3010,7 @@ class IntentWorkflowTests(unittest.TestCase):
                 self.assertEqual(reference_feedback_report_main(), 0)
             report = json.loads(report_output.getvalue())
             self.assertEqual(
-                report["generation_transport"]["by_semantic_intent"]["new"][
-                    "attempts"
-                ],
+                report["generation_transport"]["by_semantic_intent"]["new"]["attempts"],
                 1,
             )
             self.assertEqual(report["response_slo"]["eligible_previews"], 1)
@@ -2944,9 +3070,7 @@ class IntentWorkflowTests(unittest.TestCase):
             with patch("sys.argv", rejected_args), redirect_stdout(io.StringIO()):
                 self.assertEqual(record_attempt_main(), 0)
             rejected = json.loads(
-                (task / "attempts" / "002" / "attempt.json").read_text(
-                    encoding="utf-8"
-                )
+                (task / "attempts" / "002" / "attempt.json").read_text(encoding="utf-8")
             )
             self.assertEqual(rejected["decision_from_attempt"], 1)
             self.assertEqual(rejected["rejected_from_attempt"], 1)
@@ -2967,9 +3091,7 @@ class IntentWorkflowTests(unittest.TestCase):
                 self.assertEqual(reference_feedback_report_main(), 0)
             report = json.loads(report_output.getvalue())
             self.assertEqual(
-                report["generation_transport"]["by_semantic_intent"]["new"][
-                    "attempts"
-                ],
+                report["generation_transport"]["by_semantic_intent"]["new"]["attempts"],
                 1,
             )
             self.assertEqual(report["response_slo"]["eligible_previews"], 1)
@@ -3045,9 +3167,7 @@ class IntentWorkflowTests(unittest.TestCase):
         }
         self.assertEqual(
             len(
-                scene_economy_reference_failures(
-                    brief, dense_scene, {"role": "style"}
-                )
+                scene_economy_reference_failures(brief, dense_scene, {"role": "style"})
             ),
             1,
         )
@@ -3110,13 +3230,15 @@ class IntentWorkflowTests(unittest.TestCase):
                 self.assertEqual(plan_art_task_main(), 0)
             result = json.loads(output.getvalue())
             task_dir = Path(result["task_dir"])
-            plan = json.loads(Path(result["retrieval_plan"]).read_text(encoding="utf-8"))
+            plan = json.loads(
+                Path(result["retrieval_plan"]).read_text(encoding="utf-8")
+            )
             brief = json.loads((task_dir / "brief.json").read_text(encoding="utf-8"))
             self.assertEqual(plan["schema_version"], 5)
             self.assertEqual(plan["view_angle"], "profile")
             self.assertEqual(
                 plan["character_style_fallbacks"],
-                [{"subject": "珊瑚", "form": "default-form"}],
+                [],
             )
             self.assertEqual(brief["view_angle"], "profile")
             prompt = (task_dir / "prompt.md").read_text(encoding="utf-8")
@@ -3140,8 +3262,13 @@ class IntentWorkflowTests(unittest.TestCase):
             ]
             self.assertEqual(
                 preferred_pairs,
-                ["戈薇=default-form", "珊瑚=default-form"],
+                ["戈薇=default-form"],
             )
+            selection_budget = plan["layers"][1]["selection_budget"]
+            self.assertIn("exact requested forms", selection_budget)
+            self.assertIn("ineligible before ranking", selection_budget)
+            self.assertNotIn("ranking preferences, not eligibility gates", selection_budget)
+            self.assertNotIn("compatible same-view subject", selection_budget)
 
     def test_manga_edit_preserves_two_sided_finish_band(self) -> None:
         prompt = compile_prompt(self.brief("edit"), {"references": []})
@@ -3167,7 +3294,9 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertNotIn("selected character and scene references control", prompt)
         self.assertNotIn("reference-matched marks", prompt)
 
-    def test_single_style_domain_calibration_names_only_attached_authority(self) -> None:
+    def test_single_style_domain_calibration_names_only_attached_authority(
+        self,
+    ) -> None:
         brief = self.brief("edit")
         character_prompt = compile_prompt(
             brief,
@@ -3183,9 +3312,13 @@ class IntentWorkflowTests(unittest.TestCase):
             },
         )
         self.assertIn("Character-reference manga calibration", character_prompt)
-        self.assertNotIn("selected character and scene references control", character_prompt)
+        self.assertNotIn(
+            "selected character and scene references control", character_prompt
+        )
 
-    def test_manga_illustration_is_compiled_as_serialized_panel_for_any_shot(self) -> None:
+    def test_manga_illustration_is_compiled_as_serialized_panel_for_any_shot(
+        self,
+    ) -> None:
         brief = self.brief("new")
         brief["shot"] = "medium-shot"
         prompt = compile_prompt(brief, {"references": []})
@@ -3221,11 +3354,11 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertIn("Do not remove character strands or folds", prompt)
         self.assertIn("replace only the declared rendering domain", prompt)
         self.assertIn("Scene-scope manga calibration", prompt)
-        self.assertNotIn(
-            "selected character and scene references control", prompt
-        )
+        self.assertNotIn("selected character and scene references control", prompt)
 
-    def test_character_tone_edit_uses_character_style_for_garment_values_only(self) -> None:
+    def test_character_tone_edit_uses_character_style_for_garment_values_only(
+        self,
+    ) -> None:
         brief = self.brief("edit")
         brief["change_category"] = "tone"
         brief["change_scope"] = "character"
@@ -3244,11 +3377,11 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertIn("Character-scope manga calibration", prompt)
         self.assertNotIn("Scene-material scope", prompt)
         self.assertNotIn("Scene-density ceiling", prompt)
-        self.assertNotIn(
-            "selected character and scene references control", prompt
-        )
+        self.assertNotIn("selected character and scene references control", prompt)
 
-    def test_scoped_style_validation_rejects_scene_reference_for_character_tone(self) -> None:
+    def test_scoped_style_validation_rejects_scene_reference_for_character_tone(
+        self,
+    ) -> None:
         brief = self.brief("edit")
         brief["change_category"] = "tone"
         brief["change_scope"] = "character"
@@ -3286,9 +3419,7 @@ class IntentWorkflowTests(unittest.TestCase):
             scoped_style_failures(brief, manifest, require_scope=False), []
         )
         brief["change_scope_schema_version"] = CHANGE_SCOPE_SCHEMA_VERSION
-        current_failures = scoped_style_failures(
-            brief, manifest, require_scope=False
-        )
+        current_failures = scoped_style_failures(brief, manifest, require_scope=False)
         self.assertTrue(
             any("brief.change_scope" in failure for failure in current_failures)
         )
@@ -3308,9 +3439,7 @@ class IntentWorkflowTests(unittest.TestCase):
         }
         for invalid in (True, 1.0, "1"):
             brief["change_scope_schema_version"] = invalid
-            failures = scoped_style_failures(
-                brief, manifest, require_scope=False
-            )
+            failures = scoped_style_failures(brief, manifest, require_scope=False)
             self.assertTrue(
                 any("change_scope_schema_version" in failure for failure in failures),
                 repr(invalid),
@@ -3321,18 +3450,14 @@ class IntentWorkflowTests(unittest.TestCase):
         brief["change_category"] = "medium"
         brief["change_scope"] = "character"
         manifest = {
-            "references": [
-                {"role": "style", "item_id": "legacy-character-style"}
-            ]
+            "references": [{"role": "style", "item_id": "legacy-character-style"}]
         }
         self.assertEqual(
             scoped_style_failures(
                 brief,
                 manifest,
                 require_scope=False,
-                catalog_reference_domains={
-                    "legacy-character-style": "character-style"
-                },
+                catalog_reference_domains={"legacy-character-style": "character-style"},
             ),
             [],
         )
@@ -3352,12 +3477,8 @@ class IntentWorkflowTests(unittest.TestCase):
                 for category, check in character_checks
             )
         )
-        microfix_scene_checks = qa_items(
-            "manga", "microfix", "tone", "scene"
-        )
-        microfix_character_checks = qa_items(
-            "manga", "microfix", "tone", "character"
-        )
+        microfix_scene_checks = qa_items("manga", "microfix", "tone", "scene")
+        microfix_character_checks = qa_items("manga", "microfix", "tone", "character")
         self.assertTrue(
             any("scene-style" in check for _, check in microfix_scene_checks)
         )
@@ -3451,7 +3572,9 @@ class IntentWorkflowTests(unittest.TestCase):
         )
         self.assertTrue(any("Garment value hierarchy" in item for item in failures))
         self.assertTrue(any("no exact rendering focus" in item for item in failures))
-        self.assertTrue(any("authority instruction is incomplete" in item for item in failures))
+        self.assertTrue(
+            any("authority instruction is incomplete" in item for item in failures)
+        )
 
     def test_scene_material_scope_allows_second_core_style_anchor(self) -> None:
         instruction = instruction_for(
@@ -3718,13 +3841,13 @@ class IntentWorkflowTests(unittest.TestCase):
 
     def test_style_planning_does_not_filter_rendering_by_identity(self) -> None:
         plan_source = (SCRIPTS / "plan_art_task.py").read_text(encoding="utf-8")
-        style_block = plan_source.split("style_base =", 1)[1].split(
-            "layers =", 1
-        )[0]
+        style_block = plan_source.split("style_base =", 1)[1].split("layers =", 1)[0]
         self.assertNotIn('"--subject"', style_block)
         self.assertNotIn('"--form"', style_block)
 
-    def test_multi_character_plan_uses_one_ranked_style_search_with_all_preferences(self) -> None:
+    def test_multi_character_plan_uses_one_ranked_style_search_with_all_preferences(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             arguments = [
                 "plan_art_task.py",
@@ -3748,7 +3871,9 @@ class IntentWorkflowTests(unittest.TestCase):
             task_dir = Path(result["task_dir"])
             brief = json.loads((task_dir / "brief.json").read_text(encoding="utf-8"))
             evidence = (task_dir / "evidence-log.md").read_text(encoding="utf-8")
-            plan = json.loads(Path(result["retrieval_plan"]).read_text(encoding="utf-8"))
+            plan = json.loads(
+                Path(result["retrieval_plan"]).read_text(encoding="utf-8")
+            )
             style_layer = next(layer for layer in plan["layers"] if layer["layer"] == 2)
             commands = style_layer["primary_commands"]
             self.assertEqual(len(commands), 1)
@@ -3760,8 +3885,18 @@ class IntentWorkflowTests(unittest.TestCase):
             )
             self.assertIn("Character style preference 犬夜叉=child-form", evidence)
             self.assertIn("Character style preference 十六夜=default-form", evidence)
-            self.assertIn("one combined character-style candidate set", style_layer["selection_budget"])
-            self.assertIn("not eligibility gates", style_layer["selection_budget"])
+            self.assertIn(
+                "one combined character-style candidate set",
+                style_layer["selection_budget"],
+            )
+            self.assertIn(
+                "unrequested known character or wrong form is ineligible",
+                style_layer["selection_budget"],
+            )
+            self.assertIn(
+                "never broaden to another character or form",
+                style_layer["selection_budget"],
+            )
 
     def test_new_task_planner_does_not_route_identity_cards(self) -> None:
         plan_source = (SCRIPTS / "plan_art_task.py").read_text(encoding="utf-8")
@@ -3862,9 +3997,13 @@ class IntentWorkflowTests(unittest.TestCase):
             result = json.loads((task / "result.json").read_text(encoding="utf-8"))
             self.assertEqual(result["status"], "accepted")
             self.assertTrue((task / "attempts" / "001" / "attempt.json").is_file())
-            self.assertIn("broken preference event", payload["preference_profile_warning"])
+            self.assertIn(
+                "broken preference event", payload["preference_profile_warning"]
+            )
 
-    def test_split_domain_acceptance_is_blocked_before_attempt_when_qa_is_pending(self) -> None:
+    def test_split_domain_acceptance_is_blocked_before_attempt_when_qa_is_pending(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             task = Path(directory) / "tasks" / "pending-qa-task"
             task.mkdir(parents=True)
@@ -3995,14 +4134,14 @@ class IntentWorkflowTests(unittest.TestCase):
         ledger["characters"]["测试刀"]["forms"]["transformed-form"]["topology"][
             "counts"
         ]["刀尖"] = 0
-        ledger["characters"]["测试刀"]["form_inference"]["missing-form"] = [
-            "未知"
-        ]
+        ledger["characters"]["测试刀"]["form_inference"]["missing-form"] = ["未知"]
         failures = identity_ledger_failures(ledger)
         self.assertTrue(any("positive integers" in failure for failure in failures))
         self.assertTrue(any("unknown form" in failure for failure in failures))
 
-    def test_identity_ledger_validates_view_traits_and_rendering_fallbacks(self) -> None:
+    def test_identity_ledger_validates_view_traits_and_rendering_fallbacks(
+        self,
+    ) -> None:
         ledger = {
             "schema_version": 1,
             "characters": {
@@ -4033,7 +4172,9 @@ class IntentWorkflowTests(unittest.TestCase):
             },
         }
         failures = identity_ledger_failures(ledger)
-        self.assertTrue(any("view_traits must be an object" in item for item in failures))
+        self.assertTrue(
+            any("view_traits must be an object" in item for item in failures)
+        )
         self.assertTrue(any("unknown view angle" in item for item in failures))
         self.assertTrue(any("at least one trait" in item for item in failures))
         self.assertTrue(any("unknown subject" in item for item in failures))
@@ -4061,6 +4202,32 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertIn("browse_curated_styles.py", command[1])
         self.assertEqual(command.count("--prefer-subject-form"), 2)
         self.assertEqual(command[command.index("--view-angle") + 1], "profile")
+
+    def test_retrieval_benchmark_requires_strict_character_style_pairs(self) -> None:
+        dataset = {
+            "schema_version": 1,
+            "cases": [
+                {
+                    "id": "missing-strict-pair",
+                    "intent_text": "人类形态犬夜叉独处",
+                    "query": {
+                        "source": "manga-curated",
+                        "reference_domain": "character-style",
+                        "role": "rendering",
+                        "subject_form": ["犬夜叉=human-form"],
+                    },
+                    "relevant_item_ids": ["manga-curated:file:example"],
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "benchmark.json"
+            path.write_text(json.dumps(dataset), encoding="utf-8")
+            with self.assertRaisesRegex(
+                ValueError,
+                "strict_subject_forms must exactly match",
+            ):
+                load_dataset(path)
 
     def test_archived_attempts_do_not_affect_reference_ranking(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

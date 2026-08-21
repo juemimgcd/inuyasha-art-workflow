@@ -65,19 +65,15 @@ forest, temple, roof and rain searchable without duplicating them as manual
 annotations. Manual annotations remain required for visual judgments that names
 cannot establish, including authored negative space and distance falloff.
 
-Rendering retrieval remains identity-independent: never add a subject or form
-SQL filter merely because a focal character is known. Character-style retrieval
-must not hard-filter by shot when a preferred focal character-form is present;
-shot remains a scoring signal. It may apply one capped, explainable preferred
-subject-form boost above an exact shot match, so an original of the same character
-and form is inspected before an unrelated character that only shares the shot.
-This preference never creates identity authority and never outranks stronger
-action, interaction, contact, or object evidence.
-When character-style candidates otherwise tie, apply one capped soft penalty to
-panels containing indexed subjects outside the requested focal set. This makes a
-focused single-character panel inspectable before an unrelated co-character or
-object-bearing panel without turning co-occurrence into a hard filter or breaking
-multi-person fallback.
+Character-style eligibility is strict even though its authority remains limited
+to rendering. A candidate must depict at least one requested focal character in
+that character's exact requested form and must contain no unrequested known
+character. Apply this eligibility gate before relevance scoring. Do not hard
+filter by shot or view: those remain applicability scores inside the eligible
+set. If the eligible set is empty or visibly insufficient for the requested view,
+record `MISS` or `INSUFFICIENT` and curate same-character, same-form evidence;
+never broaden automatically to another character or form. This gate does not
+grant identity authority: official evidence still owns identity and construction.
 
 `--intent-text` may translate explicit natural-language phrases into controlled
 traits for ranking. Inferred traits are boost-only: they do not hard-filter the
@@ -264,12 +260,11 @@ exclude archived tasks while preserving every original file and result.
 
 ### New
 
-- Require one character-style screenshot by default and permit a second only
-  after inspection records that the first is insufficient for a visible
-  character-rendering relationship. Same-character and same-form matches rank
-  first but are not generation eligibility gates; compatible selected-medium
-  evidence may supply general mark-making while official evidence retains exact
-  identity authority. Require one separate scene-style screenshot unless an
+- Require one exact-character-form character-style screenshot by default and
+  permit a second only after inspection records that the first is insufficient
+  for a visible character-rendering relationship. Another character or form is
+  never eligible as general mark-making evidence; official evidence separately
+  retains exact identity authority. Require one separate scene-style screenshot unless an
   exact canonical scene HIT has inspected scene-style coverage. The combined
   style budget is at most three.
 - Require official identity coverage for every focal character and exact form.
@@ -386,9 +381,10 @@ when declared, exact view angle. If the camera-distance shot is insufficient,
 remove only that shot while retaining view angle. A viewless identity fallback
 may be inspected only to prepare the smallest focused crop of the required view;
 it never counts as view coverage. Never broaden identity or content across form.
-Character-style retrieval uses the hard domain and a preferred focal form but no
-action or scene score; a declared view angle is a strong applicability signal and
-the selected character anchor must visibly cover it. Scene-style retrieval uses
+Character-style retrieval uses the hard domain plus exact requested character
+and form eligibility, but no action or scene score; a declared view angle is a
+strong applicability signal and the selected character anchor must visibly cover
+it. No other character or form is an automatic fallback. Scene-style retrieval uses
 the hard scene domain and only
 scene, background, weather and distance-detail traits. Requested shot is a soft
 scene-rendering score only: it must not eliminate a closer material, weather or
@@ -493,12 +489,11 @@ Generate prompts from the current brief and manifest with `compile_prompt.py`.
   character contour, face/hair/fabric/fold treatment, and relative paper-white,
   flat-black, and restrained middle-tone hierarchy to those same parts.
 - For a multi-character task, compile an explicit per-character rendering map
-  from the manifest input numbers. Label exact-character-form,
-  same-character-compatible, and general-selected-medium assignments. Exact
-  matches are preferred; compatible/general rows control only rendering grammar,
-  while official evidence remains the sole identity, form, costume, and anatomy
-  authority. Keep this wording selected-medium neutral so TV tasks never receive
-  manga instructions.
+  from the manifest input numbers. Every character-style assignment must be an
+  exact requested character-form match; no compatible other-form or general
+  other-character row is allowed. Official evidence remains the sole identity,
+  form, costume, and anatomy authority. Keep this wording selected-medium neutral
+  so TV tasks never receive manga instructions.
 - For every manga shot size, compile a finish-calibration clause from the selected
   character and scene references. Require selective mark-making, focal detail,
   nonfocal falloff, material abstraction, and coherent black-white/tone hierarchy.
