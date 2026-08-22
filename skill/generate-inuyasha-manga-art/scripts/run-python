@@ -1,17 +1,59 @@
 #!/usr/bin/env sh
 set -eu
 
-if [ -n "${INUYASHA_PYTHON:-}" ] && [ -x "$INUYASHA_PYTHON" ]; then
-  exec "$INUYASHA_PYTHON" "$@"
-fi
-
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "$script_dir/../../.." && pwd)
-if [ -x "$repo_root/.venv/bin/python" ]; then
-  exec "$repo_root/.venv/bin/python" "$@"
+
+fail_missing_pillow() {
+  candidate=$1
+  source_name=$2
+  printf '%s\n' "The Python selected from $source_name cannot import Pillow: $candidate" >&2
+  printf '%s\n' "Create the repository-only environment with ./setup-python-env.sh," >&2
+  printf '%s\n' "or set INUYASHA_PYTHON for this command to a Python with Pillow." >&2
+  printf '%s\n' "No package was installed automatically." >&2
+  exit 1
+}
+
+run_required_candidate() {
+  candidate=$1
+  source_name=$2
+  shift 2
+  if [ ! -x "$candidate" ]; then
+    printf '%s\n' "The Python selected from $source_name is not executable: $candidate" >&2
+    exit 1
+  fi
+  if ! "$candidate" -c 'import PIL' >/dev/null 2>&1; then
+    fail_missing_pillow "$candidate" "$source_name"
+  fi
+  exec "$candidate" "$@"
+}
+
+if [ -n "${INUYASHA_PYTHON:-}" ]; then
+  run_required_candidate "$INUYASHA_PYTHON" "INUYASHA_PYTHON" "$@"
 fi
 
-if command -v python3 >/dev/null 2>&1; then
-  exec python3 "$@"
+repo_python="$repo_root/.venv/bin/python"
+if [ -e "$repo_python" ]; then
+  run_required_candidate "$repo_python" "the repository .venv" "$@"
 fi
-exec python "$@"
+
+if [ -n "${INUYASHA_WORKFLOW_HOME:-}" ]; then
+  workflow_python="$INUYASHA_WORKFLOW_HOME/.venv/bin/python"
+  if [ -e "$workflow_python" ]; then
+    run_required_candidate "$workflow_python" "INUYASHA_WORKFLOW_HOME/.venv" "$@"
+  fi
+fi
+
+for command_name in python3 python; do
+  if command -v "$command_name" >/dev/null 2>&1; then
+    candidate=$(command -v "$command_name")
+    if "$candidate" -c 'import PIL' >/dev/null 2>&1; then
+      exec "$candidate" "$@"
+    fi
+  fi
+done
+
+printf '%s\n' "No Python 3 environment with Pillow was found for the Inuyasha workflow." >&2
+printf '%s\n' "Run ./setup-python-env.sh from the package repository, or set" >&2
+printf '%s\n' "INUYASHA_PYTHON for this command. No package was installed automatically." >&2
+exit 1

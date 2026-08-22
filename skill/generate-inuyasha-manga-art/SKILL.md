@@ -58,6 +58,13 @@ skill/generate-inuyasha-manga-art/scripts/run-python \
   skill/generate-inuyasha-manga-art/scripts/<script>.py <args>
 ```
 
+If the launcher reports that Pillow is unavailable, do not install into system,
+Homebrew, Codex-bundled, or another project's Python. In the package checkout,
+run `./setup-python-env.sh` to create its ignored `.venv`; in a temporary
+worktree, set `INUYASHA_PYTHON` for that command to an existing project `.venv`.
+Package-maintenance validation must use `requirements-dev.txt`, which adds
+PyYAML to the same repository-only environment.
+
 From PowerShell after running `setup-windows.ps1`:
 
 ```powershell

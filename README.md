@@ -26,7 +26,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 
 The setup script:
 
-- creates `.venv` and installs Pillow;
+- creates `.venv` and installs the runtime and maintenance dependencies there;
 - copies the skill to `$HOME\.agents\skills\generate-inuyasha-manga-art`;
 - stores `INUYASHA_WORKFLOW_HOME` for the current user;
 - enables long paths for this Git checkout;
@@ -50,7 +50,20 @@ image libraries work without it.
 
 ## macOS and Linux checkout
 
-The checked-in launcher discovers Python 3 or the repository `.venv`:
+Create the repository-only Python environment once:
+
+```sh
+./setup-python-env.sh
+```
+
+This installs Pillow and PyYAML only into this checkout's ignored `.venv`. It
+does not install packages into system Python, Homebrew Python, the Codex bundled
+runtime, another project environment, or a global `PATH` change. Set
+`INUYASHA_BOOTSTRAP_PYTHON` for that one command if `python3` is not the desired
+bootstrap interpreter.
+
+The checked-in launcher then uses the repository `.venv` and verifies Pillow
+before running a workflow command:
 
 ```sh
 skill/generate-inuyasha-manga-art/scripts/run-python \
@@ -60,7 +73,19 @@ skill/generate-inuyasha-manga-art/scripts/run-python \
 Configuration is repository-relative on every platform. Set
 `INUYASHA_WORKFLOW_HOME` only when the skill is copied outside the clone, and
 set `INUYASHA_WORKFLOW_ROOT` only when generated workflow data should live in a
-different directory.
+different directory. For a temporary checkout or Git worktree, reuse an existing
+project environment for one command without changing global shell state:
+
+```sh
+INUYASHA_PYTHON=/absolute/path/to/inuyasha-art-workflow/.venv/bin/python \
+  skill/generate-inuyasha-manga-art/scripts/run-python \
+  skill/generate-inuyasha-manga-art/scripts/build_reference_index.py --check
+```
+
+`requirements.txt` contains runtime dependencies. `requirements-dev.txt`
+includes those plus PyYAML for package and skill validation. Launchers never
+install packages automatically: a selected but incomplete environment produces
+an actionable error instead of silently switching to another Python.
 
 ## Privacy and rights notice
 
