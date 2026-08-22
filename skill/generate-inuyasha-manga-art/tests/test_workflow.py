@@ -60,11 +60,13 @@ from prepare_reference_set import (
 )
 from record_attempt import main as record_attempt_main
 from record_attempt import (
+    manga_warning_consistency_failures,
     medium_component_failures,
     parse_medium_component_check,
     parse_preview_check,
     preview_handoff_failures,
     requires_manga_medium_components,
+    style_comparison_failures,
 )
 from reference_feedback_report import duration_summary
 from reference_feedback_report import main as reference_feedback_report_main
@@ -104,6 +106,7 @@ from validate_art_task import (
     technical_retry_limit_reached,
     unchanged_consecutive_errors,
 )
+from validate_all_tasks import lifecycle_in_scope, task_lifecycle_state
 from validate_workflow import identity_ledger_failures
 from workflow_common import (
     CONFIG_PATH,
@@ -1733,6 +1736,37 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertIn("strip away identity-critical", prompt)
         self.assertLess(len(prompt), prompt_limit("microfix"))
 
+    def test_task_audit_lifecycle_separates_completed_active_and_history(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            completed = root / "completed"
+            completed.mkdir()
+            (completed / "result.json").write_text("{}", encoding="utf-8")
+            candidate = root / "candidate"
+            (candidate / "attempts" / "001").mkdir(parents=True)
+            (candidate / "attempts" / "001" / "attempt.json").write_text(
+                json.dumps({"status": "candidate"}), encoding="utf-8"
+            )
+            rejected = root / "rejected"
+            (rejected / "attempts" / "001").mkdir(parents=True)
+            (rejected / "attempts" / "001" / "attempt.json").write_text(
+                json.dumps({"status": "rejected"}), encoding="utf-8"
+            )
+            archived = root / "archived"
+            archived.mkdir()
+            (archived / "archived.json").write_text("{}", encoding="utf-8")
+
+            self.assertEqual(task_lifecycle_state(completed), "completed")
+            self.assertEqual(task_lifecycle_state(candidate), "candidate-pending")
+            self.assertEqual(task_lifecycle_state(rejected), "rejected-closed")
+            self.assertEqual(task_lifecycle_state(archived), "archived")
+            self.assertTrue(lifecycle_in_scope("completed", "completed"))
+            self.assertTrue(lifecycle_in_scope("candidate-pending", "active"))
+            self.assertFalse(lifecycle_in_scope("rejected-closed", "active"))
+            self.assertTrue(lifecycle_in_scope("rejected-closed", "all"))
+
     def test_default_latency_budget_targets_only_controllable_phases(self) -> None:
         edit_budget = latency_budget({"intent": "edit"})
         new_budget = latency_budget({"intent": "new"})
@@ -2703,6 +2737,42 @@ class IntentWorkflowTests(unittest.TestCase):
             self.assertEqual(metadata["candidate"]["sha256"], file_hash(candidate))
             self.assertEqual(metadata["style_rows"][0]["sha256"], file_hash(style))
             self.assertEqual(metadata["style_rows"][0]["style_scope"], "character")
+            manifest = json.loads(
+                (task / "reference-manifest.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                style_comparison_failures(
+                    "candidate",
+                    candidate,
+                    manifest,
+                    sidecar,
+                    required=True,
+                ),
+                [],
+            )
+            stale_order_manifest = json.loads(json.dumps(manifest))
+            stale_order_manifest["references"][0]["order"] = 3
+            self.assertIn(
+                "manga style comparison rows do not match ordered manifest style inputs",
+                style_comparison_failures(
+                    "candidate",
+                    candidate,
+                    stale_order_manifest,
+                    sidecar,
+                    required=True,
+                ),
+            )
+            candidate.write_bytes(b"changed after comparison")
+            self.assertIn(
+                "manga style comparison candidate hash does not match output",
+                style_comparison_failures(
+                    "candidate",
+                    candidate,
+                    manifest,
+                    sidecar,
+                    required=True,
+                ),
+            )
 
     def test_environment_dominant_medium_shot_adds_scene_economy_traits(self) -> None:
         traits = retrieval_traits_for(
@@ -2878,6 +2948,20 @@ class IntentWorkflowTests(unittest.TestCase):
         )
         self.assertTrue(
             requires_manga_medium_components(
+                {"medium": "manga", "intent": "edit"},
+                {
+                    "references": [
+                        {
+                            "role": "style",
+                            "style_scope": "character",
+                            "item_id": "manga-curated:file:test",
+                        }
+                    ]
+                },
+            )
+        )
+        self.assertTrue(
+            requires_manga_medium_components(
                 {
                     "medium": "manga",
                     "shot": "close-up",
@@ -2933,6 +3017,184 @@ class IntentWorkflowTests(unittest.TestCase):
             "value-hierarchy cannot be n/a for a manga candidate",
             medium_component_failures("candidate", failed, required=True),
         )
+        failed[-1] = parse_medium_component_check(
+            "value-hierarchy=warning:gray haze weakens the global black-white split"
+        )
+        self.assertTrue(
+            any(
+                "value-hierarchy must pass" in failure
+                for failure in medium_component_failures(
+                    "candidate", failed, required=True
+                )
+            )
+        )
+
+    def test_manga_medium_warning_maps_to_exactly_one_local_component(self) -> None:
+        preview = [
+            parse_preview_check("identity=pass:identity matches"),
+            parse_preview_check("request=pass:request matches"),
+            parse_preview_check(
+                "medium=warning:foreground bark marks are locally dense"
+            ),
+            parse_preview_check("technical=pass:image is complete"),
+        ]
+        components = [
+            parse_medium_component_check(
+                "face-hair=pass:face and hair use economical marks"
+            ),
+            parse_medium_component_check(
+                "fabric-fold=pass:folds are grouped into sparse black accents"
+            ),
+            parse_medium_component_check(
+                "scene-material=warning:foreground bark marks are locally dense"
+            ),
+            parse_medium_component_check(
+                "value-hierarchy=pass:paper white and flat black dominate"
+            ),
+        ]
+        self.assertEqual(
+            manga_warning_consistency_failures(
+                "candidate", preview, components, required=True
+            ),
+            [],
+        )
+        self.assertTrue(
+            manga_warning_consistency_failures(
+                "candidate", preview, components[:2] + components[3:], required=True
+            )
+        )
+        passing_preview = [
+            *preview[:2],
+            parse_preview_check("medium=pass:manga hierarchy is clean"),
+            preview[3],
+        ]
+        self.assertTrue(
+            manga_warning_consistency_failures(
+                "candidate", passing_preview, components, required=True
+            )
+        )
+        mismatched_components = list(components)
+        mismatched_components[2] = parse_medium_component_check(
+            "scene-material=warning:roof tiles are locally over-detailed"
+        )
+        self.assertIn(
+            "medium=warning and its component warning must use the same localized evidence note",
+            manga_warning_consistency_failures(
+                "candidate", preview, mismatched_components, required=True
+            ),
+        )
+
+    def test_supplied_missing_sidecar_fails_before_attempt_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory)
+            (task / "brief.json").write_text(
+                json.dumps({"medium": "manga", "intent": "edit"}),
+                encoding="utf-8",
+            )
+            (task / "reference-manifest.json").write_text(
+                json.dumps({"references": []}), encoding="utf-8"
+            )
+            (task / "prompt.md").write_text("compiled prompt", encoding="utf-8")
+            output = task / "output.png"
+            output.write_bytes(b"generated image")
+            arguments = [
+                "record_attempt.py",
+                "--task-dir",
+                str(task),
+                "--status",
+                "rejected",
+                "--output",
+                str(output),
+                "--failure",
+                "medium=visual mismatch",
+                "--comparison-sidecar",
+                str(task / "missing.json"),
+                "--persist-output",
+            ]
+            with patch.object(sys, "argv", arguments), self.assertRaises(SystemExit):
+                record_attempt_main()
+            self.assertFalse((task / "attempts").exists())
+            self.assertFalse((task / "outputs").exists())
+
+    def test_scoped_manga_edit_requires_component_checks(self) -> None:
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory)
+            style = task / "style.png"
+            candidate = task / "candidate.png"
+            Image.new("RGB", (32, 32), "white").save(style)
+            Image.new("RGB", (32, 32), "black").save(candidate)
+            (task / "brief.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 5,
+                        "task_id": "scoped-edit-components",
+                        "medium": "manga",
+                        "intent": "edit",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (task / "reference-manifest.json").write_text(
+                json.dumps(
+                    {
+                        "references": [
+                            {
+                                "order": 1,
+                                "role": "style",
+                                "style_scope": "character",
+                                "item_id": "manga-curated:file:test",
+                                "rendered_path": str(style),
+                                "content_hash": file_hash(style),
+                                "focus": "face and hair grouping",
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (task / "prompt.md").write_text("compiled prompt", encoding="utf-8")
+            _, sidecar = build_style_comparison_sheet(task, candidate)
+            arguments = [
+                "record_attempt.py",
+                "--task-dir",
+                str(task),
+                "--status",
+                "candidate",
+                "--output",
+                str(candidate),
+                "--comparison-sidecar",
+                str(sidecar),
+            ]
+            for check in (
+                "identity=pass:identity matches",
+                "request=pass:request matches",
+                "medium=pass:medium matches",
+                "technical=pass:image is complete",
+            ):
+                arguments.extend(("--preview-check", check))
+            with patch.object(sys, "argv", arguments), self.assertRaises(SystemExit):
+                record_attempt_main()
+            self.assertFalse((task / "attempts").exists())
+
+            for check in (
+                "face-hair=pass:face and hair grouping matches",
+                "fabric-fold=pass:fabric and fold grouping matches",
+                "scene-material=n/a:no readable scene material is visible",
+                "value-hierarchy=pass:paper white and flat black remain distinct",
+            ):
+                arguments.extend(("--medium-component-check", check))
+            with patch.object(sys, "argv", arguments), redirect_stdout(io.StringIO()):
+                self.assertEqual(record_attempt_main(), 0)
+            attempt_dir = task / "attempts" / "001"
+            self.assertTrue((attempt_dir / "attempt.json").is_file())
+            self.assertTrue(
+                (attempt_dir / "manga-style-comparison.json").is_file()
+            )
+            self.assertTrue(
+                (attempt_dir / "manga-style-comparison.png").is_file()
+            )
 
     def test_candidate_acceptance_is_not_counted_as_a_second_generation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

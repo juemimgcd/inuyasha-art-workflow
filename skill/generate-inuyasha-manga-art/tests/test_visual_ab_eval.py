@@ -16,6 +16,7 @@ SKILL_DIR = Path(__file__).resolve().parents[1]
 SCRIPTS = SKILL_DIR / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
+from image_sheet import build_style_comparison_sheet
 from record_attempt import main as record_attempt_main
 from visual_ab_eval import (
     assert_promoted,
@@ -85,6 +86,8 @@ class VisualAbEvalTests(unittest.TestCase):
                 {
                     "role": "style",
                     "item_id": f"style:{case['id']}",
+                    "style_scope": "character",
+                    "focus": "character manga rendering",
                     "rendered_path": str(reference),
                     "content_hash": file_hash(reference),
                 }
@@ -378,6 +381,9 @@ class VisualAbEvalTests(unittest.TestCase):
             case = dataset["cases"][0]
             task, _ = self.create_attempt(root, case, "baseline")
             shutil.rmtree(task / "attempts")
+            _, comparison_sidecar = build_style_comparison_sheet(
+                task, task / "output.png"
+            )
             arguments = [
                 "record_attempt.py",
                 "--task-dir",
@@ -386,6 +392,8 @@ class VisualAbEvalTests(unittest.TestCase):
                 "candidate",
                 "--output",
                 str(task / "output.png"),
+                "--comparison-sidecar",
+                str(comparison_sidecar),
                 "--submitted-prompt",
                 str(task / "prompt.md"),
                 "--generator",
@@ -400,6 +408,14 @@ class VisualAbEvalTests(unittest.TestCase):
                 "medium=pass:line and tone density match manga evidence",
                 "--preview-check",
                 "technical=pass:image is complete and artifact free",
+                "--medium-component-check",
+                "face-hair=pass:face and hair grouping match manga evidence",
+                "--medium-component-check",
+                "fabric-fold=pass:fabric and fold grouping match manga evidence",
+                "--medium-component-check",
+                "scene-material=pass:scene material grouping matches manga evidence",
+                "--medium-component-check",
+                "value-hierarchy=pass:paper white, flat black, and tone hierarchy match manga evidence",
             ]
             with patch("sys.argv", arguments), redirect_stdout(io.StringIO()):
                 self.assertEqual(record_attempt_main(), 0)

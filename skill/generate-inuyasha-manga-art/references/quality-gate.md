@@ -21,6 +21,14 @@ hash-locked comparison sheet with `image_sheet.py --task-dir ... --candidate ...
 before assigning the medium and component checks. Compare each row only against
 its declared character or scene scope. The sheet supports the judgment; it does
 not let a style image control identity, pose, content, text, or composition.
+Pass the returned JSON to `record_attempt.py --comparison-sidecar ...`; a missing
+or hash-mismatched sheet blocks candidate handoff.
+
+`value-hierarchy` must be `pass` for a manga candidate. A medium warning is
+permitted only when exactly one other component records the same localized,
+non-dominant drift using the identical normalized evidence note. A warning in
+more than one component is global enough to
+reject, and a component warning cannot be hidden under `medium=pass`.
 
 ## Contents
 

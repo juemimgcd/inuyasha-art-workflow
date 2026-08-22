@@ -36,6 +36,10 @@ MANGA_MEDIUM_COMPONENTS = (
 )
 
 
+def normalized_evidence_note(value: object) -> str:
+    return " ".join(str(value or "").split()).casefold()
+
+
 def parse_failure(value: str) -> dict[str, str]:
     category, separator, note = value.partition("=")
     if not separator or not category.strip() or not note.strip():
@@ -114,13 +118,157 @@ def medium_component_failures(
     ]
     if value_checks and value_checks[0].get("result") == "n/a":
         failures.append("value-hierarchy cannot be n/a for a manga candidate")
+    if value_checks and value_checks[0].get("result") == "warning":
+        failures.append(
+            "value-hierarchy must pass for a manga candidate; record a rejected "
+            "medium attempt when the image-wide black-white-tone hierarchy drifts"
+        )
     return failures
 
 
-def requires_manga_medium_components(brief: dict) -> bool:
-    """Apply the component gate to current split-domain manga tasks at every shot."""
-    return brief.get("medium") == "manga" and bool(
-        brief.get("character_style_targets")
+def manga_warning_consistency_failures(
+    status: str,
+    preview_checks: list[dict[str, str]],
+    component_checks: list[dict[str, str]],
+    *,
+    required: bool,
+) -> list[str]:
+    """Keep a candidate warning local, singular, and tied to one visible component."""
+    if status != "candidate" or not required:
+        return []
+    medium_rows = [
+        row for row in preview_checks if row.get("category") == "medium"
+    ]
+    if len(medium_rows) != 1:
+        return []
+    component_warnings = [
+        row.get("component", "")
+        for row in component_checks
+        if row.get("result") == "warning"
+    ]
+    medium_result = medium_rows[0].get("result")
+    failures = []
+    if medium_result == "pass" and component_warnings:
+        failures.append(
+            "medium=pass conflicts with warning manga components: "
+            + ", ".join(component_warnings)
+        )
+    if medium_result == "warning" and len(component_warnings) != 1:
+        failures.append(
+            "medium=warning requires exactly one localized component warning"
+        )
+    if medium_result == "warning" and len(component_warnings) == 1:
+        component_row = next(
+            row for row in component_checks if row.get("result") == "warning"
+        )
+        if normalized_evidence_note(
+            medium_rows[0].get("note")
+        ) != normalized_evidence_note(component_row.get("note")):
+            failures.append(
+                "medium=warning and its component warning must use the same "
+                "localized evidence note"
+            )
+    if len(component_warnings) > 1:
+        failures.append(
+            "a candidate may contain at most one localized manga component warning: "
+            + ", ".join(component_warnings)
+        )
+    return failures
+
+
+def style_comparison_failures(
+    status: str,
+    output: Path | None,
+    manifest: dict,
+    sidecar_path: Path | None,
+    *,
+    required: bool,
+) -> list[str]:
+    """Verify the hash-locked candidate-versus-style sheet used for manga QA."""
+    if status != "candidate" or not required:
+        return []
+    if sidecar_path is None:
+        return [
+            "manga candidate requires --comparison-sidecar from image_sheet.py"
+        ]
+    sidecar_path = sidecar_path.expanduser().resolve()
+    if not sidecar_path.is_file():
+        return [f"manga style comparison sidecar is missing: {sidecar_path}"]
+    try:
+        payload = read_json(sidecar_path)
+    except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+        return [f"manga style comparison sidecar is unreadable: {exc}"]
+    failures = []
+    if payload.get("kind") != "manga-style-comparison":
+        failures.append("manga style comparison sidecar has the wrong kind")
+    candidate = payload.get("candidate")
+    if not isinstance(candidate, dict):
+        failures.append("manga style comparison candidate row must be an object")
+        candidate = {}
+    if output is None or candidate.get("sha256") != file_hash(output):
+        failures.append("manga style comparison candidate hash does not match output")
+    style_entries = [
+        entry
+        for entry in manifest.get("references", [])
+        if isinstance(entry, dict) and entry.get("role") == "style"
+    ]
+    expected_rows = [
+        (
+            entry.get("order"),
+            entry.get("item_id"),
+            entry.get("style_scope"),
+            entry.get("focus") or "",
+            entry.get("rendered_content_hash") or entry.get("content_hash"),
+        )
+        for entry in style_entries
+    ]
+    raw_style_rows = payload.get("style_rows")
+    if not isinstance(raw_style_rows, list):
+        failures.append("manga style comparison style_rows must be a list")
+        raw_style_rows = []
+    actual_rows = [
+        (
+            row.get("order"),
+            row.get("item_id"),
+            row.get("style_scope"),
+            row.get("focus") or "",
+            row.get("sha256"),
+        )
+        for row in raw_style_rows
+        if isinstance(row, dict)
+    ]
+    if actual_rows != expected_rows:
+        failures.append(
+            "manga style comparison rows do not match ordered manifest style inputs"
+        )
+    sheet = payload.get("sheet")
+    if not isinstance(sheet, dict):
+        failures.append("manga style comparison sheet row must be an object")
+        sheet = {}
+    sheet_path_value = sheet.get("path")
+    sheet_path = (
+        Path(sheet_path_value).expanduser().resolve()
+        if isinstance(sheet_path_value, str) and sheet_path_value.strip()
+        else None
+    )
+    if sheet_path is None or not sheet_path.is_file():
+        failures.append("manga style comparison image is missing")
+    elif sheet.get("sha256") != file_hash(sheet_path):
+        failures.append("manga style comparison image hash mismatch")
+    return failures
+
+
+def requires_manga_medium_components(
+    brief: dict, manifest: dict | None = None
+) -> bool:
+    """Apply the component gate to current manga tasks with style authority."""
+    if brief.get("medium") != "manga":
+        return False
+    if brief.get("character_style_targets"):
+        return True
+    return any(
+        isinstance(entry, dict) and entry.get("role") == "style"
+        for entry in (manifest or {}).get("references", [])
     )
 
 
@@ -251,6 +399,14 @@ def main() -> int:
     parser.add_argument("--generator", default="built-in image_gen")
     parser.add_argument("--duration-seconds", type=float)
     parser.add_argument(
+        "--comparison-sidecar",
+        type=Path,
+        help=(
+            "Hash-locked JSON sidecar produced by image_sheet.py. Required for "
+            "a manga candidate with selected style inputs."
+        ),
+    )
+    parser.add_argument(
         "--persist-output",
         action="store_true",
         help="Copy the generated image into task outputs before recording it.",
@@ -296,16 +452,54 @@ def main() -> int:
         raise SystemExit(
             "error attempts require --failure technical=NOTE so retry limits work"
         )
+    requires_components = requires_manga_medium_components(brief, manifest)
+    candidate_requires_comparison = (
+        args.status == "candidate"
+        and brief.get("medium") == "manga"
+        and any(
+            isinstance(entry, dict) and entry.get("role") == "style"
+            for entry in manifest.get("references", [])
+        )
+    )
     preview_failures = preview_handoff_failures(args.status, args.preview_check)
     preview_failures.extend(
         medium_component_failures(
             args.status,
             args.medium_component_check,
-            required=requires_manga_medium_components(brief),
+            required=requires_components,
+        )
+    )
+    preview_failures.extend(
+        manga_warning_consistency_failures(
+            args.status,
+            args.preview_check,
+            args.medium_component_check,
+            required=requires_components,
+        )
+    )
+    comparison_validation_requested = (
+        candidate_requires_comparison or args.comparison_sidecar is not None
+    )
+    preview_failures.extend(
+        style_comparison_failures(
+            "candidate" if comparison_validation_requested else args.status,
+            output,
+            manifest,
+            args.comparison_sidecar,
+            required=comparison_validation_requested,
         )
     )
     if preview_failures:
         raise SystemExit("candidate handoff blocked: " + "; ".join(preview_failures))
+    comparison_payload = None
+    comparison_sheet_path = None
+    comparison_sidecar_path = None
+    if args.comparison_sidecar is not None:
+        comparison_sidecar_path = args.comparison_sidecar.expanduser().resolve()
+        comparison_payload = read_json(comparison_sidecar_path)
+        comparison_sheet_path = Path(
+            comparison_payload["sheet"]["path"]
+        ).expanduser().resolve()
     if args.status == "accepted":
         strategy_failures = reference_strategy_failures(brief)
         if strategy_failures:
@@ -529,6 +723,11 @@ def main() -> int:
     }
     attempt["network_failure"] = is_network_failure(attempt)
     attempt["transport_retry_exhausted"] = transport_retry_exhausted(attempt)
+    if comparison_payload is not None and comparison_sheet_path is not None:
+        attempt["manga_style_comparison"] = {
+            "sidecar_sha256": file_hash(comparison_sidecar_path),
+            "sheet_sha256": file_hash(comparison_sheet_path),
+        }
     atomic_write_json(attempt_dir / "attempt.json", attempt)
     for name in ("brief.json", "prompt.md", "reference-manifest.json", "qa.json"):
         source = task_dir / name
@@ -546,6 +745,12 @@ def main() -> int:
             }
         )
         atomic_write_json(submission_path, submission)
+    if comparison_payload is not None and comparison_sheet_path is not None:
+        shutil.copy2(comparison_sheet_path, attempt_dir / "manga-style-comparison.png")
+        shutil.copy2(
+            comparison_sidecar_path,
+            attempt_dir / "manga-style-comparison.json",
+        )
 
     if response_window_path.is_file():
         response_window.update(
@@ -628,9 +833,7 @@ def main() -> int:
                     "output": str(output) if output else None,
                     "handoff_ready": (
                         args.status == "candidate"
-                        and not preview_handoff_failures(
-                            args.status, attempt["preview_checks"]
-                        )
+                        and not preview_failures
                     ),
                     "transport_retry_exhausted": attempt[
                         "transport_retry_exhausted"
