@@ -139,13 +139,23 @@ or prompt improvements are necessary diagnostics but never substitute for this
 visual gate when claiming an image-quality improvement.
 
 For revisions that change manga style-anchor ranking, the structured rendering
-map, manga prompt finish calibration, or manga-medium QA, use the dedicated
+map, or generator-facing manga prompt finish calibration, use the dedicated
 three-case datasets `references/visual-manga-style-eval-v1.json` for `new` and
 `references/visual-manga-style-edit-eval-v1.json` for scoped `edit`. Changes that
 affect both paths require two independently promoted runs. These datasets keep
 the same immutable six-slot, paired-input, blind-review, critical-failure, and
 promotion contract. General-path promotion cannot substitute for the relevant
 manga-style run, and a manga-style run for one intent cannot promote the other.
+
+Post-generation-only changes to candidate eligibility, comparison evidence,
+warning consistency, attempt persistence, or lifecycle auditing do not alter
+generator inputs or output pixels. They require deterministic candidate-gate
+regression cases for current `new`, scoped `edit`, valid controls, rejected
+boundaries, and failure-before-mutation behavior. They may be activated and
+packaged only as handoff-selection or audit hardening and must not be described
+as raw generated-image quality or visual promotion. Any accompanying change to a
+prompt, reference input, ranking, or rendering map restores the applicable
+visual A/B requirement.
 
 An explicit later user rejection may supersede the effective promotion without
 changing the immutable blind artifacts. Append a result-hash-bound event to
@@ -154,7 +164,7 @@ and compute the effective verdict from the original result plus all such events.
 A critical side is ineligible to win a judgment; if both A and B have critical
 failures, the only valid choice is tie/both-fail.
 Activation is a separate hard step. Before installing, packaging, or describing
-a quality-affecting candidate revision as active, run `visual_ab_eval.py
+a generation-quality-affecting candidate revision as active, run `visual_ab_eval.py
 --assert-promoted --run-dir <run-directory>`. It must compute the effective,
 feedback-aware verdict and exit nonzero for an incomplete run, `keep_baseline`,
 or any candidate critical failure recorded after the immutable result.
@@ -249,7 +259,13 @@ Do not overwrite rejected attempts. Snapshot the brief, prompt, manifest, and QA
 with every attempt. Store explicit user preference feedback in
 `preference-events.jsonl`; never infer approval merely because a file exists.
 
-Legacy tasks may remain readable. Audit them with `validate_all_tasks.py`; plan schema normalization with `migrate_art_tasks.py`. Migration is dry-run unless `--apply` is explicitly passed.
+Legacy tasks may remain readable. Audit accepted deliverables with
+`validate_all_tasks.py --scope completed`, current prepared or candidate-pending
+work with `--scope active`, and use `--scope all` only for an intentional history
+inventory. Closed rejections, errors, and drafts must not make the normal
+completed or active audit look broken. `--include-incomplete` remains a
+compatibility alias for `--scope all`. Plan schema normalization with
+`migrate_art_tasks.py`; migration is dry-run unless `--apply` is explicitly passed.
 
 If historical evidence cannot be repaired without rewriting what an accepted
 generation actually used, create `archived.json` with `archive_art_task.py`.
@@ -722,15 +738,24 @@ that remains inside the selected manga language. Every pass or warning must
 include a concrete visual evidence note. Missing, duplicate, unknown, note-free,
 misplaced-warning, or failed checks make the result ineligible for
 handoff and require a `rejected` attempt with a structured failure instead.
-Every current split-domain manga candidate at any shot size additionally requires
-four concrete component checks—`face-hair`, `fabric-fold`, `scene-material`, and
-`value-hierarchy`. A visible component may use `pass`, `warning`, or `fail`;
-warning means a
-localized non-dominant finish drift. A component genuinely
+Every current manga candidate with selected style authority, including scoped
+`edit` and `microfix` tasks, additionally requires four concrete component
+checks—`face-hair`, `fabric-fold`, `scene-material`, and `value-hierarchy`. A
+visible component may use `pass`, `warning`, or `fail`;
+warning means a localized non-dominant finish drift. `value-hierarchy` must pass;
+an image-wide gray/value drift is a rejected medium attempt. If the overall
+medium check is `warning`, exactly one other component must carry the identical
+normalized evidence note for that localized warning. Multiple component warnings,
+or a component warning paired with
+`medium=pass`, block handoff. A component genuinely
 outside the frame may use `n/a` with a concrete reason. Value hierarchy is always
 applicable. A wide shot may mark unreadable character components `n/a`, but it
 must still check scene rendering and value hierarchy. A general statement that
 the image is black and white or uses screen tone cannot satisfy these checks.
+For any manga candidate with selected style inputs, pass the JSON emitted by
+`image_sheet.py` as `record_attempt.py --comparison-sidecar ...`; the recorder
+must verify the candidate hash, ordered scoped style hashes, and sheet hash before
+persisting a handoff-ready attempt.
 Fix failures in this order: identity/form, medium leakage or under-rendering,
 anatomy/costume, composition, background/tone, polish.
 

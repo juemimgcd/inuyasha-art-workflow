@@ -146,11 +146,16 @@ Optimize only work the agent controls:
   or failed check blocks the
   candidate before it is persisted or reported as handoff-ready. Record a visual
   failure as `rejected` with a structured failure instead of weakening this gate.
-- A current split-domain manga candidate at any shot size must also record four
+- A current manga candidate with selected style authority, including scoped
+  `edit` and `microfix` tasks, must also record four
   concrete `--medium-component-check` rows: `face-hair`, `fabric-fold`,
   `scene-material`, and `value-hierarchy`. Use `pass`, `warning`, or `fail` for a
   visible component and evidence-backed `n/a` when it is genuinely outside the frame;
-  value hierarchy is always applicable. These rows check stable character,
+  value hierarchy is always applicable and must be `pass` for a candidate. When
+  the overall medium check is `warning`, exactly one of the other component rows
+  must carry the identical normalized evidence note for the same localized
+  warning; multiple component warnings or a
+  component warning under `medium=pass` block handoff. These rows check stable character,
   scene, and value authority boundaries rather than a fixed defect blacklist.
   A wide shot may mark unreadable character components `n/a`, but it still
   checks scene rendering and value hierarchy.
@@ -205,14 +210,24 @@ retry, add a second attempt, or replace a slot. Judge the A/B pairs before openi
 at least two cases and has no critical identity, medium, request,
 anatomy/contact, or technical failure.
 
-When the revision changes manga anchor ranking, rendering-map compilation,
-character/scene finish calibration, or manga-medium QA, use the focused gates
+When the revision changes manga anchor ranking, rendering-map compilation, or
+generator-facing character/scene finish calibration, use the focused gates
 instead: `references/visual-manga-style-eval-v1.json` for `new` and
 `references/visual-manga-style-edit-eval-v1.json` for scoped `edit`. A revision
 that changes both paths must pass both focused datasets before it is described as
 visually promoted. These focused cases compare face/hair grouping, fabric/fold
 economy, value hierarchy, paper-white, scene grouping, and depth falloff; they do
 not replace identity, request, anatomy/contact, or technical critical checks.
+
+A revision limited to post-generation candidate eligibility, comparison-sidecar
+validation, warning consistency, attempt persistence, or lifecycle auditing does
+not change generator inputs or output pixels. Validate it with deterministic
+candidate-gate regression cases covering current `new`, scoped `edit`, valid
+controls, each rejected boundary, and failure-before-mutation behavior. Such a
+revision may be described only as handoff-selection or audit hardening, never as
+raw generated-image quality or visual promotion. If the same revision also
+changes a prompt, reference input, ranking, or rendering map, the relevant visual
+A/B gates remain mandatory.
 
 ```bash
 scripts/run-python scripts/visual_ab_eval.py --check --json
@@ -255,8 +270,9 @@ review missed, preserve the original result and append the correction with
 `visual_ab_eval.py --record-human-feedback --feedback-failure
 CASE_ID=VARIANT:CATEGORY --note ...`. Read the current decision with
 `--effective-results`; never rewrite the original judgment or `results/result.json`.
-Before activating, packaging, or describing a quality-affecting revision as the
-new workflow, run `visual_ab_eval.py --assert-promoted --run-dir <run-directory>`.
+Before activating, packaging, or describing a generation-quality-affecting
+revision as the new workflow, run `visual_ab_eval.py --assert-promoted
+--run-dir <run-directory>`.
 This command uses the feedback-aware effective verdict and exits nonzero for an
 incomplete run, `keep_baseline`, or any later candidate critical failure.
 For one combined release check, run `validate_workflow.py --visual-run-dir
@@ -579,11 +595,16 @@ scripts/run-python scripts/image_sheet.py \
   --task-dir <task-directory> --candidate <candidate.png>
 ```
 
+Keep the returned `comparison_sidecar` path; `record_attempt.py` verifies that
+its candidate hash, ordered style rows, and sheet hash still match the actual
+handoff inputs.
+
 ```bash
 scripts/run-python scripts/record_attempt.py \
   --task-dir <task-directory> \
   --status candidate \
   --output <candidate.png> \
+  --comparison-sidecar <candidate-manga-style-comparison.json> \
   --duration-seconds 75 \
   --persist-output \
   --preview-check identity="pass:face, form, costume, and marks match official evidence" \
@@ -598,7 +619,7 @@ scripts/run-python scripts/record_attempt.py \
 ```
 
 This single post-generation command persists the image, snapshots the exact
-submission, records the blocking preview checks, and returns a handoff-ready
+submission and comparison evidence, records the blocking preview checks, and returns a handoff-ready
 output path. Do not run full QA or final validation before showing that preview.
 
 For a modified submission add
@@ -620,6 +641,12 @@ the full workflow contract and quality gate, and run final validation:
 scripts/run-python scripts/validate_art_task.py \
   --task-dir <task-directory> --stage final
 ```
+
+For repository-wide audits, keep lifecycle meanings separate:
+`validate_all_tasks.py --scope completed` checks accepted deliverables,
+`--scope active` checks only prepared or candidate-pending work, and `--scope all`
+is an intentional history inventory that may expose abandoned drafts and closed
+failures. Do not report the history inventory as the health of current work.
 
 Keep attempts append-only. Only repeated explicit feedback may update the stable
 preference profile.

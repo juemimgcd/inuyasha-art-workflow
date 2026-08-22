@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "task_id": "20260810-kagome-to-sesshomaru-panel-edit",
+  "archived_at": "2026-08-22T12:28:59+08:00",
+  "reason": "Historical accepted task has entirely pending schema-1 QA; acceptance evidence cannot be completed now without inventing or rewriting the original review. Preserve output and records, exclude from current final validation.",
+  "previous_result_status": "accepted",
+  "previous_output": "/Users/jquery/Documents/inuYasha-design/reference-workflow/tasks/20260810-kagome-to-sesshomaru-panel-edit/outputs/kagome-to-sesshomaru-user-approved-base.png",
+  "reversible": true
+}
