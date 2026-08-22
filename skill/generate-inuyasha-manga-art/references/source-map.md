@@ -18,6 +18,13 @@ derivative as identity evidence while labeling it `user-directed-derived-identit
 Such an item can control the explicitly requested local variant, but it must not be described as a
 publisher-original official sheet.
 
+`official.candidate_series` is a reviewed shortlist policy, not inferred catalog
+metadata. Only paths explicitly listed together may share one Top-K candidate
+slot. The current request selects a member through its configured
+`selection_terms`; otherwise the configured default member is used. Omit series
+collapse to inspect every source file independently. Selected-medium and
+continuity sources never use this policy.
+
 Keep path casing and spelling exact. `inuyahsa-official` is the directory's existing spelling.
 
 For both curated `origin-photos` sources, treat every folder name as inherited retrieval metadata and the leaf folder as the screenshot's content label. For `selected-output`, use its structured filenames as primary metadata and its character folders as inherited tags. All three libraries are user-owned and open-ended.

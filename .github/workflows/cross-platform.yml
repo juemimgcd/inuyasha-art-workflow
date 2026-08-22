@@ -18,7 +18,9 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install dependencies
-        run: python -m pip install -r requirements.txt
+        run: python -m pip install -r requirements-dev.txt
+      - name: Check runtime and maintenance dependencies
+        run: python -c "import PIL, yaml"
       - name: Compile Python scripts
         run: python -m compileall -q skill/generate-inuyasha-manga-art/scripts
       - name: Run unit tests
@@ -27,8 +29,16 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          .\setup-windows.ps1 -SkipDependencyInstall -SkipCatalogBuild
+          .\setup-windows.ps1 -SkipCatalogBuild
           $skill = "$HOME\.agents\skills\generate-inuyasha-manga-art"
+          $env:INUYASHA_PYTHON = Join-Path $env:RUNNER_TEMP "missing-python.exe"
+          try {
+            & "$skill\scripts\run-python.ps1" -c "print('must-not-run')"
+            throw "The launcher accepted a missing explicit interpreter."
+          } catch {
+            if ($_ -notmatch "not executable") { throw }
+          }
+          Remove-Item Env:INUYASHA_PYTHON
           & "$skill\scripts\run-python.ps1" `
             "$skill\scripts\build_reference_index.py" --help
       - name: Check POSIX launcher

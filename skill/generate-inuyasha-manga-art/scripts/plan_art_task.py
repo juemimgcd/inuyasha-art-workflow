@@ -124,8 +124,8 @@ def main() -> int:
     parser.add_argument(
         "--candidate-limit",
         type=int,
-        default=3,
-        help="Maximum candidates shown per retrieval layer (default: 3; hard max: 6).",
+        default=4,
+        help="Maximum candidates shown per retrieval layer (default: 4; hard max: 6).",
     )
     args = parser.parse_args()
     if args.candidate_limit < 1 or args.candidate_limit > 6:
@@ -269,6 +269,9 @@ def main() -> int:
             character,
             "--form",
             form,
+            "--intent-text",
+            args.request,
+            "--collapse-candidate-series",
             "--limit",
             str(args.candidate_limit),
         ]
@@ -302,6 +305,9 @@ def main() -> int:
                 prop,
                 "--form",
                 form,
+                "--intent-text",
+                args.request,
+                "--collapse-candidate-series",
                 "--limit",
                 str(args.candidate_limit),
             ]
@@ -339,14 +345,14 @@ def main() -> int:
         "--limit",
         str(args.candidate_limit),
         "--columns",
-        "3",
+        "4",
     ]
     style_fallback = [
         *style_base,
         "--limit",
         str(args.candidate_limit),
         "--columns",
-        "3",
+        "4",
     ]
     layers = [
         {
@@ -359,8 +365,11 @@ def main() -> int:
             "fallback_without_view_angle": official_view_fallback_commands,
             "fallback_without_shot_or_view_angle": official_unfaceted_fallback_commands,
             "selection_budget": (
-                "inspect at most three official setting-sheet candidates per focal "
-                "character; choose one shot-matched source or the smallest focused "
+                "inspect at most four official setting-sheet candidates per focal "
+                "character; one explicitly curated similar-content series occupies "
+                "one candidate slot and its representative follows the current request, "
+                "while every source remains available to explicit full search; choose "
+                "one shot-matched source or the smallest focused "
                 "crop that preserves the required face, form, costume, or construction; "
                 "a declared view angle must match an exact controlled view facet. "
                 "Viewless fallbacks may be inspected only to prepare the smallest "
@@ -410,7 +419,7 @@ def main() -> int:
             "--limit",
             str(args.candidate_limit),
             "--columns",
-            "3",
+            "4",
         ]
         layers.append(
             {
@@ -451,7 +460,7 @@ def main() -> int:
             "--limit",
             str(args.candidate_limit),
             "--columns",
-            "3",
+            "4",
         ]
         canonical_scene_style_fallback = [
             launcher,
@@ -469,7 +478,7 @@ def main() -> int:
             "--limit",
             str(args.candidate_limit),
             "--columns",
-            "3",
+            "4",
         ]
         layers.append(
             {
@@ -510,7 +519,7 @@ def main() -> int:
             "--limit",
             str(args.candidate_limit),
             "--columns",
-            "3",
+            "4",
         ]
         scene_style_fallback = [
             launcher,
@@ -526,7 +535,7 @@ def main() -> int:
             "--limit",
             str(args.candidate_limit),
             "--columns",
-            "3",
+            "4",
         ]
         layers.append(
             {
@@ -565,7 +574,7 @@ def main() -> int:
             ]
             if include_shot and args.shot:
                 parts.extend(["--shot", args.shot])
-            parts.extend(["--limit", str(args.candidate_limit), "--columns", "3"])
+            parts.extend(["--limit", str(args.candidate_limit), "--columns", "4"])
             return parts
 
         layers.append(
@@ -610,7 +619,7 @@ def main() -> int:
             "--limit",
             str(args.candidate_limit),
             "--columns",
-            "3",
+            "4",
         ]
         continuity_fallback = [
             launcher,
@@ -622,7 +631,7 @@ def main() -> int:
             "--limit",
             str(args.candidate_limit),
             "--columns",
-            "3",
+            "4",
         ]
         layers.append(
             {
