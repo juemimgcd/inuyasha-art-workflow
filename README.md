@@ -8,7 +8,6 @@ Private snapshot of the local Codex skill, its reference workflow, source librar
 - `workflow/reference-workflow/` — catalog, annotations, contact sheets, task manifests, attempts, prompts, QA records, and generated outputs.
 - `libraries/inuyahsa-official/` — official identity and setting-sheet reference library. The original directory spelling is preserved intentionally.
 - `libraries/origin-photos/` — curated manga and TV source captures.
-- `libraries/inuyasha-mine/` — user-created continuity references.
 - `libraries/selected-output/` — user-selected generated outputs.
 
 The snapshot intentionally omits only rebuildable Python bytecode caches and macOS `.DS_Store` files.

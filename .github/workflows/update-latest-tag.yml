@@ -1,0 +1,24 @@
+name: Update latest tag
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [closed]
+
+jobs:
+  update-latest-tag:
+    if: github.event.pull_request.merged == true
+    permissions:
+      contents: write
+    concurrency:
+      group: update-latest-tag
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - name: Move latest tag
+        run: |
+          git tag --force latest
+          git push --force origin refs/tags/latest

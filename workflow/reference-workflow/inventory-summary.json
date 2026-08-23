@@ -1,9 +1,9 @@
 {
-  "built_at": "2026-08-23T21:19:15+08:00",
+  "built_at": "2026-08-23T22:57:38+08:00",
   "database": "${REPO_ROOT}/workflow/reference-workflow/catalog.sqlite3",
   "counts": {
-    "image": 222,
-    "image_file": 248,
+    "image": 213,
+    "image_file": 239,
     "duplicate_image_file": 26
   },
   "sources": {
@@ -16,11 +16,6 @@
       "image": 105,
       "image_file": 125,
       "duplicate_image_file": 20
-    },
-    "user-continuity": {
-      "image": 9,
-      "image_file": 9,
-      "duplicate_image_file": 0
     },
     "tv-curated": {
       "image": 11,
@@ -38,42 +33,35 @@
       "exists": true,
       "file_count": 88,
       "total_size": 15020559,
-      "latest_mtime_ns": 1787490392073790793,
-      "inventory_hash": "6b0ee0b76d84122ec216da2723fb34c6d0aa7a4b343381d2242ee8a76e8d56f3"
+      "latest_mtime_ns": 1787496955570688863,
+      "inventory_hash": "3d1cf3ba21d9ea3ca1cc9e8dd88484024503dc7763cd1123a47487a6b32d52d1"
     },
     "manga-curated": {
       "exists": true,
       "file_count": 125,
       "total_size": 14599539,
-      "latest_mtime_ns": 1787490392231291348,
-      "inventory_hash": "636a797cb4e108752b346c3b2b3c9ca3dce2a9f09788e1e2774a6813b916b413"
-    },
-    "user-continuity": {
-      "exists": true,
-      "file_count": 9,
-      "total_size": 22545698,
-      "latest_mtime_ns": 1787490392147056476,
-      "inventory_hash": "1fff175f457b90589cb91d9c45446121db4b91fb57ae53be599c9522fd69b316"
+      "latest_mtime_ns": 1787496955652336296,
+      "inventory_hash": "11070e884d1ae1fc5506d1f355633f08b35e5502e76feb610c87461abd748d4e"
     },
     "tv-curated": {
       "exists": true,
       "file_count": 11,
       "total_size": 6689855,
-      "latest_mtime_ns": 1787490392175702622,
-      "inventory_hash": "f726d9937f804e010004354211e9d249213a62d21615e7338132e3913237c3a8"
+      "latest_mtime_ns": 1787496955615962075,
+      "inventory_hash": "8f6569b1bcc9281de35a7fa3acb1fae8ec83293e2605a026fb6c2b6fe75436e1"
     },
     "selected-output": {
       "exists": true,
       "file_count": 15,
       "total_size": 42590281,
-      "latest_mtime_ns": 1787490392294252628,
-      "inventory_hash": "3301ad47a9bbac42d4aadd3b90b694f9dc50c0177b87520b97548c930822aafe"
+      "latest_mtime_ns": 1787496955707533136,
+      "inventory_hash": "17a372557cd99736e99f09a122e004b98e918b36a0184814c43eaaaa61d4fc49"
     }
   },
   "annotation_count": 46,
   "incremental_cache": {
-    "hash_cache_hits": 248,
-    "hash_computations": 0,
+    "hash_cache_hits": 0,
+    "hash_computations": 239,
     "rehash_requested": false
   }
 }
