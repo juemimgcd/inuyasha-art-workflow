@@ -51,6 +51,11 @@ without describing every tile or wood grain.
   costume layers, or interaction contact as expendable decoration.
 - Keep large areas genuinely white or flat black. Use dot tone as a graphic
   layer, not as smooth modeled lighting.
+- Treat flat black as an authored hand-inked group rather than a perfectly
+  uniform digital flood-fill. Keep coverage decisive, but follow the selected
+  character reference's organic contour taper, small edge irregularity, and
+  sparse intentional white breaks. Do not add glossy animation highlights,
+  smooth volume gradients, gray replacement, or arbitrary distressed texture.
 - Concentrate information where the moment needs it. Let redundant folds,
   strands, textures, and background marks fall away, but retain the setting and
   construction cues required to understand the shot.
@@ -110,6 +115,17 @@ by enlarging the character, recropping the scene, adding large new black areas,
 or escalating the drama. Use local contour taper and breaks, clustered marks,
 selective density, and distance falloff to refine the drawing without changing
 the shot's visual argument.
+
+## Camera and narrative crop
+
+Camera distance serves the story; it is not a completeness score. When the user
+does not name a shot, choose the close, medium, partial-body, foreground-occluded,
+or wide composition that makes the requested moment most expressive and readable.
+Do not default to a full-body character-sheet view merely to expose all canonical
+details. Use full-body framing when the complete silhouette, garment construction,
+weapon/body topology, stance, or ground contact is part of the requested visual
+argument. When a shot is explicit, honor it exactly and preserve identity through
+the visible canonical anchors inside that crop.
 
 Reject both sides of the band:
 

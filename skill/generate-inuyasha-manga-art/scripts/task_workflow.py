@@ -824,6 +824,44 @@ def _manga_finish_preservation(medium: str) -> str:
     )
 
 
+def _manga_camera_and_black_ink_direction(
+    medium: str, intent: str, shot: str | None
+) -> str:
+    if medium != "manga" or intent != "new":
+        return ""
+    if shot is None:
+        camera = (
+            "Camera distance is not specified: choose the crop that makes the requested "
+            "moment most expressive and readable. Prefer a narrative close, medium, "
+            "partial-body, or foreground-occluded composition when it strengthens the "
+            "focal action; do not default to a full-body character sheet. Use full-body "
+            "framing only when complete silhouette, garment construction, weapon/body "
+            "topology, stance, or ground contact is itself necessary to the story."
+        )
+    elif shot == "full-body":
+        camera = (
+            "The request explicitly requires full-body framing; keep the complete "
+            "silhouette and ground contact visible while still staging a narrative image, "
+            "not a neutral character sheet."
+        )
+    else:
+        camera = (
+            f"Honor the declared {shot} camera distance and its expressive crop; do not "
+            "pull back to a full-body character sheet merely to display the whole costume."
+        )
+    return (
+        "\nManga camera and black-ink direction: "
+        + camera
+        + " Render large black hair and garment groups as manually inked graphic shapes: "
+        "keep decisive coverage, but use organic contour taper, small edge irregularity, "
+        "and only the sparse intentional white breaks supported by the selected character "
+        "reference. Avoid glossy highlights, smooth volume gradients, and perfectly "
+        "uniform digital flood-fill that reads like animation paint or pristine printing "
+        "ink. Do not compensate by turning black groups gray, scratchy, or arbitrarily "
+        "distressed."
+    )
+
+
 def _manga_medium_edit_clause(
     medium: str,
     change_category: str | None,
@@ -1182,6 +1220,9 @@ Use the target as the exact continuity and composition authority. Change only wh
         shot = brief.get("shot")
         view_angle = brief.get("view_angle")
         construction = _medium_construction(medium, shot)
+        manga_camera_and_black_ink = _manga_camera_and_black_ink_direction(
+            medium, intent, shot
+        )
         deliverable = brief.get("deliverable", "illustration")
         if medium == "manga" and deliverable == "illustration":
             deliverable = "single borderless serialized-manga panel, not a standalone illustration"
@@ -1204,6 +1245,7 @@ Reference authority:
 Priority order: requested scene and focal hierarchy first, official identity anchors second, selected-medium rendering third, and exact-focus content evidence fourth. Never blend the roles. Character-style evidence may affect only the character; scene-style evidence may affect only the environment and must never increase character detail density.
 
 Composition: design a new composition from the request with one clear focal hierarchy. Do not copy a style screenshot's characters, dialogue, panel layout, pose, or story.
+{manga_camera_and_black_ink}
 
 Spatial construction: use one coherent depth system; keep body direction, relative scale, overlap, ground contact, and prop attachment mechanically continuous.
 {contact_topology_clause}

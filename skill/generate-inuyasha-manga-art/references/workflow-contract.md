@@ -524,6 +524,16 @@ Generate prompts from the current brief and manifest with `compile_prompt.py`.
   it must not mention or infer absent character-style or scene-style references.
   An edit with only one style domain names only that attached domain and locks the
   other domain to the target.
+- For every new manga image, compile camera and black-ink direction separately
+  from identity coverage. An unspecified shot must select the crop that best
+  expresses the requested moment instead of defaulting to a full-body character
+  sheet; a declared shot remains hard. Full-body is justified when complete
+  silhouette, garment/weapon topology, stance, or ground contact is narratively
+  necessary. Large black hair and garment groups remain decisive, but their
+  contour taper, edge variation, and sparse white breaks must follow the selected
+  character-style evidence rather than glossy animation highlights, smooth
+  gradients, or perfectly uniform digital flood-fill. Do not weaken black groups
+  into gray or arbitrary distress.
 - When the request explicitly says `双手`, compile a contact-topology lock that
   requires two distinct visible hands, both participating in the named action,
   and traces each hand through every named prop/body contact. A hidden, fused,
