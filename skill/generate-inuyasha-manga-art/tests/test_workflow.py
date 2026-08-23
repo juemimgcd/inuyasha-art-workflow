@@ -2262,6 +2262,38 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertNotIn("continuous shine bands", prompt)
         self.assertNotIn("wet reflections", prompt)
 
+    def test_unspecified_manga_shot_chooses_expressive_crop_without_full_body_default(
+        self,
+    ) -> None:
+        brief = self.brief("new")
+        brief["shot"] = None
+        prompt = compile_prompt(brief, {"references": []})
+        self.assertIn("Camera distance is not specified", prompt)
+        self.assertIn("do not default to a full-body character sheet", prompt)
+        self.assertIn("foreground-occluded composition", prompt)
+        self.assertIn("stance, or ground contact is itself necessary", prompt)
+
+    def test_explicit_manga_shot_stays_hard_and_black_fill_is_hand_inked(self) -> None:
+        brief = self.brief("new")
+        brief["shot"] = "close-up"
+        prompt = compile_prompt(brief, {"references": []})
+        self.assertIn("Honor the declared close-up camera distance", prompt)
+        self.assertIn("do not pull back to a full-body character sheet", prompt)
+        self.assertIn("manually inked graphic shapes", prompt)
+        self.assertIn("organic contour taper", prompt)
+        self.assertIn("perfectly uniform digital flood-fill", prompt)
+        self.assertIn("Do not compensate by turning black groups gray", prompt)
+
+    def test_explicit_full_body_manga_shot_is_preserved_as_narrative_staging(
+        self,
+    ) -> None:
+        brief = self.brief("new")
+        brief["shot"] = "full-body"
+        prompt = compile_prompt(brief, {"references": []})
+        self.assertIn("explicitly requires full-body framing", prompt)
+        self.assertIn("keep the complete silhouette and ground contact visible", prompt)
+        self.assertIn("not a neutral character sheet", prompt)
+
     def test_explicit_two_hand_request_compiles_visible_contact_topology(self) -> None:
         brief = self.brief("new")
         brief["request"] = "十六夜用双手和布巾替幼年犬夜叉擦拭湿发"

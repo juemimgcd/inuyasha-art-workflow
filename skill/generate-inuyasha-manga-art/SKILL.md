@@ -313,6 +313,18 @@ Choose one dynamic style image for every new image and named medium replacement.
 Never turn the guide into numeric caps or percentage reductions for strands,
 folds, tones, rain lines, or background marks.
 
+For a new manga image whose shot is not explicit, choose camera distance for the
+requested moment's strongest narrative read; close, medium, partial-body,
+foreground-occluded, and wide compositions are all valid. Do not default to a
+full-body character-sheet view just to show every canonical detail. Keep an
+explicit shot hard, and use full-body framing when complete silhouette, garment
+or weapon topology, stance, or ground contact is itself narratively necessary.
+Render large black hair and garment groups as decisive but manually inked shapes:
+follow the selected character reference's organic contour taper, slight edge
+variation, and sparse intentional white breaks. Reject glossy animation
+highlights, smooth volume gradients, and perfectly uniform digital flood-fill;
+do not replace strong black groups with gray or arbitrary distress.
+
 Judge finish drift by severity rather than raw detail count. Use `pass` when the
 shot's detail distribution and medium both match, `warning` when localized extra
 detail remains subordinate to the original manga line/tone/black-white hierarchy,
