@@ -13,7 +13,9 @@ from pathlib import Path
 from build_reference_index import freshness
 from composite_local_microfix import outside_edit_box_equal
 from prepare_reference_set import (
+    exact_form_authority_subjects,
     image_pixel_hash,
+    manifest_identity_coverage_item,
     source_crop_pixel_hash,
     validate_crop_box,
     validate_identity_card_reference,
@@ -49,6 +51,7 @@ from workflow_common import (
     library_signature,
     load_config,
     now_iso,
+    official_facet_coverage,
     open_database,
     resolve_recorded_path,
     workflow_paths,
@@ -63,6 +66,64 @@ RENDERING_COVERAGE_FIELDS = (
 )
 DOMINANT_MATERIAL_COVERAGE_FIELD = "Dominant material rendering coverage"
 FOCUSED_IDENTITY_SHOTS = {"face", "profile", "close-up", "medium-shot"}
+DIRECTIONAL_VIEW_ANGLES = {
+    "front",
+    "three-quarter-front",
+    "profile",
+    "three-quarter-back",
+    "back",
+}
+
+
+def official_facet_coverage_failures(
+    requirements: list[dict], catalog_rows: list, selected_rows: list, evidence: str
+) -> tuple[list[str], list[str], list[dict]]:
+    failures: list[str] = []
+    warnings: list[str] = []
+    reports = []
+    for requirement in requirements:
+        subject = requirement.get("subject", "")
+        form = requirement.get("form", "")
+        required = requirement.get("required") or []
+        catalog = official_facet_coverage(
+            catalog_rows, subject, form, required
+        )
+        selected = official_facet_coverage(
+            selected_rows, subject, form, required
+        )
+        reports.append({"catalog": catalog, "selected": selected})
+        missing_available = [
+            facet
+            for facet in required
+            if catalog["providers"][facet] and not selected["providers"][facet]
+        ]
+        if missing_available:
+            failures.append(
+                "selected official identity references miss catalog-available facets "
+                f"for {subject}={form}: {missing_available}"
+            )
+        if catalog["status"] != "HIT":
+            warnings.append(
+                "official identity facet coverage is "
+                f"{catalog['status']} for {subject}={form}: "
+                f"{catalog['missing_facets']}"
+            )
+    if reports:
+        statuses = [row["catalog"]["status"] for row in reports]
+        expected = (
+            "MISS"
+            if "MISS" in statuses
+            else "INSUFFICIENT"
+            if "INSUFFICIENT" in statuses
+            else "HIT"
+        )
+        recorded = retrieval_result(evidence.split("## Layer 2:", 1)[0], "Result")
+        if recorded != expected:
+            failures.append(
+                "Layer 1 Result must match complete official facet coverage: "
+                f"expected {expected}, found {recorded or '[blank]'}"
+            )
+    return failures, warnings, reports
 
 
 def requires_character_view_coverage(brief: dict) -> bool:
@@ -71,8 +132,22 @@ def requires_character_view_coverage(brief: dict) -> bool:
     return (
         int(brief.get("schema_version") or 0) >= BRIEF_SCHEMA_VERSION
         and brief.get("intent") == "new"
-        and bool(brief.get("view_angle"))
+        and brief.get("view_angle") in DIRECTIONAL_VIEW_ANGLES
         and shot != "wide-shot"
+    )
+
+
+def allows_character_view_insufficient(
+    brief: dict, *, has_style_rows: bool, matches_view: bool
+) -> bool:
+    """Allow only the documented wide-shot directional-view exception."""
+    return (
+        int(brief.get("schema_version") or 0) >= BRIEF_SCHEMA_VERSION
+        and brief.get("intent") == "new"
+        and brief.get("view_angle") in DIRECTIONAL_VIEW_ANGLES
+        and not requires_character_view_coverage(brief)
+        and has_style_rows
+        and not matches_view
     )
 
 
@@ -155,6 +230,18 @@ def identity_focus_failures(brief: dict, row, entry: dict) -> list[str]:
         or entry.get("crop_box") is not None
     ):
         return []
+    requested_characters = set(brief.get("characters") or [])
+    row_subjects = (
+        set(json.loads(row["subjects"] or "[]"))
+        if "subjects" in row.keys()
+        else set()
+    )
+    if (
+        requested_characters
+        and row_subjects
+        and requested_characters.isdisjoint(row_subjects)
+    ):
+        return []
     if requires_character_view_coverage(brief) and not reference_matches_view_angle(
         row, view_angle
     ):
@@ -214,7 +301,7 @@ def character_style_view_coverage_failures(
     if (
         int(brief.get("schema_version") or 0) < BRIEF_SCHEMA_VERSION
         or brief.get("intent") != "new"
-        or not view_angle
+        or view_angle not in DIRECTIONAL_VIEW_ANGLES
     ):
         return []
     candidate_ids, matches_view = character_style_view_coverage(rows, view_angle)
@@ -793,6 +880,8 @@ def main() -> int:
     seen = set()
     style_catalog_domains: dict[str, str] = {}
     identity_coverage = set()
+    selected_official_identity_rows = []
+    official_facet_reports: list[dict] = []
     identity_card_characters = set()
     retired_identity_card_reported = False
     official_identity_characters = set()
@@ -1021,12 +1110,32 @@ def main() -> int:
             character_style_view_rows.append((row, entry))
         resolved.append((role, row["item_id"]))
         if role == "identity":
-            subjects = set(json.loads(row["subjects"] or "[]"))
-            identity_coverage.update(subjects)
-            official_identity_characters.update(subjects)
+            authoritative_subjects = exact_form_authority_subjects(
+                row, required_forms
+            )
+            identity_coverage.update(authoritative_subjects)
+            official_identity_characters.update(authoritative_subjects)
+            if row["source_id"] == "official":
+                crop_box = entry.get("crop_box")
+                declared_facets = entry.get("identity_facets") or []
+                try:
+                    coverage_row = manifest_identity_coverage_item(
+                        row,
+                        crop_box,
+                        declared_facets,
+                        require_facets="official_facet_requirements" in brief,
+                    )
+                    if coverage_row is not None:
+                        selected_official_identity_rows.append(
+                            coverage_row
+                        )
+                except ValueError as exc:
+                    failures.append(f"invalid identity crop {item_id}: {exc}")
             failures.extend(identity_focus_failures(brief, row, entry))
         if role == "form":
-            form_coverage.update(json.loads(row["subjects"] or "[]"))
+            form_coverage.update(
+                exact_form_authority_subjects(row, required_forms)
+            )
         if entry.get("content_hash") != row["content_hash"]:
             failures.append(f"catalog hash mismatch: {item_id}")
         if role == "content":
@@ -1156,6 +1265,23 @@ def main() -> int:
                         )
             elif row["kind"] == "image" and file_hash(rendered) != row["content_hash"]:
                 failures.append(f"prepared reference content changed: {rendered}")
+    facet_requirements = brief.get("official_facet_requirements") or []
+    if facet_requirements:
+        catalog_official_rows = connection.execute(
+            "SELECT item_id, relative_path, subject_forms, shot_types, tags, "
+            "eligible_roles FROM items "
+            "WHERE source_id = 'official' AND kind = 'image'"
+        ).fetchall()
+        facet_failures, facet_warnings, official_facet_reports = (
+            official_facet_coverage_failures(
+                facet_requirements,
+                catalog_official_rows,
+                selected_official_identity_rows,
+                evidence,
+            )
+        )
+        failures.extend(facet_failures)
+        warnings.extend(facet_warnings)
     connection.close()
     failures.extend(
         character_style_view_coverage_failures(
@@ -1199,13 +1325,10 @@ def main() -> int:
             character_style_count,
             medium,
             brief.get("dominant_scene_materials") or [],
-            allow_character_view_insufficient=(
-                brief_schema >= BRIEF_SCHEMA_VERSION
-                and intent == "new"
-                and bool(view_angle)
-                and not requires_character_view_coverage(brief)
-                and bool(character_style_view_rows)
-                and not character_style_matches_view
+            allow_character_view_insufficient=allows_character_view_insufficient(
+                brief,
+                has_style_rows=bool(character_style_view_rows),
+                matches_view=character_style_matches_view,
             ),
         )
     )
@@ -1502,6 +1625,7 @@ def main() -> int:
         "reference_count": len(references),
         "failures": failures,
         "warnings": warnings,
+        "official_facet_coverage": official_facet_reports,
         "latency": latency_result,
     }
     print(json.dumps(result, ensure_ascii=False, indent=2))

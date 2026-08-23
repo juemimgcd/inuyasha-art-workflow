@@ -19,9 +19,12 @@ description: "Generate, edit, microfix, or art-direct character-accurate Inuyash
   substitute another character or form automatically. It
   controls contour rhythm, face and hair linework, fabric/fold treatment and
   garment value hierarchy; action, expression, interaction and scene terms do
-  not participate in its ranking. A separately persisted `view_angle` does
-  participate because face, bangs, jaw, and hair mark-making must be applicable
-  to the requested direction; it never grants pose or composition authority.
+  not participate in its ranking. A separately persisted directional
+  `view_angle` participates because face, bangs, jaw, and hair mark-making must
+  be applicable to the requested direction; it never grants pose or composition
+  authority. `high-angle` and `low-angle` describe camera elevation, so they may
+  rank composition applicability but never become an identity or
+  character-style same-view gate.
 - Scene evidence comes only from `origin-photos/.../场景`, indexed as
   `reference_domain=scene`. Within the one combined selected-medium retrieval,
   rank an exact `scene-id` first for work-specific
@@ -218,14 +221,27 @@ retry, add a second attempt, or replace a slot. Judge the A/B pairs before openi
 at least two cases and has no critical identity, medium, request,
 anatomy/contact, or technical failure.
 
-When the revision changes manga anchor ranking, rendering-map compilation, or
-generator-facing character/scene finish calibration, use the focused gates
-instead: `references/visual-manga-style-eval-v1.json` for `new` and
+When a revision changes rendering-map compilation or generator-facing manga
+character/scene finish calibration under fixed reference inputs and is to be
+activated or described as a visual improvement, use the focused gates instead:
+`references/visual-manga-style-eval-v1.json` for `new` and
 `references/visual-manga-style-edit-eval-v1.json` for scoped `edit`. A revision
 that changes both paths must pass both focused datasets before it is described as
 visually promoted. These focused cases compare face/hair grouping, fabric/fold
 economy, value hierarchy, paper-white, scene grouping, and depth falloff; they do
 not replace identity, request, anatomy/contact, or technical critical checks.
+
+A revision limited to retrieval, ranking, or coverage hardening whose validated
+tasks retain byte-identical ordered manifest inputs and compiled prompts does not
+change generator inputs or output pixels. Validate it with deterministic coverage
+regressions, the retrieval benchmark, and task/workflow validation, and describe
+it only as retrieval or validation hardening. The fixed-input visual A/B gate
+requires byte-identical paired inputs, so it cannot prove a reference-selection
+improvement and must not be cited as doing so. If selection actually changes the
+generator-facing inputs and the revision is to be activated or claimed as a
+visual improvement, define and pass a selection-aware visual evaluation; if the
+prompt or rendering map changes under fixed inputs, the existing applicable
+visual A/B gate remains mandatory.
 
 A revision limited to post-generation candidate eligibility, comparison-sidecar
 validation, warning consistency, attempt persistence, or lifecycle auditing does
@@ -234,8 +250,8 @@ candidate-gate regression cases covering current `new`, scoped `edit`, valid
 controls, each rejected boundary, and failure-before-mutation behavior. Such a
 revision may be described only as handoff-selection or audit hardening, never as
 raw generated-image quality or visual promotion. If the same revision also
-changes a prompt, reference input, ranking, or rendering map, the relevant visual
-A/B gates remain mandatory.
+changes generator-facing inputs, the prompt, or the rendering map, the applicable
+visual gate remains mandatory for activation or a visual-improvement claim.
 
 ```bash
 scripts/run-python scripts/visual_ab_eval.py --check --json
@@ -376,26 +392,40 @@ scripts/run-python scripts/plan_art_task.py \
   --shot action
 ```
 
+Before candidate-series collapse or Top-K truncation, audit every task-required
+official identity facet over the complete exact subject/form eligible set. Top-K
+is only the visual-inspection budget: record `MISS` when no exact item exists,
+`INSUFFICIENT` when a required facet has no provider, and `HIT` only when every
+required facet has one. An unspecified shot does not imply hands, feet, ground
+contact, or weapon-mount coverage.
+
 Store camera distance and character direction separately. For example, an
 upper-body profile uses `--shot upper-body --view-angle profile`. The planner
 may infer one unambiguous explicit direction such as `侧脸` or `侧身`, but a
 conflicting or multi-direction request must be split or declared explicitly.
 
 Inspect the planner's official identity candidates for every focal character.
-Choose the single source whose view and visible construction best match the shot;
-when the needed face, garment overlap, weapon mount, hand, or footwear occupies
+Choose one source or the smallest complementary provider/crop set whose view and
+visible construction cover the chosen shot; never attach every provider merely
+because the catalog can cover more facets. The total hard maximum remains six.
+When the needed face, garment overlap, weapon mount, hand, or footwear occupies
 only a small part of a sheet, prepare the smallest focused task-local crop and
-record its source hash, crop box, rendered hash, and focus. Then inspect the
-character-style domain.
+record its source hash, crop box, rendered hash, focus, and only the explicitly
+visible `--crop-facet ITEM_ID=SUBJECT:FORM:FACET` values. A crop never inherits
+other page-global facets. Then inspect the character-style domain.
 For schema-5 `new` tasks using `face`, `profile`, `close-up`, or `medium-shot`,
 pre-generation validation blocks an uncropped official setting sheet when its
 shot facets do not match the requested view. Use `prepare_reference_set.py
 --crop ITEM_ID=X,Y,W,H --focus ITEM_ID=...`; do not compensate with a manga
-style image or an identity collage.
-For non-wide schema-5 `new` tasks, `brief.view_angle` requires official identity
-evidence with that exact controlled view facet or a focused task-local crop of
-the required view. Character-style evidence must also visibly cover the same
-view angle. For `wide-shot`, keep exact character/form identity hard, rank view
+style image or an identity collage. Add one repeated `--crop-facet` per visible
+identity facet.
+For non-wide schema-5 `new` tasks, a directional `brief.view_angle` (`front`,
+`three-quarter-front`, `profile`, `three-quarter-back`, or `back`) requires
+official identity evidence with that exact controlled view facet or a focused
+task-local crop of the required view. Character-style evidence must also visibly
+cover that direction. High/low camera angles remain ranking and composition
+constraints, not identity or character-style authority gates. For `wide-shot`,
+keep exact character/form identity hard, rank view
 matches first, and when the bounded character-style anchor misses the requested
 view record Layer 2 `Result: INSUFFICIENT`; do not retrieve again. ImageGen owns
 the small figure's pose. Viewless candidates never count as a same-view `HIT`.
@@ -412,9 +442,10 @@ candidates must depict at least one requested focal character in the exact
 requested form and must not contain any unrequested known character. Only then
 rank view applicability, shot, character mark-making and value hierarchy; do not
 score action, interaction, expression, camera or scene similarity. If no eligible
-candidate covers the requested view, record `MISS` or `INSUFFICIENT` and stop
-retrieval. Only a `wide-shot` may continue to generation with that view gap;
-other new shots remain blocked until same-view evidence exists.
+candidate covers the requested directional view, record `MISS` or `INSUFFICIENT`
+and stop retrieval. Only a `wide-shot` may continue to generation with that
+directional view gap; other new shots remain blocked until same-view evidence
+exists.
 Keep character and form fixed. The same bounded selected-medium retrieval
 also returns a separate scene-domain group. Exact canonical places
 use `scene-id`; generic places use scene/background/weather traits for rendering

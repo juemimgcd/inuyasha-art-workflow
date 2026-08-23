@@ -36,7 +36,7 @@ from workflow_common import (
     workflow_root,
 )
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 
 def parse_args() -> argparse.Namespace:
@@ -461,6 +461,32 @@ def build_database(
                         f"{source_id} {digest} {sorted(item_authorities)}"
                     )
                 item_authority = item_authorities.pop()
+                evidence_role_overrides = source.get(
+                    "path_evidence_role_overrides", {}
+                )
+                item_evidence_roles = {
+                    tuple(
+                        evidence_role_overrides.get(
+                            location["relative_path"],
+                            source.get("evidence_roles", []),
+                        )
+                    )
+                    for location in locations
+                }
+                if len(item_evidence_roles) != 1:
+                    raise ValueError(
+                        "duplicate image locations disagree on evidence roles: "
+                        f"{source_id} {digest} {sorted(item_evidence_roles)}"
+                    )
+                item_source_roles = item_evidence_roles.pop()
+                widened_roles = set(item_source_roles) - set(
+                    source.get("evidence_roles", [])
+                )
+                if widened_roles:
+                    raise ValueError(
+                        "path evidence roles may only narrow source authority: "
+                        f"{source_id} {digest} {sorted(widened_roles)}"
+                    )
                 tags = set(source.get("default_tags", []))
                 annotation_ids = [item_id]
                 for location in locations:
@@ -472,8 +498,14 @@ def build_database(
                 tags, note, annotated = apply_annotations(
                     annotation_ids, tags, "", annotations
                 )
+                for location in locations:
+                    tags.difference_update(
+                        source.get("path_tag_suppressions", {}).get(
+                            location["relative_path"], []
+                        )
+                    )
                 eligible_roles = eligible_reference_roles(
-                    source.get("evidence_roles", []), tags
+                    item_source_roles, tags
                 )
                 folder_tags = sorted(
                     {

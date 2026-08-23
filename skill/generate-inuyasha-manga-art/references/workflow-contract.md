@@ -34,6 +34,11 @@ catalog item stores `eligible_roles`. An explicit annotation such as
 `reference-role:content-only` can only narrow the source roles; it can never add
 authority that the source itself does not possess. Retrieval and preparation
 must enforce item eligibility, not only the source ID.
+Path-scoped subject/form, shot, tag-suppression, and evidence-role overrides are
+complete replacements for visually inspected exceptions and must name an existing
+relative source path. `path_evidence_role_overrides` may only narrow roles already
+granted by the source; it cannot change the source medium or authority. TV frames
+must be indexed by `tv-curated`, never quarantined inside `official` by role alone.
 
 Historical identity-card collages live under
 `workflow/reference-workflow/identity-cards`. They are retired transport bundles,
@@ -51,13 +56,32 @@ mount, hand, or footwear detail is needed. `prepare_reference_set.py
 Pre-generation validation rejects any identity-card entry while final validation
 continues to understand historical manifests without rewriting them.
 
+For every planned character and prop, compute official identity-facet coverage
+on the complete exact `subject_forms` eligible set before candidate-series
+collapse or Top-K preview truncation. The controlled facets are `face`,
+`hair-ear`, `costume`, `garment-overlap`, `hands`, `feet`, `prop-attachment`, and
+`construction`. This library audit does not require attaching every provider.
+Record `MISS` when no exact eligible item exists, `INSUFFICIENT` when a required
+facet has no provider, and `HIT` only when every task-required facet has one.
+Top-K remains a visual inspection budget. Attach the smallest inspected official
+set that visibly covers every catalog-available task facet needed by the chosen
+frame. An unspecified shot does not imply hands, feet, ground contact, garment
+overlap, or weapon-mount coverage.
+
+A focused identity crop contributes only explicitly declared `identity_facets`
+that are visibly inside the crop and provided by its source page; it never
+inherits other page-global facets. Record that subset with the crop box, source
+hash, rendered hash, and non-empty focus.
+
 Free-text retrieval remains a fallback filter inside a domain. Character-style
 ranking ignores action, interaction, expression and scene traits, but retains a
-separately declared view angle because face, bangs, jaw, and hair mark-making
-must be applicable to the requested direction. View angle remains rendering
-applicability only and never controls pose or composition. In a `wide-shot`, a
-view mismatch is recorded as Layer 2 `INSUFFICIENT` instead of triggering a
-second retrieval. Scene ranking
+separately declared directional view angle because face, bangs, jaw, and hair
+mark-making must be applicable to the requested direction. That directional
+view remains rendering applicability only and never controls pose or
+composition. `high-angle` and `low-angle` are camera-elevation constraints: they
+may rank applicability but never become official identity or character-style
+same-view gates. In a `wide-shot`, a directional view mismatch is recorded as
+Layer 2 `INSUFFICIENT` instead of triggering a second retrieval. Scene ranking
 ignores characters, forms, actions and interactions, using exact `scene-id` for
 canonical places and scene/background/effect traits for rendering. Return
 `match_reasons` so the inspected candidate set shows why each item ranked. Do
@@ -141,14 +165,27 @@ failures. Ties preserve the baseline. Unit tests, valid schemas, retrieval score
 or prompt improvements are necessary diagnostics but never substitute for this
 visual gate when claiming an image-quality improvement.
 
-For revisions that change manga style-anchor ranking, the structured rendering
-map, or generator-facing manga prompt finish calibration, use the dedicated
-three-case datasets `references/visual-manga-style-eval-v1.json` for `new` and
+For revisions that change the structured rendering map or generator-facing manga
+prompt finish calibration under fixed reference inputs and are to be activated
+or described as visual improvements, use the dedicated three-case datasets
+`references/visual-manga-style-eval-v1.json` for `new` and
 `references/visual-manga-style-edit-eval-v1.json` for scoped `edit`. Changes that
 affect both paths require two independently promoted runs. These datasets keep
 the same immutable six-slot, paired-input, blind-review, critical-failure, and
 promotion contract. General-path promotion cannot substitute for the relevant
 manga-style run, and a manga-style run for one intent cannot promote the other.
+
+Pure retrieval, ranking, or coverage hardening whose validated tasks retain
+byte-identical ordered manifest inputs and compiled prompts does not change
+generator inputs or output pixels. Deterministic coverage regressions, the
+retrieval benchmark, and task/workflow validation are the required evidence, and
+the revision may be described only as retrieval or validation hardening. The
+fixed-input visual A/B contract requires byte-identical paired inputs and cannot
+prove a reference-selection improvement. If selection actually changes
+generator-facing inputs and the revision is to be activated or claimed as a
+visual improvement, define and pass a selection-aware visual evaluation. A
+prompt or rendering-map change under fixed inputs still requires the applicable
+existing visual A/B gate.
 
 Post-generation-only changes to candidate eligibility, comparison evidence,
 warning consistency, attempt persistence, or lifecycle auditing do not alter
@@ -156,9 +193,9 @@ generator inputs or output pixels. They require deterministic candidate-gate
 regression cases for current `new`, scoped `edit`, valid controls, rejected
 boundaries, and failure-before-mutation behavior. They may be activated and
 packaged only as handoff-selection or audit hardening and must not be described
-as raw generated-image quality or visual promotion. Any accompanying change to a
-prompt, reference input, ranking, or rendering map restores the applicable
-visual A/B requirement.
+as raw generated-image quality or visual promotion. Any accompanying change to
+generator-facing inputs, the prompt, or the rendering map restores the applicable
+visual-gate requirement for activation or a visual-improvement claim.
 
 An explicit later user rejection may supersede the effective promotion without
 changing the immutable blind artifacts. Append a result-hash-bound event to
@@ -187,19 +224,24 @@ garment overlap occupies only a small part of the page. Record `crop_box`,
 manifest. Always regenerate the crop from the catalog source. Validation must
 recompute the expected pixels from the source and coordinates instead of trusting
 manifest hashes alone. The crop keeps the source sheet's authority and may
-control only construction visible inside it.
+control only construction visible inside it. Record each visible controlled facet
+with `--crop-facet ITEM_ID=SUBJECT:FORM:FACET`; validation rejects undeclared or
+source-unsupported crop facets.
 For a schema-5 `new` task with a `face`, `profile`, `close-up`, or `medium-shot`
 request, an official setting sheet whose shot facets do not match the request
 must be prepared as the smallest focused face/view crop. Pre-generation
 validation rejects the uncropped sheet; a character-style image cannot replace
 this identity evidence.
-For any non-wide schema-5 `new` task carrying `brief.view_angle`, an uncropped
-official identity reference must carry the exact controlled `view-angle:*` tag
-or its documented shot-facet equivalent. The selected character-style row must
-cover the same angle. Pre-generation validation rejects a mismatched identity
-or character-style row; a general front or upper-body match is not profile
-coverage. For `wide-shot`, exact character/form evidence remains mandatory, but
-a view mismatch is recorded as Layer 2 `INSUFFICIENT` without another retrieval.
+For any non-wide schema-5 `new` task carrying a directional `brief.view_angle`
+(`front`, `three-quarter-front`, `profile`, `three-quarter-back`, or `back`), an
+uncropped official identity reference must carry the exact controlled
+`view-angle:*` tag or its documented shot-facet equivalent. The selected
+character-style row must cover the same direction. Pre-generation validation
+rejects a mismatched identity or character-style row; a general front or
+upper-body match is not profile coverage. High/low camera angles do not impose
+this authority gate. For `wide-shot`, exact character/form evidence remains
+mandatory, but a directional view mismatch is recorded as Layer 2
+`INSUFFICIENT` without another retrieval.
 An image-level view tag on a multi-character panel is not subject-bound evidence:
 when an unrequested co-character is present, it cannot prove that the focal
 character owns the tagged view. Record coverage as insufficient unless a focused
@@ -234,7 +276,9 @@ New tasks use:
   scene style scopes, and coverage-gated canonical scene style. New tasks persist the planner's explicit `--shot`;
   legacy briefs without it remain valid.
   `shot` stores camera distance or panel function; `view_angle` separately stores
-  character direction such as `front`, `three-quarter-front`, or `profile`.
+  character direction such as `front`, `three-quarter-front`, or `profile`, or
+  camera elevation as `high-angle`/`low-angle`. Camera elevation is not an
+  identity or character-style same-view authority gate.
   Historical briefs with only `shot` remain valid. New manga briefs also declare
   optional-compatible `rendering_map` schema 1:
   character resolution/grouping/quiet zones, focal/near/middle/far scene planes,
@@ -376,7 +420,7 @@ Shot and view are ranking signals inside those bounded results. Each result is
 final. Record missing character-view, canonical-scene, or scene-rendering
 coverage as `MISS` or `INSUFFICIENT` and stop retrieval. ImageGen may construct
 a missing canonical scene, scene rendering, or `wide-shot` character pose; a
-non-wide character-view gap remains blocked before generation.
+non-wide directional character-view gap remains blocked before generation.
 
 Optional exact content evidence is allowed only when the user explicitly requests
 that extra lookup. Search the selected-medium curated source first.
@@ -402,10 +446,12 @@ Start identity with exact subject + form. Use shot and view only to rank the one
 bounded result. If that result is insufficient, record it and stop; never run a
 shotless or viewless retry. Never broaden identity or content across form.
 Character-style retrieval uses the hard domain plus exact requested character
-and form eligibility, but no action or scene score; a declared view angle is a
-strong applicability signal and the selected character anchor must visibly cover
-it. For `wide-shot`, exact character/form remains mandatory but a missing view
-match must be recorded as Layer 2 `INSUFFICIENT`; ImageGen constructs the small
+and form eligibility, but no action or scene score; a declared directional view
+is a strong applicability signal and the selected character anchor must visibly
+cover it. High/low camera elevation remains a soft ranking/composition signal.
+For `wide-shot`, exact character/form remains mandatory but a missing
+directional view match must be recorded as Layer 2 `INSUFFICIENT`; ImageGen
+constructs the small
 figure's pose and retrieval stops. No other character or form is an automatic fallback. Scene-style retrieval uses
 the hard scene domain and only scene, background, weather and distance-detail
 traits. An exact requested scene family outranks a generic economy-only match.

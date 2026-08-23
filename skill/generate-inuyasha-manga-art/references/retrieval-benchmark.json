@@ -2,30 +2,32 @@
   "schema_version": 1,
   "description": "Curated high-frequency intent benchmark for item-level Top-K retrieval.",
   "thresholds": {
-    "recall_at_1": 0.9,
+    "recall_at_1": 1.0,
     "recall_at_3": 1.0,
     "mrr": 0.95
   },
   "cases": [
     {
-      "id": "kagome-embrace-from-behind",
-      "intent_text": "犬夜叉从背后拥抱戈薇",
+      "id": "kagome-inuyasha-shoulder-touch",
+      "intent_text": "犬夜叉从戈薇侧后方伸手搭住她的肩膀",
       "query": {
         "source": "manga-curated",
         "role": "content",
         "subject_form": ["犬夜叉=half-demon-form", "戈薇=default-form"],
-        "shot": ["two-shot"]
+        "shot": ["two-shot"],
+        "query": "interaction:shoulder-rest"
       },
       "relevant_item_ids": ["manga-curated:file:e5150d8d84bfd219d430"]
     },
     {
-      "id": "kikyo-gentle-embrace",
-      "intent_text": "桔梗温柔拥抱犬夜叉，安静的身体接触",
+      "id": "kikyo-inuyasha-layered-tessaiga-composition",
+      "intent_text": "桔梗大幅头像位于背景，犬夜叉持铁碎牙位于前景的层叠双人构图",
       "query": {
         "source": "manga-curated",
         "role": "content",
         "subject_form": ["犬夜叉=half-demon-form", "桔梗=default-form"],
-        "shot": ["two-shot"]
+        "shot": ["two-shot"],
+        "query": "depth-layout:foreground-background content-object:tessaiga"
       },
       "relevant_item_ids": ["manga-curated:file:787b991f546bf60f1ac4"]
     },
@@ -52,23 +54,26 @@
       "relevant_item_ids": ["manga-curated:file:8f7a2ef700f3ecd25058"]
     },
     {
-      "id": "child-inuyasha-izayoi-first-snow-rendering",
-      "intent_text": "幼年犬夜叉和十六夜在雪天的府邸，刚刚开始下雪；幼年犬夜叉抬头看向天上零星落下的雪花，十六夜在后面温柔地看着幼年犬夜叉",
+      "id": "izayoi-inuyasha-upper-body-mother-child-rendering",
+      "intent_text": "十六夜和半妖犬夜叉母子同框，十六夜位于左侧上身，犬夜叉在右侧局部",
       "query": {
         "source": "manga-curated",
         "role": "rendering",
-        "shot": ["two-shot"]
+        "subject_form": ["十六夜=default-form", "犬夜叉=half-demon-form"],
+        "shot": ["upper-body"],
+        "view_angle": "multi-view"
       },
-      "relevant_item_ids": ["manga-curated:file:8f7a2ef700f3ecd25058"]
+      "relevant_item_ids": ["manga-curated:file:876af11c5aa2fd24a707"]
     },
     {
-      "id": "kagome-inuyasha-romantic-gaze",
-      "intent_text": "犬夜叉和戈薇浪漫面对面对视，近景双人关系",
+      "id": "kagome-inuyasha-adjacent-face-panels",
+      "intent_text": "犬夜叉侧脸与戈薇正脸分属相邻面部格，没有同框接触或共同视线",
       "query": {
         "source": "manga-curated",
         "role": "content",
         "subject_form": ["犬夜叉=half-demon-form", "戈薇=default-form"],
-        "shot": ["two-shot"]
+        "shot": ["face"],
+        "view_angle": "multi-view"
       },
       "relevant_item_ids": ["manga-curated:file:f6cd8c02e6d82581bafe"]
     },
@@ -104,6 +109,18 @@
         "shot": ["action"]
       },
       "relevant_item_ids": ["manga-curated:file:937a64a1a7ada14e33a8"]
+    },
+    {
+      "id": "human-inuyasha-without-upper-fire-rat-robe",
+      "intent_text": "人类形态犬夜叉坐靠岩壁，已经脱掉上身火鼠裘外袍",
+      "query": {
+        "source": "manga-curated",
+        "role": "content",
+        "subject_form": ["犬夜叉=human-form"],
+        "shot": ["medium-shot"],
+        "query": "costume-state:without-fire-rat-robe"
+      },
+      "relevant_item_ids": ["manga-curated:file:817a09fa3adbab29f225"]
     },
     {
       "id": "sesshomaru-draws-tenseiga",
@@ -153,13 +170,14 @@
       ]
     },
     {
-      "id": "inuyasha-carries-shippo",
-      "intent_text": "犬夜叉抱起七宝",
+      "id": "inuyasha-holds-bicycle-wheel-shippo-inset",
+      "intent_text": "犬夜叉单手抓住自行车前轮，七宝只出现在插入小格",
       "query": {
         "source": "manga-curated",
         "role": "content",
         "subject_form": ["犬夜叉=half-demon-form", "七宝=default-form"],
-        "shot": ["two-shot"]
+        "shot": ["two-shot"],
+        "query": "action:hold interaction:hand-prop"
       },
       "relevant_item_ids": ["manga-curated:file:02e6cd132e5e96a7c6df"]
     },
@@ -175,13 +193,14 @@
       "relevant_item_ids": ["manga-curated:file:0664d22f673677b8d7f0"]
     },
     {
-      "id": "miroku-sango-face-to-face-dialogue",
-      "intent_text": "弥勒和珊瑚面对面交谈对视",
+      "id": "miroku-sango-side-by-side-dialogue",
+      "intent_text": "弥勒和珊瑚在同一平面并肩站立，交谈并看向画外",
       "query": {
         "source": "manga-curated",
         "role": "content",
         "subject_form": ["弥勒=default-form", "珊瑚=default-form"],
-        "shot": ["two-shot"]
+        "shot": ["two-shot"],
+        "view_angle": "three-quarter-front"
       },
       "relevant_item_ids": ["manga-curated:file:04851d6589cb2aa26ba2"]
     },
@@ -293,10 +312,7 @@
         "shot": ["upper-body"]
       },
       "relevant_item_ids": [
-        "manga-curated:file:0fbb062a365b8cfa7992",
-        "manga-curated:file:2fbd35cc27786e5559d3",
-        "manga-curated:file:bbdfde415b9957d7bdd1",
-        "manga-curated:file:be6446ad75ea8ddab71b"
+        "manga-curated:file:5497c36480b84760a3f6"
       ],
       "strict_subject_forms": [["戈薇", "default-form"]]
     },
@@ -372,6 +388,112 @@
         "manga-curated:file:92518485ea6c29091042",
         "manga-curated:file:43374f02629515244270"
       ]
+    },
+    {
+      "id": "official-human-inuyasha-waist-tessaiga",
+      "intent_text": "人类形态犬夜叉全身，腰间佩挂未变化铁碎牙",
+      "query": {
+        "source": "official",
+        "role": "identity",
+        "subject_form": ["犬夜叉=human-form"],
+        "shot": ["full-body"],
+        "query": "content-object:tessaiga"
+      },
+      "relevant_item_ids": ["official:file:efe7eafd42e0ab48e48f"]
+    },
+    {
+      "id": "official-inuyasha-upper-waist-tessaiga",
+      "intent_text": "半妖犬夜叉上身，手靠近腰间未变化铁碎牙",
+      "query": {
+        "source": "official",
+        "role": "identity",
+        "subject_form": ["犬夜叉=half-demon-form"],
+        "shot": ["upper-body"],
+        "query": "content-object:tessaiga"
+      },
+      "relevant_item_ids": ["official:file:1ded4be57342f9fb0093"]
+    },
+    {
+      "id": "official-inuyasha-tessaiga-draw-sheath",
+      "intent_text": "犬夜叉拔出并收回未变化铁碎牙的动作分解",
+      "query": {
+        "source": "official",
+        "role": "identity",
+        "subject_form": ["铁碎牙=untransformed-form"],
+        "shot": ["action"],
+        "query": "action:draw-weapon"
+      },
+      "relevant_item_ids": ["official:file:b69a31a9412dc8a2a06b"]
+    },
+    {
+      "id": "official-miroku-face-not-wind-tunnel",
+      "intent_text": "弥勒正面侧面和四分之三面部表情",
+      "query": {
+        "source": "official",
+        "role": "identity",
+        "subject_form": ["弥勒=default-form"],
+        "shot": ["face"],
+        "query": "expression"
+      },
+      "relevant_item_ids": ["official:file:c829114650304a53b15f"]
+    },
+    {
+      "id": "official-miroku-wind-tunnel-not-staff",
+      "intent_text": "弥勒右掌发动风穴及吸引效果",
+      "query": {
+        "source": "official",
+        "role": "identity",
+        "subject_form": ["弥勒=default-form"],
+        "shot": ["action"],
+        "query": "action:activate-wind-tunnel"
+      },
+      "relevant_item_ids": ["official:file:38153b6036396ab71795"]
+    },
+    {
+      "id": "official-beads-object-only",
+      "intent_text": "言灵念珠的珠体穿接和闭合结构",
+      "query": {
+        "source": "official",
+        "role": "identity",
+        "subject_form": ["言灵念珠=default-form"],
+        "shot": ["detail"],
+        "query": "content-object:beads-of-subjugation"
+      },
+      "relevant_item_ids": ["official:file:5e39f1a2948f908605e4"]
+    },
+    {
+      "id": "official-kanna-mirror",
+      "intent_text": "神无手持圆镜的正背侧全身结构",
+      "query": {
+        "source": "official",
+        "role": "identity",
+        "subject_form": ["神无=default-form"],
+        "query": "content-object:mirror"
+      },
+      "relevant_item_ids": ["official:file:37c5529748aa587ed04b"]
+    },
+    {
+      "id": "official-sango-hiraikotsu",
+      "intent_text": "战斗服珊瑚背负飞来骨的静态结构转面",
+      "query": {
+        "source": "official",
+        "role": "identity",
+        "subject_form": ["珊瑚=battle-armor-form"],
+        "query": "content-object:hiraikotsu"
+      },
+      "relevant_item_ids": ["official:file:f49fb704ab4479e230fe"]
+    },
+    {
+      "id": "official-totosai-rides-muumuu",
+      "intent_text": "刀刀斋骑着哞哞飞行并手持锤子",
+      "query": {
+        "source": "official",
+        "role": "identity",
+        "subject_form": ["刀刀斋=default-form", "哞哞=default-form"],
+        "shot": ["action"],
+        "query": "interaction:rider-mount"
+      },
+      "relevant_item_ids": ["official:file:b657046af78113be6295"]
     }
   ]
 }

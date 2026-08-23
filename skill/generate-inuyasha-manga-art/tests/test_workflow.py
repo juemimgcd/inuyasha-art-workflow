@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import shutil
 import sqlite3
 import sys
 import tempfile
@@ -49,6 +50,7 @@ from prepare_generation_submission import (
     validate_generation_submission,
 )
 from prepare_reference_set import (
+    exact_form_authority_subjects,
     file_hash,
     image_pixel_hash,
     instruction_for,
@@ -100,6 +102,7 @@ from task_workflow import (
 from technical_failures import transport_retry_exhausted
 from validate_all_tasks import lifecycle_in_scope, task_lifecycle_state
 from validate_art_task import (
+    allows_character_view_insufficient,
     candidate_source_failures,
     character_style_view_coverage_failures,
     consecutive_technical_errors,
@@ -107,6 +110,7 @@ from validate_art_task import (
     identity_focus_failures,
     manifest_style_scope_failure,
     rendering_coverage_failures,
+    requires_character_view_coverage,
     retrieval_result,
     scene_economy_reference_failures,
     scene_style_coverage_evidence_failures,
@@ -114,6 +118,7 @@ from validate_art_task import (
     technical_retry_limit_reached,
     unchanged_consecutive_errors,
 )
+from validate_art_task import main as validate_art_task_main
 from validate_workflow import identity_ledger_failures
 from workflow_common import (
     CONFIG_PATH,
@@ -801,7 +806,7 @@ class MetadataTests(unittest.TestCase):
         self.assertGreater(focused_score, shared_score)
         self.assertIn("preferred subject focus: extra subjects present", shared_reasons)
 
-    def test_benchmark_covers_real_reversed_mother_child_rendering_path(self) -> None:
+    def test_benchmark_covers_verified_mother_child_rendering_path(self) -> None:
         dataset = load_dataset(
             Path(__file__).resolve().parents[1]
             / "references"
@@ -810,12 +815,15 @@ class MetadataTests(unittest.TestCase):
         case = next(
             case
             for case in dataset["cases"]
-            if case["id"] == "child-inuyasha-izayoi-first-snow-rendering"
+            if case["id"] == "izayoi-inuyasha-upper-body-mother-child-rendering"
         )
         self.assertEqual(case["query"]["role"], "rendering")
         self.assertNotIn("subject", case["query"])
-        self.assertNotIn("subject_form", case["query"])
-        self.assertIn("幼年犬夜叉和十六夜", case["intent_text"])
+        self.assertEqual(
+            case["query"]["subject_form"],
+            ["十六夜=default-form", "犬夜叉=half-demon-form"],
+        )
+        self.assertIn("十六夜和半妖犬夜叉", case["intent_text"])
 
     def test_source_exclude_globs_skip_derived_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1141,6 +1149,113 @@ class ReferenceValidationTests(unittest.TestCase):
             validate_reference(
                 row, "identity", "official:test", "manga", {"犬夜叉": "human-form"}
             )
+
+    def test_explicit_empty_secondary_form_does_not_inherit_primary_form(self) -> None:
+        values = self.row(
+            source="official",
+            subjects=["十六夜", "犬夜叉"],
+            forms=["default-form"],
+            subject_forms={"十六夜": ["default-form"], "犬夜叉": []},
+        )
+        with sqlite3.connect(":memory:") as connection:
+            connection.row_factory = sqlite3.Row
+            row = connection.execute(
+                """
+                SELECT ? AS source_id, ? AS subjects, ? AS forms,
+                       ? AS subject_forms, ? AS eligible_roles
+                """,
+                tuple(
+                    values[field]
+                    for field in (
+                        "source_id",
+                        "subjects",
+                        "forms",
+                        "subject_forms",
+                        "eligible_roles",
+                    )
+                ),
+            ).fetchone()
+        validate_reference(
+            row,
+            "identity",
+            "official:mother-child",
+            "manga",
+            {"十六夜": "default-form", "犬夜叉": "child-form"},
+        )
+        authoritative = exact_form_authority_subjects(
+            row, {"十六夜": "default-form", "犬夜叉": "child-form"}
+        )
+        self.assertEqual(authoritative, {"十六夜"})
+        self.assertEqual({"十六夜", "犬夜叉"} - authoritative, {"犬夜叉"})
+        with self.assertRaisesRegex(SystemExit, "does not provide form authority"):
+            validate_reference(
+                row,
+                "identity",
+                "official:mother-child",
+                "manga",
+                {"犬夜叉": "child-form"},
+            )
+
+    def test_task_validator_does_not_count_context_only_subject_as_covered(
+        self,
+    ) -> None:
+        repository_workflow_root = (
+            SCRIPTS.parents[2] / "workflow/reference-workflow"
+        )
+        source_task = (
+            repository_workflow_root
+            / "tasks/20260811-izayoi-child-inuyasha-kemari-play"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            workflow_root = Path(directory)
+            (workflow_root / "tasks").mkdir()
+            shutil.copy2(
+                repository_workflow_root / "catalog.sqlite3",
+                workflow_root / "catalog.sqlite3",
+            )
+            shutil.copy2(
+                repository_workflow_root / "annotations.jsonl",
+                workflow_root / "annotations.jsonl",
+            )
+            task = workflow_root / "tasks/context-only-coverage"
+            shutil.copytree(source_task, task)
+            manifest_path = task / "reference-manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["references"] = [
+                entry
+                for entry in manifest["references"]
+                if entry["item_id"]
+                != "manga-curated:file:cd73f043f0439d0ba73d"
+            ]
+            for order, entry in enumerate(manifest["references"], 1):
+                entry["order"] = order
+            manifest_path.write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            output = io.StringIO()
+            arguments = [
+                "validate_art_task.py",
+                "--workflow-root",
+                str(workflow_root),
+                "--task-dir",
+                str(task),
+                "--stage",
+                "pre-generation",
+            ]
+            with patch("sys.argv", arguments), redirect_stdout(output):
+                self.assertEqual(validate_art_task_main(), 2)
+
+        result = json.loads(output.getvalue())
+        self.assertTrue(
+            any(
+                "missing official identity or selected-medium exact-form coverage"
+                in failure
+                and "犬夜叉" in failure
+                for failure in result["failures"]
+            ),
+            result["failures"],
+        )
 
     def test_prop_only_official_sheet_satisfies_exact_prop_form(self) -> None:
         row = self.row(
@@ -2373,6 +2488,52 @@ class IntentWorkflowTests(unittest.TestCase):
             [],
         )
 
+    def test_low_angle_is_camera_ranking_not_character_view_authority(self) -> None:
+        brief = {
+            "schema_version": 5,
+            "intent": "new",
+            "shot": "full-body",
+            "view_angle": "low-angle",
+            "characters": ["犬夜叉"],
+        }
+        front = {
+            "item_id": "official:file:front-inuyasha",
+            "reference_domain": "character-style",
+            "subjects": json.dumps(["犬夜叉"]),
+            "tags": json.dumps(["view-angle:front"]),
+            "shot_types": json.dumps(["full-body"]),
+        }
+        entry = {"role": "style", "crop_box": None}
+        self.assertFalse(requires_character_view_coverage(brief))
+        self.assertEqual(identity_focus_failures(brief, front, entry), [])
+        self.assertEqual(
+            character_style_view_coverage_failures(brief, [(front, entry)]),
+            [],
+        )
+        self.assertFalse(
+            allows_character_view_insufficient(
+                brief, has_style_rows=True, matches_view=False
+            )
+        )
+        self.assertTrue(
+            requires_character_view_coverage({**brief, "view_angle": "profile"})
+        )
+        self.assertEqual(
+            len(
+                character_style_view_coverage_failures(
+                    {**brief, "view_angle": "profile"}, [(front, entry)]
+                )
+            ),
+            1,
+        )
+        self.assertTrue(
+            allows_character_view_insufficient(
+                {**brief, "shot": "wide-shot", "view_angle": "profile"},
+                has_style_rows=True,
+                matches_view=False,
+            )
+        )
+
     def test_wide_shot_requires_honest_view_insufficiency_without_retry(self) -> None:
         brief = {
             "schema_version": 5,
@@ -2454,6 +2615,36 @@ class IntentWorkflowTests(unittest.TestCase):
         prompt = compile_prompt(self.brief("new"), manifest)
         self.assertIn("Input 1 (style)", prompt)
         self.assertNotIn("opaquehash", prompt)
+
+    def test_repeated_reference_authority_is_compiled_once(self) -> None:
+        brief = self.brief("new")
+        brief["request"] = "x" * 3000
+        brief["scene"] = brief["request"]
+        instruction = instruction_for("identity", "manga")
+        manifest = {
+            "references": [
+                {"role": "identity", "instructions": instruction}
+                for _ in range(3)
+            ]
+        }
+
+        prompt = compile_prompt(brief, manifest)
+
+        self.assertLessEqual(len(prompt), prompt_limit("new"))
+        self.assertEqual(prompt.count(instruction), 1)
+        for index in range(1, 4):
+            self.assertIn(f"Input {index} (identity)", prompt)
+
+    def test_legacy_non_string_reference_instruction_remains_compilable(self) -> None:
+        manifest = {
+            "references": [
+                {"role": "identity", "instructions": ["legacy", "instruction"]}
+            ]
+        }
+
+        prompt = compile_prompt(self.brief("new"), manifest)
+
+        self.assertIn("Input 1 (identity): ['legacy', 'instruction']", prompt)
 
     def test_new_manga_prompt_rejects_polished_illustration_finish(self) -> None:
         prompt = compile_prompt(self.brief("new"), {"references": []})
@@ -4196,6 +4387,48 @@ class IntentWorkflowTests(unittest.TestCase):
             self.assertNotIn("ranking preferences, not eligibility gates", selection_budget)
             self.assertNotIn("compatible same-view subject", selection_budget)
 
+    def test_planner_and_prompt_treat_low_angle_as_camera_elevation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            arguments = [
+                "plan_art_task.py",
+                "--workflow-root",
+                directory,
+                "--slug",
+                "inuyasha-low-angle-routing",
+                "--request",
+                "犬夜叉站在崖顶，低机位仰视",
+                "--identity-form",
+                "犬夜叉=half-demon-form",
+                "--shot",
+                "full-body",
+                "--view-angle",
+                "low-angle",
+            ]
+            output = io.StringIO()
+            with patch("sys.argv", arguments), redirect_stdout(output):
+                self.assertEqual(plan_art_task_main(), 0)
+            result = json.loads(output.getvalue())
+            task_dir = Path(result["task_dir"])
+            plan = json.loads(
+                Path(result["retrieval_plan"]).read_text(encoding="utf-8")
+            )
+            prompt = (task_dir / "prompt.md").read_text(encoding="utf-8")
+
+        identity_budget = plan["layers"][0]["selection_budget"]
+        style_budget = plan["layers"][1]["selection_budget"]
+        self.assertIn(
+            "High/low camera elevation affects only ranking and composition",
+            identity_budget,
+        )
+        self.assertIn(
+            "High/low camera elevation never creates a same-view gap",
+            style_budget,
+        )
+        self.assertIn("requested directional view", style_budget)
+        self.assertNotIn("misses the requested view", style_budget)
+        self.assertIn("camera elevation: low-angle", prompt)
+        self.assertNotIn("character view angle: low-angle", prompt)
+
     def test_prop_identity_query_does_not_inherit_character_view_preferences(
         self,
     ) -> None:
@@ -4226,13 +4459,19 @@ class IntentWorkflowTests(unittest.TestCase):
         character = next(
             command
             for command in commands
-            if command[command.index("--subject") + 1] == "犬夜叉"
+            if command[command.index("--subject-form") + 1]
+            == "犬夜叉=human-form"
         )
         prop = next(
             command
             for command in commands
-            if command[command.index("--subject") + 1] == "铁碎牙"
+            if command[command.index("--subject-form") + 1]
+            == "铁碎牙=untransformed-form"
         )
+        self.assertNotIn("--subject", character)
+        self.assertNotIn("--form", character)
+        self.assertNotIn("--subject", prop)
+        self.assertNotIn("--form", prop)
         self.assertIn("--prefer-shot", character)
         self.assertIn("--prefer-view-angle", character)
         self.assertNotIn("--prefer-shot", prop)

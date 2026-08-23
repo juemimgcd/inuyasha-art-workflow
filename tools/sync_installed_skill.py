@@ -24,6 +24,7 @@ PROTECTED_PATH_KEYS = frozenset(
     path.as_posix().casefold() for path in PROTECTED_PATHS
 )
 IGNORED_NAMES = frozenset({".DS_Store"})
+IGNORED_DIRECTORY_NAMES = frozenset({"__pycache__", ".ruff_cache"})
 IGNORED_SUFFIXES = frozenset({".pyc", ".pyo"})
 
 
@@ -84,7 +85,7 @@ def source_files(root: Path) -> list[Path]:
             continue
         relative = candidate.relative_to(root)
         safe_join(root, relative, "installed source")
-        if "__pycache__" in relative.parts:
+        if any(part in IGNORED_DIRECTORY_NAMES for part in relative.parts):
             continue
         if candidate.name in IGNORED_NAMES or candidate.suffix in IGNORED_SUFFIXES:
             continue
