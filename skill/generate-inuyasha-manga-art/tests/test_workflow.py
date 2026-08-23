@@ -3013,6 +3013,7 @@ class IntentWorkflowTests(unittest.TestCase):
                     "browse_curated_styles.freshness",
                     return_value=(True, "test catalog"),
                 ),
+                patch("browse_curated_styles.build_contact_sheet"),
                 redirect_stdout(stdout),
             ):
                 self.assertEqual(browse_curated_styles_main(), 0)
@@ -3149,6 +3150,7 @@ class IntentWorkflowTests(unittest.TestCase):
                     "browse_curated_styles.freshness",
                     return_value=(True, "test catalog"),
                 ),
+                patch("browse_curated_styles.build_contact_sheet"),
                 redirect_stdout(stdout),
             ):
                 self.assertEqual(browse_curated_styles_main(), 0)
@@ -3194,6 +3196,7 @@ class IntentWorkflowTests(unittest.TestCase):
                     "browse_curated_styles.freshness",
                     return_value=(True, "test catalog"),
                 ),
+                patch("browse_curated_styles.build_contact_sheet"),
                 redirect_stdout(stdout),
             ):
                 self.assertEqual(browse_curated_styles_main(), 0)
