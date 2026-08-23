@@ -65,6 +65,17 @@ DOMINANT_MATERIAL_COVERAGE_FIELD = "Dominant material rendering coverage"
 FOCUSED_IDENTITY_SHOTS = {"face", "profile", "close-up", "medium-shot"}
 
 
+def requires_character_view_coverage(brief: dict) -> bool:
+    """Require same-view evidence except for a small figure in a wide shot."""
+    shot = brief.get("shot")
+    return (
+        int(brief.get("schema_version") or 0) >= BRIEF_SCHEMA_VERSION
+        and brief.get("intent") == "new"
+        and bool(brief.get("view_angle"))
+        and shot != "wide-shot"
+    )
+
+
 def reference_matches_view_angle(row, view_angle: str | None) -> bool:
     if not view_angle:
         return True
@@ -126,6 +137,15 @@ def manifest_style_scope_failure(
     )
 
 
+def style_domain_count(
+    resolved: list[tuple[str, str]], catalog_domains: dict[str, str], domain: str
+) -> int:
+    return sum(
+        role == "style" and catalog_domains.get(item_id) == domain
+        for role, item_id in resolved
+    )
+
+
 def identity_focus_failures(brief: dict, row, entry: dict) -> list[str]:
     """Require a focused official crop when a sheet did not match a face-led shot."""
     view_angle = brief.get("view_angle")
@@ -135,7 +155,9 @@ def identity_focus_failures(brief: dict, row, entry: dict) -> list[str]:
         or entry.get("crop_box") is not None
     ):
         return []
-    if view_angle and not reference_matches_view_angle(row, view_angle):
+    if requires_character_view_coverage(brief) and not reference_matches_view_angle(
+        row, view_angle
+    ):
         return [
             (
                 "focused identity evidence required: official reference "
@@ -160,17 +182,10 @@ def identity_focus_failures(brief: dict, row, entry: dict) -> list[str]:
     ]
 
 
-def character_style_view_coverage_failures(
-    brief: dict, rows: list[tuple[object, dict]]
-) -> list[str]:
-    """Require at least one unambiguous character-style anchor for the view."""
-    view_angle = brief.get("view_angle")
-    if (
-        int(brief.get("schema_version") or 0) < BRIEF_SCHEMA_VERSION
-        or brief.get("intent") != "new"
-        or not view_angle
-    ):
-        return []
+def character_style_view_coverage(
+    rows: list[tuple[object, dict]], view_angle: str | None
+) -> tuple[list[str], bool]:
+    """Return eligible character-style IDs and whether one owns the view."""
     candidate_ids = []
     for row, entry in rows:
         if (
@@ -187,7 +202,42 @@ def character_style_view_coverage_failures(
         if reference_matches_view_angle(row, view_angle) and (
             len(view_owners) <= 1 or focused_crop
         ):
+            return candidate_ids, True
+    return candidate_ids, False
+
+
+def character_style_view_coverage_failures(
+    brief: dict, rows: list[tuple[object, dict]], evidence: str = ""
+) -> list[str]:
+    """Require a same-view anchor, or honest insufficiency for a wide shot."""
+    view_angle = brief.get("view_angle")
+    if (
+        int(brief.get("schema_version") or 0) < BRIEF_SCHEMA_VERSION
+        or brief.get("intent") != "new"
+        or not view_angle
+    ):
+        return []
+    candidate_ids, matches_view = character_style_view_coverage(rows, view_angle)
+    if matches_view:
+        return []
+    if not requires_character_view_coverage(brief):
+        if not candidate_ids:
             return []
+        layer_two = (
+            evidence.split("## Layer 2:", 1)[1].split("## Layer 3:", 1)[0]
+            if "## Layer 2:" in evidence
+            else ""
+        )
+        if layer_two and retrieval_result(layer_two, "Result") == "INSUFFICIENT":
+            return []
+        return [
+            (
+                "character-style view coverage is insufficient for this wide shot: "
+                f"none of {candidate_ids} matches requested view angle {view_angle}; "
+                "record Layer 2 Result as INSUFFICIENT and let ImageGen construct "
+                "the small figure's pose without another retrieval"
+            )
+        ]
     return [
         (
             "character-style view coverage is insufficient: none of "
@@ -195,8 +245,7 @@ def character_style_view_coverage_failures(
             f"view angle {view_angle}; "
             "image-level view tags on a multi-character panel do not prove which "
             "character owns that view. Select an unambiguous same-view selected-"
-            "medium character anchor or record the layer as INSUFFICIENT before "
-            "curating a focused fallback"
+            "medium character anchor or record the layer as INSUFFICIENT and stop"
         )
     ]
 
@@ -212,10 +261,15 @@ def scene_economy_reference_failures(brief: dict, row, entry: dict) -> list[str]
         and entry.get("content_kind") == "scene"
         and entry.get("scene_style_coverage") == "HIT"
     )
+    economy_required = required.issubset(
+        set(brief.get("retrieval_traits") or [])
+    ) or (
+        brief.get("medium") == "manga" and brief.get("shot") == "wide-shot"
+    )
     if (
         not owns_scene_style
         or row["reference_domain"] != "scene"
-        or not required.issubset(set(brief.get("retrieval_traits") or []))
+        or not economy_required
     ):
         return []
     tags = set(json.loads(row["tags"] or "[]"))
@@ -424,14 +478,18 @@ def scene_style_coverage_evidence_failures(
 def rendering_coverage_failures(
     evidence: str,
     references: list[dict],
-    style_count: int,
+    character_style_count: int,
     medium: str,
     dominant_scene_materials: list[str] | None = None,
+    *,
+    allow_character_view_insufficient: bool = False,
 ) -> list[str]:
     if not any(f"- {field}:" in evidence for field in RENDERING_COVERAGE_FIELDS):
         return []
     failures: list[str] = []
-    expected_coverage = {"HIT"} if style_count else {"N/A", "SKIP"}
+    expected_coverage = {"HIT"} if character_style_count else {"N/A", "SKIP"}
+    if character_style_count and allow_character_view_insufficient:
+        expected_coverage.add("INSUFFICIENT")
     for field in RENDERING_COVERAGE_FIELDS:
         match = re.search(
             rf"^- {re.escape(field)}:\s*(.+?)\s*$",
@@ -443,7 +501,7 @@ def rendering_coverage_failures(
         if status not in expected_coverage:
             failures.append(
                 f"Layer 2 {field} must record "
-                f"{'HIT' if style_count else 'N/A or SKIP'}"
+                f"{'HIT or INSUFFICIENT' if allow_character_view_insufficient else 'HIT' if character_style_count else 'N/A or SKIP'}"
             )
     for entry in references:
         if entry.get("role") != "style":
@@ -1101,7 +1159,7 @@ def main() -> int:
     connection.close()
     failures.extend(
         character_style_view_coverage_failures(
-            brief, character_style_view_rows
+            brief, character_style_view_rows, evidence
         )
     )
 
@@ -1119,6 +1177,12 @@ def main() -> int:
     except (KeyError, SystemExit) as exc:
         failures.append(str(exc))
     style_count = sum(role == "style" for role, _ in resolved)
+    character_style_count = style_domain_count(
+        resolved, style_catalog_domains, "character-style"
+    )
+    _, character_style_matches_view = character_style_view_coverage(
+        character_style_view_rows, view_angle
+    )
     target_count = sum(role == "target" for role, _ in resolved)
     failures.extend(
         scoped_style_failures(
@@ -1132,9 +1196,17 @@ def main() -> int:
         rendering_coverage_failures(
             evidence,
             references,
-            style_count,
+            character_style_count,
             medium,
             brief.get("dominant_scene_materials") or [],
+            allow_character_view_insufficient=(
+                brief_schema >= BRIEF_SCHEMA_VERSION
+                and intent == "new"
+                and bool(view_angle)
+                and not requires_character_view_coverage(brief)
+                and bool(character_style_view_rows)
+                and not character_style_matches_view
+            ),
         )
     )
     declared_character_style_targets = bool(brief.get("character_style_targets"))

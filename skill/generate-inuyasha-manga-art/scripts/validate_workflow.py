@@ -8,7 +8,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from build_reference_index import freshness
+from build_reference_index import SCHEMA_VERSION, freshness
 from visual_ab_eval import effective_results
 from visual_ab_eval import load_dataset as load_visual_eval_dataset
 from workflow_common import (
@@ -59,7 +59,7 @@ REQUIRED_FILES = (
     "scripts/run-python",
     "scripts/run-python.ps1",
 )
-EXPECTED_CATALOG_SCHEMA = "8"
+EXPECTED_CATALOG_SCHEMA = str(SCHEMA_VERSION)
 
 
 def parse_args() -> argparse.Namespace:
@@ -395,7 +395,7 @@ def main() -> int:
             meta = dict(connection.execute("SELECT key, value FROM meta"))
             if meta.get("schema_version") != EXPECTED_CATALOG_SCHEMA:
                 failures.append(
-                    "catalog schema must be rebuilt for folder-aware indexing"
+                    "catalog schema does not match build_reference_index"
                 )
             item_columns = {
                 row[1] for row in connection.execute("PRAGMA table_info(items)")

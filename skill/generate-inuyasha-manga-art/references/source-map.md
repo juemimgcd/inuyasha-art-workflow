@@ -40,27 +40,29 @@ visible; other selected-medium images naming a known character are
 
 ## Default manga route
 
-Run these layers serially. Record `HIT`, `MISS`, or `INSUFFICIENT` for the current layer before advancing; do not scan all layers in parallel.
+Run exactly two bounded retrieval operations for a normal new task, in order,
+recording `HIT`, `MISS`, or `INSUFFICIENT` before generation:
 
-1. Resolve every named character and required form from `official`.
-2. Browse `manga-curated`, hard-filtered to `character-style`, and inspect one
-   screenshot for character contour, face/hair, fabric/fold and garment values.
-   Action, interaction, expression, camera and scene similarity are ignored.
-3. Search `manga-curated`, hard-filtered to `scene`. For an Inuyasha-specific
-   place, require its exact `scene-id`; on `MISS` or `INSUFFICIENT`, ImageGen
-   constructs the scene. For a generic place, ImageGen constructs it immediately.
-4. Select one scene-domain screenshot for scene rendering. An exact canonical
-   scene hit may cover both steps 3 and 4 only after recording
-   `scene_style_coverage=HIT` with a concrete inspection basis recorded
-   consistently in evidence, brief, and manifest. Coverage `INSUFFICIENT`, or scene identity
-   `MISS`/`INSUFFICIENT`, requires a separate scene-style reference and the
-   fallback query excludes the canonical `scene-id` already judged inadequate.
-5. If the request needs separately evidenced non-scene content, search `manga-curated` for
-   that exact content. Only after a recorded `MISS` or `INSUFFICIENT`, search
-   `tv-curated` and select at most one image as `content` with a non-empty focus.
-6. Search `selected-output` only when accepted continuity was explicitly requested.
-   Inspect at most one matching precedent. A `MISS` here is allowed.
-7. Let ImageGen design the new composition, pose, action, expression and staging.
+1. Resolve every named character, required form, and canonical prop from
+   `official`.
+2. Run one `manga-curated` retrieval that returns separately grouped
+   `character-style` and `scene` candidates. Choose one exact-form
+   character-style anchor and one scene-style anchor when each group is
+   sufficient. Action, interaction, expression, and scene terms do not rank the
+   character group.
+
+For an Inuyasha-specific place, rank its exact `scene-id` first inside that
+same bounded scene group. If the canonical structure is a `HIT` but
+`scene_style_coverage=INSUFFICIENT`, retain it as structure evidence and choose
+one additional scene-style anchor from the same result; do not run another
+retrieval. After these two operations, stop retrieval and let ImageGen construct
+any uncovered pose, scene, action, expression, or staging.
+
+Search separately for non-scene content only when the user explicitly requests
+that extra evidence. Use `manga-curated` first, and only after a recorded
+`MISS` or `INSUFFICIENT` use at most one exact-focus `tv-curated` fallback.
+Search `selected-output` only when accepted continuity was explicitly
+requested, and inspect at most one matching precedent.
 
 Do not use a manga screenshot or selected output as identity evidence. Do not copy a screenshot's panels, dialogue, depicted characters, or story. Do not let selected output replace the selected medium's original rendering evidence.
 

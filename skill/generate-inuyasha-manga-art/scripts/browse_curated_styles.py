@@ -87,6 +87,14 @@ def parse_args() -> argparse.Namespace:
         choices=REFERENCE_DOMAINS,
         help="Hard authority-domain filter applied before ranking.",
     )
+    parser.add_argument(
+        "--combined-rendering",
+        action="store_true",
+        help=(
+            "Return character-style and scene rendering candidates in one bounded "
+            "retrieval. This mode does not support pagination."
+        ),
+    )
     source_group = parser.add_mutually_exclusive_group()
     source_group.add_argument("--medium", choices=("manga", "tv"))
     source_group.add_argument("--source", choices=SOURCE_CHOICES)
@@ -117,6 +125,15 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Exclude an exact structured filename term, tag, or content label. "
             "Used when a canonical scene hit cannot also cover scene rendering."
+        ),
+    )
+    parser.add_argument(
+        "--scene-exact-term",
+        action="append",
+        default=[],
+        help=(
+            "In combined rendering mode, rank an exact scene term without "
+            "filtering character-style candidates."
         ),
     )
     parser.add_argument("--match", choices=("all", "any"), default="all")
@@ -169,6 +186,43 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.combined_rendering:
+        if args.reference_domain or args.role not in {None, "rendering"}:
+            raise SystemExit(
+                "--combined-rendering cannot be combined with --reference-domain "
+                "and supports only --role rendering"
+            )
+        if args.offset:
+            raise SystemExit("--combined-rendering does not support pagination")
+        if args.subject or args.form:
+            raise SystemExit(
+                "--combined-rendering uses --prefer-subject-form so character "
+                "facets cannot filter out the scene group"
+            )
+        global_filters = [
+            flag
+            for flag, value in (
+                ("--query", args.query),
+                ("--exact-term", args.exact_term),
+                ("--exclude-exact-term", args.exclude_exact_term),
+                ("--folder", args.folder),
+                ("--content", args.content),
+            )
+            if value
+        ]
+        if global_filters:
+            raise SystemExit(
+                "--combined-rendering cannot use global hard filters "
+                f"({', '.join(global_filters)}); use --intent-text and "
+                "--scene-exact-term so both domains remain available"
+            )
+        if args.source == "selected-output":
+            raise SystemExit(
+                "--combined-rendering requires a selected-medium curated source"
+            )
+        args.role = "rendering"
+    elif args.scene_exact_term:
+        raise SystemExit("--scene-exact-term requires --combined-rendering")
     if args.offset < 0:
         raise SystemExit("--offset must be zero or greater")
     if args.limit < 1 or args.limit > 30:
@@ -191,7 +245,9 @@ def main() -> int:
     source_id = args.source or SOURCE_BY_MEDIUM[args.medium or "manga"]
     clauses = ["source_id = ?", "kind = 'image'"]
     parameters: list[object] = [source_id]
-    if args.reference_domain:
+    if args.combined_rendering:
+        clauses.append("reference_domain IN ('character-style', 'scene')")
+    elif args.reference_domain:
         clauses.append("reference_domain = ?")
         parameters.append(args.reference_domain)
     if args.role:
@@ -219,15 +275,11 @@ def main() -> int:
         else set()
     )
     excluded_scoring_terms = {term.casefold() for term in args.exclude_exact_term}
-    scoring_terms = [
-        term
-        for term in dict.fromkeys([*terms, *intent_traits])
-        if term.casefold() not in excluded_scoring_terms
-        and not (
-            args.view_angle
-            and term.casefold() == f"view-angle:{args.view_angle}".casefold()
-        )
-    ]
+    requested_scene_ids = {
+        term.casefold()
+        for term in [*args.exact_term, *args.scene_exact_term]
+        if term.casefold().startswith("scene-id:")
+    }
     if terms:
         joiner = " AND " if args.match == "all" else " OR "
         clauses.append("(" + joiner.join("search_text LIKE ?" for _ in terms) + ")")
@@ -270,7 +322,9 @@ def main() -> int:
         clauses.append(f"({' OR '.join(content_clauses)})")
         parameters.extend(args.content)
     for column, values in hard_facet_filters(
-        reference_domain=args.reference_domain,
+        reference_domain=(
+            "character-style" if args.combined_rendering else args.reference_domain
+        ),
         role=args.role,
         preferred_subject_forms=args.prefer_subject_form,
         subjects=args.subject,
@@ -327,7 +381,8 @@ def main() -> int:
         parameters.extend(args.form)
 
     strict_character_style = bool(
-        args.role == "rendering" and args.reference_domain == "character-style"
+        args.role == "rendering"
+        and (args.reference_domain == "character-style" or args.combined_rendering)
     )
     requested_character_style_forms = args.prefer_subject_form or pairs
     if strict_character_style and not requested_character_style_forms:
@@ -369,31 +424,68 @@ def main() -> int:
             "eligible_roles",
         ):
             candidate[field] = json.loads(candidate[field])
-        if strict_character_style and not eligible_character_style_candidate(
-            candidate, requested_character_style_forms
+        candidate_domain = candidate["reference_domain"]
+        if (
+            strict_character_style
+            and candidate_domain == "character-style"
+            and not eligible_character_style_candidate(
+                candidate, requested_character_style_forms
+            )
         ):
             continue
+        candidate_traits = (
+            retrieval_traits_for_domain(inferred_traits, candidate_domain)
+            if args.combined_rendering
+            else intent_traits
+        )
+        candidate_conflicts = (
+            style_conflict_subjects(args.intent_text)
+            if args.role == "rendering" and candidate_domain == "character-style"
+            else set()
+        )
+        candidate_scoring_terms = [
+            term
+            for term in dict.fromkeys([*terms, *candidate_traits])
+            if term.casefold() not in excluded_scoring_terms
+            and not (
+                args.view_angle
+                and term.casefold() == f"view-angle:{args.view_angle}".casefold()
+            )
+        ]
+        scene_in_combined = args.combined_rendering and candidate_domain == "scene"
         candidate["score"], candidate["match_reasons"] = retrieval_relevance(
             candidate,
-            query_terms=scoring_terms,
-            exact_terms=args.exact_term,
-            subjects=args.subject,
-            subject_forms=pairs,
-            preferred_subject_forms=args.prefer_subject_form,
+            query_terms=candidate_scoring_terms,
+            exact_terms=(
+                [*args.exact_term, *args.scene_exact_term]
+                if candidate_domain == "scene"
+                else args.exact_term
+            ),
+            subjects=[] if scene_in_combined else args.subject,
+            subject_forms=[] if scene_in_combined else pairs,
+            preferred_subject_forms=(
+                [] if scene_in_combined else args.prefer_subject_form
+            ),
             shots=args.shot,
-            view_angles=[args.view_angle] if args.view_angle else [],
+            view_angles=(
+                []
+                if scene_in_combined
+                else [args.view_angle]
+                if args.view_angle
+                else []
+            ),
             folders=args.folder,
             contents=args.content,
-            penalized_subjects=rendering_conflicts,
+            penalized_subjects=set() if scene_in_combined else candidate_conflicts,
             role=args.role,
             shot_weight=(
                 1
-                if args.reference_domain == "scene" and args.role == "rendering"
+                if candidate_domain == "scene" and args.role == "rendering"
                 else 4
             ),
         )
-        if args.reference_domain == "scene" and any(
-            term.startswith("scene-id:") for term in args.exact_term
+        if candidate_domain == "scene" and requested_scene_ids.intersection(
+            str(tag).casefold() for tag in candidate["tags"]
         ):
             structure_boosts = {
                 "scene-structure:overall": 4,
@@ -420,7 +512,7 @@ def main() -> int:
             certified_style_anchor_rank(
                 candidate,
                 role=args.role,
-                reference_domain=args.reference_domain,
+                reference_domain=candidate_domain,
             )
         )
         if candidate["certified_style_anchor"]:
@@ -430,17 +522,30 @@ def main() -> int:
         candidate["inferred_traits"] = inferred_traits
         candidate["scoring_traits"] = [
             trait
-            for trait in intent_traits
+            for trait in candidate_traits
             if trait.casefold() not in excluded_scoring_terms
         ]
         candidate["style_conflict_subjects"] = sorted(
-            rendering_conflicts, key=str.casefold
+            candidate_conflicts, key=str.casefold
         )
         candidates.append(candidate)
 
     candidates.sort(key=candidate_sort_key)
     total = len(candidates)
-    candidates = candidates[args.offset : args.offset + args.limit]
+    totals_by_domain = {
+        domain: sum(row["reference_domain"] == domain for row in candidates)
+        for domain in ("character-style", "scene")
+    }
+    if args.combined_rendering:
+        candidates = [
+            row
+            for domain in ("character-style", "scene")
+            for row in [
+                item for item in candidates if item["reference_domain"] == domain
+            ][: args.limit]
+        ]
+    else:
+        candidates = candidates[args.offset : args.offset + args.limit]
     if not candidates:
         raise SystemExit(f"No images from {source_id} matched this page or query")
 
@@ -451,7 +556,10 @@ def main() -> int:
         entries.append(
             (
                 Path(candidate["path"]),
-                f"{index}. {content} | {Path(candidate['relative_path']).stem}",
+                (
+                    f"{index}. {candidate['reference_domain']} | {content} | "
+                    f"{Path(candidate['relative_path']).stem}"
+                ),
             )
         )
 
@@ -460,11 +568,13 @@ def main() -> int:
         {
             "source": source_id,
             "reference_domain": args.reference_domain,
+            "combined_rendering": args.combined_rendering,
             "query": args.query,
             "intent_text": args.intent_text,
             "inferred_traits": intent_traits,
             "exact_terms": args.exact_term,
             "excluded_exact_terms": args.exclude_exact_term,
+            "scene_exact_terms": args.scene_exact_term,
             "folders": args.folder,
             "content": args.content,
             "subjects": args.subject,
@@ -507,6 +617,7 @@ def main() -> int:
     result = {
         "source_id": source_id,
         "reference_domain": args.reference_domain,
+        "combined_rendering": args.combined_rendering,
         "medium": args.medium,
         "query": args.query,
         "intent_text": args.intent_text,
@@ -514,6 +625,7 @@ def main() -> int:
         "style_conflict_subjects": sorted(rendering_conflicts, key=str.casefold),
         "exact_terms": args.exact_term,
         "excluded_exact_terms": args.exclude_exact_term,
+        "scene_exact_terms": args.scene_exact_term,
         "folders": args.folder,
         "content": args.content,
         "subjects": args.subject,
@@ -525,8 +637,19 @@ def main() -> int:
         "offset": args.offset,
         "returned": len(candidates),
         "total_matches": total,
+        "total_matches_by_domain": totals_by_domain,
         "contact_sheet": str(output),
         "candidates": candidates,
+        "groups": (
+            {
+                domain: [
+                    row for row in candidates if row["reference_domain"] == domain
+                ]
+                for domain in ("character-style", "scene")
+            }
+            if args.combined_rendering
+            else None
+        ),
     }
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -545,7 +668,16 @@ def main() -> int:
             if row["match_reasons"]:
                 print(f"  matched: {'; '.join(row['match_reasons'])}")
         print(f"Contact sheet: {output}")
-        print(f"Showing {args.offset + 1}-{last} of {total} matches")
+        if args.combined_rendering:
+            print(
+                "Showing one bounded retrieval: "
+                f"{sum(row['reference_domain'] == 'character-style' for row in candidates)} "
+                "character-style and "
+                f"{sum(row['reference_domain'] == 'scene' for row in candidates)} "
+                "scene candidates; retrieval is complete"
+            )
+        else:
+            print(f"Showing {args.offset + 1}-{last} of {total} matches")
     return 0
 
 

@@ -1,5 +1,5 @@
 {
-  "built_at": "2026-08-22T20:57:02+08:00",
+  "built_at": "2026-08-23T21:19:15+08:00",
   "database": "${REPO_ROOT}/workflow/reference-workflow/catalog.sqlite3",
   "counts": {
     "image": 222,
@@ -38,36 +38,36 @@
       "exists": true,
       "file_count": 88,
       "total_size": 15020559,
-      "latest_mtime_ns": 1787403011841457720,
-      "inventory_hash": "c214f0bdfdb056b6c811c27d4e080423f4f3267742059b1b380b82be677644ae"
+      "latest_mtime_ns": 1787490392073790793,
+      "inventory_hash": "6b0ee0b76d84122ec216da2723fb34c6d0aa7a4b343381d2242ee8a76e8d56f3"
     },
     "manga-curated": {
       "exists": true,
       "file_count": 125,
       "total_size": 14599539,
-      "latest_mtime_ns": 1787403012004218629,
-      "inventory_hash": "5acfabe26e4afeb8703356168815fc143684c022edad12adadfd2e0f64812114"
+      "latest_mtime_ns": 1787490392231291348,
+      "inventory_hash": "636a797cb4e108752b346c3b2b3c9ca3dce2a9f09788e1e2774a6813b916b413"
     },
     "user-continuity": {
       "exists": true,
       "file_count": 9,
       "total_size": 22545698,
-      "latest_mtime_ns": 1787403011915137255,
-      "inventory_hash": "64c78ef0421fb5d6440c215d48ee96561d8d99a481fd54bcaebb10c9f45a7e2e"
+      "latest_mtime_ns": 1787490392147056476,
+      "inventory_hash": "1fff175f457b90589cb91d9c45446121db4b91fb57ae53be599c9522fd69b316"
     },
     "tv-curated": {
       "exists": true,
       "file_count": 11,
       "total_size": 6689855,
-      "latest_mtime_ns": 1787403011946828139,
-      "inventory_hash": "1111e628082faddcd43c50376e4da73a61a3fe7caf7c967bbbb19ac6a2be9e91"
+      "latest_mtime_ns": 1787490392175702622,
+      "inventory_hash": "f726d9937f804e010004354211e9d249213a62d21615e7338132e3913237c3a8"
     },
     "selected-output": {
       "exists": true,
       "file_count": 15,
       "total_size": 42590281,
-      "latest_mtime_ns": 1787403012068631394,
-      "inventory_hash": "f6803c5c5ef26ea28dcc1b3722c3bc1e627cdc8a10e802dca884d54a7f9aea03"
+      "latest_mtime_ns": 1787490392294252628,
+      "inventory_hash": "3301ad47a9bbac42d4aadd3b90b694f9dc50c0177b87520b97548c930822aafe"
     }
   },
   "annotation_count": 46,

@@ -36,7 +36,7 @@ from workflow_common import (
     workflow_root,
 )
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
 
 def parse_args() -> argparse.Namespace:

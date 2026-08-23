@@ -253,12 +253,15 @@ def main() -> int:
     # Record the interpreter already running the planner. This keeps generated
     # command arrays directly executable on macOS, Linux, and Windows.
     launcher = sys.executable
+    official_preferences = []
+    if args.shot:
+        official_preferences.extend(["--prefer-shot", args.shot])
+    if view_angle:
+        official_preferences.extend(["--prefer-view-angle", view_angle])
     official_commands = []
-    official_fallback_commands = []
-    official_view_fallback_commands = []
-    official_unfaceted_fallback_commands = []
     for character, form in args.identity_form:
-        base = [
+        official_commands.append(
+            [
             launcher,
             str(SCRIPTS / "search_reference_index.py"),
             "--source",
@@ -271,27 +274,12 @@ def main() -> int:
             form,
             "--intent-text",
             args.request,
+            *official_preferences,
             "--collapse-candidate-series",
             "--limit",
             str(args.candidate_limit),
-        ]
-        parts = list(base)
-        if args.shot:
-            parts.extend(["--shot", args.shot])
-        if view_angle:
-            parts.extend(["--view-angle", view_angle])
-        official_commands.append(parts)
-        if args.shot:
-            shotless = list(base)
-            if view_angle:
-                shotless.extend(["--view-angle", view_angle])
-            official_fallback_commands.append(shotless)
-        if view_angle:
-            viewless = list(base)
-            if args.shot:
-                viewless.extend(["--shot", args.shot])
-            official_view_fallback_commands.append(viewless)
-            official_unfaceted_fallback_commands.append(list(base))
+            ]
+        )
     for prop, form in prop_forms:
         official_commands.append(
             [
@@ -313,47 +301,32 @@ def main() -> int:
             ]
         )
     style_source = "manga-curated" if args.medium == "manga" else "tv-curated"
-    # Character-style evidence is eligible only when it depicts a requested
-    # focal character in the exact requested form.  View and shot rank only
-    # inside that set; no other character or form is an automatic fallback.
-    common = []
-    if args.shot:
-        common.extend(["--shot", args.shot])
     preferred_subject_forms = [
         value
         for character, form in args.identity_form
         for value in ("--prefer-subject-form", f"{character}={form}")
     ]
-    style_base = [
+    combined_style_command = [
         launcher,
         str(SCRIPTS / "browse_curated_styles.py"),
         "--source",
         style_source,
+        "--combined-rendering",
         "--role",
         "rendering",
-        "--reference-domain",
-        "character-style",
         "--intent-text",
         args.request,
         *preferred_subject_forms,
     ]
     if view_angle:
-        style_base.extend(["--view-angle", view_angle])
-    style_primary = [
-        *style_base,
-        *common,
-        "--limit",
-        str(args.candidate_limit),
-        "--columns",
-        "4",
-    ]
-    style_fallback = [
-        *style_base,
-        "--limit",
-        str(args.candidate_limit),
-        "--columns",
-        "4",
-    ]
+        combined_style_command.extend(["--view-angle", view_angle])
+    if args.shot:
+        combined_style_command.extend(["--shot", args.shot])
+    if canonical_scene:
+        combined_style_command.extend(["--scene-exact-term", scene_query])
+    combined_style_command.extend(
+        ["--limit", str(args.candidate_limit), "--columns", "4"]
+    )
     layers = [
         {
             "layer": 1,
@@ -361,19 +334,20 @@ def main() -> int:
             "identity_cards": [],
             "prepare_arguments": [],
             "primary_commands": official_commands,
-            "fallback_without_shot": official_fallback_commands,
-            "fallback_without_view_angle": official_view_fallback_commands,
-            "fallback_without_shot_or_view_angle": official_unfaceted_fallback_commands,
+            "retrieval_complete": True,
             "selection_budget": (
                 "inspect at most four official setting-sheet candidates per focal "
                 "character; one explicitly curated similar-content series occupies "
                 "one candidate slot and its representative follows the current request, "
-                "while every source remains available to explicit full search; choose "
+                "while every source remains indexed; choose "
                 "one shot-matched source or the smallest focused "
                 "crop that preserves the required face, form, costume, or construction; "
-                "a declared view angle must match an exact controlled view facet. "
-                "Viewless fallbacks may be inspected only to prepare the smallest "
-                "focused crop and never count as view coverage; schema-5 "
+                "a declared view angle ranks matching official facets first. For a "
+                "non-wide shot it must match an exact controlled view facet or a "
+                "focused crop; a wide-shot may retain exact-form identity evidence "
+                "and record view coverage as INSUFFICIENT. "
+                "If the bounded result is insufficient, record INSUFFICIENT and stop "
+                "retrieval; schema-5 "
                 "face/profile/close-up/medium-shot tasks must crop an unmatched "
                 "setting sheet before pre-generation validation; "
                 "each declared canonical prop requires exact-form official coverage and "
@@ -383,177 +357,28 @@ def main() -> int:
         {
             "layer": 2,
             "source": style_source,
-            "primary_commands": [style_primary],
-            "fallback_without_shot": [style_fallback] if args.shot else [],
+            "role": "combined-rendering",
+            "primary_commands": [combined_style_command],
+            "groups": ["character-style", "scene"],
+            "retrieval_complete": True,
             "selection_budget": (
-                "inspect one combined character-style candidate set containing only "
-                "requested focal characters in their exact requested forms; any panel "
-                "with an unrequested known character or wrong form is ineligible before "
-                "ranking. Choose "
-                "one anchor by default; add a second complementary anchor only after "
-                "inspection records that the first is insufficient for a visible "
-                "character-rendering relationship. These inputs control only linework, "
-                "face/hair mark simplification, fabric marks, and garment value hierarchy. "
-                "A declared view angle is a strong applicability signal and must be "
-                "visibly covered before selection; it never grants pose authority. "
-                "If the exact-character-form set is empty or visibly insufficient, record "
-                "MISS or INSUFFICIENT and curate same-character, same-form evidence; never "
-                "broaden to another character or form. "
-                "Official evidence remains the identity authority; ignore action, "
-                "interaction, expression, framing, and scene similarity."
+                "inspect this one bounded selected-medium result, grouped into exact-form "
+                "character-style and scene-style candidates. Character candidates must "
+                "use exact requested forms; an unrequested known character or wrong form "
+                "is ineligible before ranking, and retrieval must never broaden to another "
+                "character or form. Choose one anchor from each available group by "
+                "default. When canonical scene identity is HIT but its scene-style "
+                "coverage is INSUFFICIENT, retain that structural anchor and choose one "
+                "additional scene-style anchor from the same bounded scene group; do "
+                "not run another retrieval. Shot and view affect ranking inside this "
+                "final result. "
+                "For a wide-shot whose exact-form character anchor misses the requested "
+                "view, record Layer 2 INSUFFICIENT without another retrieval. Record "
+                "MISS or INSUFFICIENT for a missing group and let ImageGen "
+                "construct the uncovered pose or scene."
             ),
         },
     ]
-    if canonical_scene:
-        scene_identity_command = [
-            launcher,
-            str(SCRIPTS / "browse_curated_styles.py"),
-            "--source",
-            style_source,
-            "--reference-domain",
-            "scene",
-            "--role",
-            "content",
-            "--exact-term",
-            scene_query,
-            "--limit",
-            str(args.candidate_limit),
-            "--columns",
-            "4",
-        ]
-        layers.append(
-            {
-                "layer": len(layers) + 1,
-                "role": "canonical-scene",
-                "need": scene_focus,
-                "source": style_source,
-                "primary_commands": [scene_identity_command],
-                "fallback_without_shot": [],
-                "coverage_gate": {
-                    "required_field": "scene_style_coverage",
-                    "allowed_values": ["HIT", "INSUFFICIENT"],
-                    "prepare_argument": "--scene-style-coverage ITEM_ID=HIT|INSUFFICIENT",
-                },
-                "after_miss_or_insufficient": "ImageGen constructs the canonical scene from the request; do not cross media",
-                "selection_budget": (
-                    "choose at most one exact scene-domain reference. It always controls "
-                    "canonical structure; it controls scene rendering only after an "
-                    "explicit scene_style_coverage=HIT. Otherwise record INSUFFICIENT. "
-                    "It never controls visible characters, pose, action, expression, or framing"
-                ),
-            }
-        )
-        canonical_scene_style_command = [
-            launcher,
-            str(SCRIPTS / "browse_curated_styles.py"),
-            "--source",
-            style_source,
-            "--reference-domain",
-            "scene",
-            "--role",
-            "rendering",
-            "--intent-text",
-            args.request,
-            "--exclude-exact-term",
-            scene_query,
-            *common,
-            "--limit",
-            str(args.candidate_limit),
-            "--columns",
-            "4",
-        ]
-        canonical_scene_style_fallback = [
-            launcher,
-            str(SCRIPTS / "browse_curated_styles.py"),
-            "--source",
-            style_source,
-            "--reference-domain",
-            "scene",
-            "--role",
-            "rendering",
-            "--intent-text",
-            args.request,
-            "--exclude-exact-term",
-            scene_query,
-            "--limit",
-            str(args.candidate_limit),
-            "--columns",
-            "4",
-        ]
-        layers.append(
-            {
-                "layer": len(layers) + 1,
-                "role": "scene-style-fallback",
-                "source": style_source,
-                "run_when": [
-                    "canonical scene result is MISS or INSUFFICIENT",
-                    "canonical scene result is HIT and scene_style_coverage is INSUFFICIENT",
-                ],
-                "skip_when": "canonical scene result is HIT and scene_style_coverage is HIT",
-                "primary_commands": [canonical_scene_style_command],
-                "fallback_without_shot": (
-                    [canonical_scene_style_fallback] if args.shot else []
-                ),
-                "scene_construction": (
-                    "ImageGen when canonical scene identity is MISS or INSUFFICIENT"
-                ),
-                "selection_budget": (
-                    "choose exactly one non-canonical scene-domain rendering anchor "
-                    "when this conditional layer runs"
-                ),
-            }
-        )
-    else:
-        scene_style_command = [
-            launcher,
-            str(SCRIPTS / "browse_curated_styles.py"),
-            "--source",
-            style_source,
-            "--reference-domain",
-            "scene",
-            "--role",
-            "rendering",
-            "--intent-text",
-            args.request,
-            *common,
-            "--limit",
-            str(args.candidate_limit),
-            "--columns",
-            "4",
-        ]
-        scene_style_fallback = [
-            launcher,
-            str(SCRIPTS / "browse_curated_styles.py"),
-            "--source",
-            style_source,
-            "--reference-domain",
-            "scene",
-            "--role",
-            "rendering",
-            "--intent-text",
-            args.request,
-            "--limit",
-            str(args.candidate_limit),
-            "--columns",
-            "4",
-        ]
-        layers.append(
-            {
-                "layer": len(layers) + 1,
-                "role": "scene-style",
-                "source": style_source,
-                "primary_commands": [scene_style_command],
-                "fallback_without_shot": [scene_style_fallback] if args.shot else [],
-                "scene_construction": "ImageGen",
-                "selection_budget": (
-                    "choose one scene-domain rendering anchor. It controls materials, "
-                    "weather, negative space, black-white mass, and detail falloff; "
-                    "when scene-economy traits are present its density is a ceiling and may "
-                    "not transfer onto the character; "
-                    "ImageGen controls scene construction, staging, and all actions"
-                ),
-            }
-        )
     if args.content_query:
         fallback_content_source = (
             "tv-curated" if args.medium == "manga" else "manga-curated"
@@ -585,9 +410,6 @@ def main() -> int:
                 "selected_medium": {
                     "source": style_source,
                     "primary_commands": [content_command(style_source, True)],
-                    "fallback_without_shot": (
-                        [content_command(style_source, False)] if args.shot else []
-                    ),
                 },
                 "cross_medium_fallback": {
                     "source": fallback_content_source,
@@ -595,11 +417,6 @@ def main() -> int:
                     "primary_commands": [
                         content_command(fallback_content_source, True)
                     ],
-                    "fallback_without_shot": (
-                        [content_command(fallback_content_source, False)]
-                        if args.shot
-                        else []
-                    ),
                 },
                 "selection_budget": (
                     "at most one exact-focus content image; a cross-medium hit is "
@@ -615,19 +432,7 @@ def main() -> int:
             "selected-output",
             "--role",
             "continuity",
-            *common,
-            "--limit",
-            str(args.candidate_limit),
-            "--columns",
-            "4",
-        ]
-        continuity_fallback = [
-            launcher,
-            str(SCRIPTS / "browse_curated_styles.py"),
-            "--source",
-            "selected-output",
-            "--role",
-            "continuity",
+            *(["--shot", args.shot] if args.shot else []),
             "--limit",
             str(args.candidate_limit),
             "--columns",
@@ -638,7 +443,6 @@ def main() -> int:
                 "layer": len(layers) + 1,
                 "source": "selected-output",
                 "primary_commands": [continuity_primary],
-                "fallback_without_shot": [continuity_fallback] if args.shot else [],
                 "selection_budget": "at most one explicitly requested continuity precedent",
             }
         )

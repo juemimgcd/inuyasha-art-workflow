@@ -690,11 +690,37 @@ CANONICAL_SCENE_RULES = (
     ("goshinboku", "御神木", ("御神木", "时代树", "時代樹")),
 )
 
+NEGATED_ALIAS_PREFIX = re.compile(
+    r"(?:不要|不能|不得|不可|不允许|不希望|不想要|不需要|不出现|不在|不画|"
+    r"别画|别|无需|没有|不是|排除|去掉|禁止|严禁|避免|无)"
+    r"(?:(?:[\s，,:：、]*"
+    r"(?:让|希望|在|画面|场景|构图|背景|前景|中景|远景|中|内|里|远处|再|"
+    r"有|画出?|出现|任何|一个|一处|该|这个|的)"
+    r"[\s，,:：、]*)*)$"
+)
+
+
+def has_nonnegated_alias(normalized: str, aliases: Iterable[str]) -> bool:
+    spans = {
+        (match.start(), match.end())
+        for alias in aliases
+        for match in re.finditer(re.escape(alias.casefold()), normalized)
+    }
+    widest_end = -1
+    for start, end in sorted(spans, key=lambda span: (span[0], -span[1])):
+        if end <= widest_end:
+            continue
+        widest_end = end
+        prefix = normalized[max(0, start - 16) : start]
+        if not NEGATED_ALIAS_PREFIX.search(prefix):
+            return True
+    return False
+
 
 def infer_canonical_scene(text: str) -> dict[str, str] | None:
     normalized = " ".join(text.casefold().split())
     for scene_id, label, aliases in CANONICAL_SCENE_RULES:
-        if any(alias.casefold() in normalized for alias in aliases):
+        if has_nonnegated_alias(normalized, aliases):
             return {"id": scene_id, "label": label}
     return None
 
@@ -794,9 +820,16 @@ INTENT_TRAIT_RULES = (
     ("scene-energy:dialogue", ("交谈", "对话", "说话")),
     ("scene-energy:action", ("追逐", "奔跑", "战斗", "攻击")),
     ("scene-energy:impact", ("冲击", "爆发", "猛力挥刀")),
+    ("scene-family:settlement", ("村庄", "乡村", "聚落", "村界")),
     (
         "background:nature",
         (
+            "山路",
+            "道路",
+            "岔路",
+            "丘陵",
+            "山脊",
+            "山麓",
             "森林",
             "草地",
             "树林",
@@ -891,7 +924,7 @@ def infer_retrieval_traits(text: str) -> list[str]:
         return []
     inferred: list[str] = []
     for trait, aliases in INTENT_TRAIT_RULES:
-        if trait in normalized or any(alias.casefold() in normalized for alias in aliases):
+        if trait in normalized or has_nonnegated_alias(normalized, aliases):
             inferred.append(trait)
     inferred_set = set(inferred)
     for specific, superseded in INTENT_TRAIT_SUPERSEDES.items():
@@ -1098,6 +1131,10 @@ def retrieval_relevance(
             reasons.append(f"style identity conflict penalty: {subject}")
 
     def tag_weight(term: str) -> int:
+        if term.startswith("scene-id:"):
+            return 12
+        if term.startswith("scene-family:"):
+            return 12
         if term.startswith(("action:", "content-object:", "subject-object:")):
             return 9
         if term.startswith("interaction:"):
@@ -1112,10 +1149,12 @@ def retrieval_relevance(
             return 4
         return 6
 
+    scored_terms: set[str] = set()
     for raw_term in [*exact_terms, *query_terms]:
         term = raw_term.casefold().strip()
-        if not term:
+        if not term or term in scored_terms:
             continue
+        scored_terms.add(term)
         if term in tags:
             weight = tag_weight(term)
             score += weight

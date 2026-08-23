@@ -209,13 +209,25 @@ def parse_args() -> argparse.Namespace:
         help="Exact indexed shot type; repeat to accept alternatives.",
     )
     parser.add_argument(
+        "--prefer-shot",
+        action="append",
+        default=[],
+        choices=SHOT_VALUES,
+        help="Prefer this indexed shot type during scoring without filtering.",
+    )
+    parser.add_argument(
         "--view-angle",
         choices=VIEW_ANGLE_VALUES,
         help=(
             "Require an exact controlled view-angle tag or its documented shot "
-            "facet equivalent. Use a shotless/viewless fallback only to prepare "
-            "a focused crop, never to claim view coverage."
+            "facet equivalent. The planner uses --prefer-view-angle for its one "
+            "bounded official result."
         ),
+    )
+    parser.add_argument(
+        "--prefer-view-angle",
+        choices=VIEW_ANGLE_VALUES,
+        help="Prefer this controlled view angle during scoring without filtering.",
     )
     parser.add_argument("--volume", type=int)
     parser.add_argument("--page", type=int)
@@ -464,6 +476,15 @@ def main() -> int:
     connection.close()
 
     performance = reference_performance(workflow_paths(root)["tasks"])
+    scoring_shots = list(dict.fromkeys([*args.shot, *args.prefer_shot]))
+    scoring_view_angles = list(
+        dict.fromkeys(
+            [
+                *([args.view_angle] if args.view_angle else []),
+                *([args.prefer_view_angle] if args.prefer_view_angle else []),
+            ]
+        )
+    )
     output = []
     for row in rows:
         item = dict(row)
@@ -492,8 +513,8 @@ def main() -> int:
                 for subject, forms in paired_forms.items()
                 for form in forms
             ],
-            shots=args.shot,
-            view_angles=[args.view_angle] if args.view_angle else [],
+            shots=scoring_shots,
+            view_angles=scoring_view_angles,
             folders=args.folder,
             contents=args.content,
             penalized_subjects=rendering_conflicts,

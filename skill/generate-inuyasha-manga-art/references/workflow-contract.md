@@ -43,7 +43,8 @@ benchmark runs so historical provenance remains readable; never copy them into
 an official source directory or present them as publisher originals.
 
 `plan_art_task.py` must always issue an official identity search for every focal
-character-form. Select one shot-matched official setting sheet, or prepare the
+character-form. Shot and view are soft official ranking preferences, not SQL
+filters. Select the best applicable official setting sheet, or prepare the
 smallest focused official crop when only one face view, garment overlap, weapon
 mount, hand, or footwear detail is needed. `prepare_reference_set.py
 --identity-card` is a retired compatibility option and must reject new use.
@@ -54,7 +55,9 @@ Free-text retrieval remains a fallback filter inside a domain. Character-style
 ranking ignores action, interaction, expression and scene traits, but retains a
 separately declared view angle because face, bangs, jaw, and hair mark-making
 must be applicable to the requested direction. View angle remains rendering
-applicability only and never controls pose or composition. Scene ranking
+applicability only and never controls pose or composition. In a `wide-shot`, a
+view mismatch is recorded as Layer 2 `INSUFFICIENT` instead of triggering a
+second retrieval. Scene ranking
 ignores characters, forms, actions and interactions, using exact `scene-id` for
 canonical places and scene/background/effect traits for rendering. Return
 `match_reasons` so the inspected candidate set shows why each item ranked. Do
@@ -71,8 +74,8 @@ that character's exact requested form and must contain no unrequested known
 character. Apply this eligibility gate before relevance scoring. Do not hard
 filter by shot or view: those remain applicability scores inside the eligible
 set. If the eligible set is empty or visibly insufficient for the requested view,
-record `MISS` or `INSUFFICIENT` and curate same-character, same-form evidence;
-never broaden automatically to another character or form. This gate does not
+record `MISS` or `INSUFFICIENT`; this completes the selected-medium retrieval.
+Keep the requested character and form fixed. This gate does not
 grant identity authority: official evidence still owns identity and construction.
 
 `--intent-text` may translate explicit natural-language phrases into controlled
@@ -190,11 +193,13 @@ request, an official setting sheet whose shot facets do not match the request
 must be prepared as the smallest focused face/view crop. Pre-generation
 validation rejects the uncropped sheet; a character-style image cannot replace
 this identity evidence.
-For any schema-5 `new` task carrying `brief.view_angle`, an uncropped official
-identity reference must carry the exact controlled `view-angle:*` tag or its
-documented shot-facet equivalent. The selected character-style row must cover
-the same angle. Pre-generation validation rejects a mismatched identity or
-character-style row; a general front or upper-body match is not profile coverage.
+For any non-wide schema-5 `new` task carrying `brief.view_angle`, an uncropped
+official identity reference must carry the exact controlled `view-angle:*` tag
+or its documented shot-facet equivalent. The selected character-style row must
+cover the same angle. Pre-generation validation rejects a mismatched identity
+or character-style row; a general front or upper-body match is not profile
+coverage. For `wide-shot`, exact character/form evidence remains mandatory, but
+a view mismatch is recorded as Layer 2 `INSUFFICIENT` without another retrieval.
 An image-level view tag on a multi-character panel is not subject-bound evidence:
 when an unrequested co-character is present, it cannot prove that the focal
 character owns the tagged view. Record coverage as insufficient unless a focused
@@ -323,8 +328,7 @@ exclude archived tasks while preserving every original file and result.
   change. A target plus unrelated style or continuity evidence is not a default.
 - For a manga-medium correction, use the target plus one dynamically selected,
   scope-matched manga style screenshot. The bundled corpus-derived guide defines
-  the QA band but does not replace visual evidence. Do not attach a fixed volume
-  or page.
+  the QA band but does not replace visual evidence.
 - For a target-only first preview, inspect the supplied target and generate before
   locating a historical task or completing durable task bookkeeping. Create or
   update the task record after a usable preview exists. Require pre-generation
@@ -358,26 +362,28 @@ exclude archived tasks while preserving every original file and result.
 
 ## Serial retrieval contract
 
-For a new task, run the layers in this order and record `HIT`, `MISS`,
-`INSUFFICIENT`, or an allowed `SKIP` before advancing:
+For a normal new task, run exactly two bounded retrieval operations and record
+`HIT`, `MISS`, or `INSUFFICIENT` before generation:
 
 1. `official`, `reference_domain=identity`, for canonical identity and exact form.
-2. Selected-medium `reference_domain=character-style` for character rendering.
-3. Selected-medium `reference_domain=scene` for scene identity. Canonical places
-   require an exact `scene-id`; after `MISS` or `INSUFFICIENT`, ImageGen constructs
-   the scene. Do not use cross-medium scene identity fallback.
-4. Selected-medium `reference_domain=scene` for scene rendering. A canonical
-   scene `HIT` may cover this only after human inspection records
-   `scene_style_coverage=HIT` and a concrete visible coverage basis. The evidence
-   log, brief, and manifest must record the same coverage state. Coverage
-   `INSUFFICIENT`, or scene-identity
-   `MISS`/`INSUFFICIENT`, makes this layer mandatory. Its fallback query must
-   exclude the canonical `scene-id` already judged inadequate.
-5. Optional exact content evidence. Search the selected-medium curated source first.
+2. One selected-medium retrieval that returns separately grouped
+   `reference_domain=character-style` and `reference_domain=scene` candidates.
+
+For manga, this is one official-setting-sheet retrieval followed by one grouped
+retrieval from the curated manga originals.
+
+Shot and view are ranking signals inside those bounded results. Each result is
+final. Record missing character-view, canonical-scene, or scene-rendering
+coverage as `MISS` or `INSUFFICIENT` and stop retrieval. ImageGen may construct
+a missing canonical scene, scene rendering, or `wide-shot` character pose; a
+non-wide character-view gap remains blocked before generation.
+
+Optional exact content evidence is allowed only when the user explicitly requests
+that extra lookup. Search the selected-medium curated source first.
    Open the other curated medium only after the selected-medium content search is
    recorded as `MISS` or `INSUFFICIENT`. Record `SKIP` when no separate content
    evidence is needed.
-6. `selected-output` for explicitly requested accepted continuity only; otherwise
+`selected-output` is for explicitly requested accepted continuity only; otherwise
    record `SKIP` and do not search it.
 
 Layer 1 includes a separate exact-form search for every declared canonical
@@ -392,28 +398,22 @@ style-layer `HIT` resolves rendering only and never counts as a content-layer
 selected-medium style evidence. The selected content reference must have one
 non-empty exact `focus`, and the normal budget is one image.
 
-Start identity and ordinary content layers with exact subject + form + shot and,
-when declared, exact view angle. If the camera-distance shot is insufficient,
-remove only that shot while retaining view angle. A viewless identity fallback
-may be inspected only to prepare the smallest focused crop of the required view;
-it never counts as view coverage. Never broaden identity or content across form.
+Start identity with exact subject + form. Use shot and view only to rank the one
+bounded result. If that result is insufficient, record it and stop; never run a
+shotless or viewless retry. Never broaden identity or content across form.
 Character-style retrieval uses the hard domain plus exact requested character
 and form eligibility, but no action or scene score; a declared view angle is a
 strong applicability signal and the selected character anchor must visibly cover
-it. No other character or form is an automatic fallback. Scene-style retrieval uses
-the hard scene domain and only
-scene, background, weather and distance-detail traits. Requested shot is a soft
-scene-rendering score only: it must not eliminate a closer material, weather or
-scene-family anchor before inspection. Remove the shot score before declaring
-`MISS` or `INSUFFICIENT`. 犬夜叉
+it. For `wide-shot`, exact character/form remains mandatory but a missing view
+match must be recorded as Layer 2 `INSUFFICIENT`; ImageGen constructs the small
+figure's pose and retrieval stops. No other character or form is an automatic fallback. Scene-style retrieval uses
+the hard scene domain and only scene, background, weather and distance-detail
+traits. An exact requested scene family outranks a generic economy-only match.
+Requested shot is a soft scene-rendering score only: it must not eliminate a
+closer material, weather or scene-family anchor before inspection and never
+causes a second retrieval. 犬夜叉
 `default-form` may alias `half-demon-form` only in configured screenshot sources;
 it never aliases human or full-demon form.
-
-The complete local manga PDFs are offline calibration/evaluation material and a
-cold fallback for curating a focused screenshot only after the indexed curated
-layer is recorded insufficient. Never attach a whole volume to a generation
-call, present the corpus as newly created official material, upload it as
-"training data", or claim that this workflow fine-tunes the image model.
 
 For multi-character evidence, bind every requested form to its named character.
 Never satisfy `戈薇=default-form` merely because another character in the same
@@ -421,15 +421,14 @@ image is indexed with `default-form`, and never leak 犬夜叉 form aliases to �
 
 Do not rerun unchanged parent evidence for a microfix. Reuse it only when the parent task, catalog item IDs, medium, and identity forms remain valid.
 
-Show at most four exact candidates per layer by default. In the official layer,
+Show at most four exact candidates per result group by default. In the official layer,
 only members declared together in `source-library.json.candidate_series` occupy
 one candidate slot. Select the representative from the current request's
 member-specific terms, fall back to the configured default member, and never
 infer a series merely from a trailing filename number. Keep every source item
 independently indexed and available when series collapsing is omitted. This
-collapse mode is invalid for selected-medium or continuity sources. Expanding to
-six requires a recorded `MISS` or `INSUFFICIENT`; large speculative contact
-sheets are not part of the normal path.
+collapse mode is invalid for selected-medium or continuity sources. The bounded
+result is final; `MISS` or `INSUFFICIENT` completes that retrieval operation.
 
 ## Reference authority and order
 
@@ -484,7 +483,10 @@ parts are drawn and separated by relative paper-white, flat-black, halftone, or
 TV cel/value relationships. Never copy a style source's costume design or let
 its tone assignment redefine official garment construction. Before generation,
 Layer 2 must record `HIT` coverage for character mark-making, hair and face
-linework, fabric/fold treatment and garment value hierarchy. Scene rendering has
+linework, fabric/fold treatment and garment value hierarchy. A `wide-shot` with
+an exact-form character anchor but no same-view anchor may instead record Layer 2
+`Result: INSUFFICIENT` and component coverage as `HIT` or `INSUFFICIENT`; it may
+not claim a same-view `HIT`. Scene rendering has
 its own result in Layer 4. A canonical scene manifest entry must carry
 `scene_style_coverage: HIT|INSUFFICIENT`; `INSUFFICIENT` grants no scene-style
 authority. Optional scene-material labels are transfer scope for one scene
@@ -542,8 +544,8 @@ Generate prompts from the current brief and manifest with `compile_prompt.py`.
   output must read as direct, page-ready late-1990s serialized manga rather than
   either a polished monochrome illustration or generic under-rendered line art.
   Preserve identity-bearing eyes, bangs, jaw, hair silhouette, costume layers,
-  contact, and required setting cues. Never translate offline provenance into a
-  fixed volume/page query or input; select style evidence dynamically.
+  contact, and required setting cues. Select style evidence dynamically from the
+  curated originals for the current task.
 - For a manga `wide-shot`, or an environment-dominant manga request detected from
   multiple scene facets such as architecture plus night/weather, compile a
   dedicated scene-economy clause. Treat coherent axes, scale, depth, overlap,
@@ -561,9 +563,11 @@ Generate prompts from the current brief and manifest with `compile_prompt.py`.
   task whose stored deliverable is `illustration`, the generator-facing format
   must call it a single borderless serialized-manga panel. Legacy briefs with no
   scene facets use the general clause.
-  When both economy traits are present in the brief, pre-generation validation
-  must require the selected scene-style row to carry both positive tags. Literal
-  weather or architecture similarity cannot substitute for economy coverage.
+  For every manga `wide-shot`, pre-generation validation must require the
+  selected scene-style row to carry both positive economy tags even if the brief
+  omits them. Environment-dominant non-wide requests require the same when both
+  traits are stored in the brief. Literal weather or architecture similarity
+  cannot substitute for economy coverage.
 - For a manga `wide-shot` edit, compile an additional preservation lock. Unless
   the named request explicitly changes one, preserve the target's framing, crop,
   camera distance, character scale and placement, major object positions,

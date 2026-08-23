@@ -246,7 +246,8 @@
         "source": "official",
         "role": "identity",
         "subject_form": ["杀生丸=default-form"],
-        "shot": ["back-view"]
+        "prefer_shot": ["back-view"],
+        "prefer_view_angle": "back"
       },
       "relevant_item_ids": [
         "official:file:feb144894cb1375186a7",
