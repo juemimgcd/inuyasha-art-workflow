@@ -9,7 +9,6 @@ Use each source only for its declared role. The local catalog is a locator for a
 | `official` | `/Users/jquery/Documents/inuyahsa-official` | canonical identity | Character name, face, anatomy, form, costume, weapon/prop construction and attachment, scar, and scale. |
 | `manga-curated` | `/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos` | growing user-curated manga style, scene identity and scoped content | Character folders supply `character-style`; the top-level `场景/` folder supplies scene identity and scene rendering. |
 | `tv-curated` | `/Users/jquery/Documents/inuYasha-design/origin-photos/TV-photos` | growing user-curated TV rendering and scoped content | TV rendering for TV tasks, or one separately selected exact-focus content reference. |
-| `user-continuity` | `/Users/jquery/Documents/inuyasha-mine` | requested continuity | A user-original form or prior accepted interpretation when explicitly requested. |
 | `selected-output` | `/Users/jquery/Documents/inuYasha-design/selected-output` | selected user-original precedent | One inspected accepted output for continuity and finish quality after identity and medium style are resolved. |
 
 `official` is the default authority for that directory, not an unconditional

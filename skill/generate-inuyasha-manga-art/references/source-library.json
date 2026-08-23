@@ -15,10 +15,6 @@
       "to": "${REPO_ROOT}/libraries/origin-photos"
     },
     {
-      "from": "/Users/jquery/Documents/inuyasha-mine",
-      "to": "${REPO_ROOT}/libraries/inuyasha-mine"
-    },
-    {
       "from": "/Users/jquery/Documents/inuYasha-design/selected-output",
       "to": "${REPO_ROOT}/libraries/selected-output"
     },
@@ -212,16 +208,6 @@
         "inherit_ancestor_folders": true,
         "deduplicate_by_content": true
       }
-    },
-    {
-      "id": "user-continuity",
-      "label": "用户原创与连续性参考",
-      "path": "${REPO_ROOT}/libraries/inuyasha-mine",
-      "source_type": "image-directory",
-      "medium": "user-original",
-      "authority": "user-continuity",
-      "evidence_roles": ["continuity", "target"],
-      "default_tags": ["user-original", "continuity"]
     },
     {
       "id": "tv-curated",

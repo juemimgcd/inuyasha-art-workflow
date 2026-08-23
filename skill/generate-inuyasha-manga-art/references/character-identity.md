@@ -4,7 +4,7 @@ Use this guide for identity, costume, equipment, transformations, and relative s
 
 ## Authority and inspection protocol
 
-The setting-sheet root is `/Users/jquery/Documents/inuyahsa-official` (keep the directory's existing spelling). This directory contains the 设定集. Treat each `<角色>设定集` folder as authoritative for that named character's canonical structural identity. Use `source-map.md` to distinguish it from the user's original art, selected outputs, manga screenshots, and TV screenshots. When the user explicitly requests one of their original variants from `/Users/jquery/Documents/inuyasha-mine`, preserve that variant instead of silently replacing it with the canonical form.
+The setting-sheet root is `/Users/jquery/Documents/inuyahsa-official` (keep the directory's existing spelling). This directory contains the 设定集. Treat each `<角色>设定集` folder as authoritative for that named character's canonical structural identity. Use `source-map.md` to distinguish it from the user's original art, selected outputs, manga screenshots, and TV screenshots. When the user explicitly supplies one of their original variants, preserve that variant instead of silently replacing it with the canonical form.
 
 For every named character:
 
