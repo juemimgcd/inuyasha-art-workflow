@@ -2253,8 +2253,8 @@ class IntentWorkflowTests(unittest.TestCase):
         prompt = compile_prompt(self.brief("new"), {"references": []})
         self.assertIn("late-1990s serialized black-and-white manga", prompt)
         self.assertIn("not a polished monochrome illustration", prompt)
-        self.assertIn("Manga finish calibration", prompt)
-        self.assertIn("selected character and scene references", prompt)
+        self.assertIn("Manga finish:", prompt)
+        self.assertIn("selected character/scene references", prompt)
         self.assertIn("Preserve requested scene phenomena", prompt)
         self.assertIn("under-rendered coloring-book outline", prompt)
         self.assertIn("identity-bearing eye shape", prompt)
@@ -2268,21 +2268,41 @@ class IntentWorkflowTests(unittest.TestCase):
         brief = self.brief("new")
         brief["shot"] = None
         prompt = compile_prompt(brief, {"references": []})
-        self.assertIn("Camera distance is not specified", prompt)
-        self.assertIn("do not default to a full-body character sheet", prompt)
-        self.assertIn("foreground-occluded composition", prompt)
-        self.assertIn("stance, or ground contact is itself necessary", prompt)
+        self.assertIn("choose the most expressive crop", prompt)
+        self.assertIn("use full-body only when silhouette", prompt)
+        self.assertIn("stance, or ground contact needs it", prompt)
 
     def test_explicit_manga_shot_stays_hard_and_black_fill_is_hand_inked(self) -> None:
         brief = self.brief("new")
         brief["shot"] = "close-up"
         prompt = compile_prompt(brief, {"references": []})
-        self.assertIn("Honor the declared close-up camera distance", prompt)
-        self.assertIn("do not pull back to a full-body character sheet", prompt)
-        self.assertIn("manually inked graphic shapes", prompt)
-        self.assertIn("organic contour taper", prompt)
-        self.assertIn("perfectly uniform digital flood-fill", prompt)
-        self.assertIn("Do not compensate by turning black groups gray", prompt)
+        self.assertIn("declared `close-up` shot/framing hard", prompt)
+        self.assertIn("do not pull back just to show the whole costume", prompt)
+        self.assertIn("decisive hand-inked blacks", prompt)
+        self.assertIn("tapered contours", prompt)
+        self.assertIn("uniform digital fill", prompt)
+        self.assertIn("gray fill", prompt)
+
+    def test_non_distance_manga_shots_are_not_called_camera_distances(self) -> None:
+        for shot in ("action", "detail", "two-shot", "group-shot", "profile", "back-view"):
+            with self.subTest(shot=shot):
+                brief = self.brief("new")
+                brief["shot"] = shot
+                prompt = compile_prompt(brief, {"references": []})
+                self.assertIn(f"Shot/framing: {shot}", prompt)
+                self.assertNotIn(f"Camera distance: {shot}", prompt)
+                if shot == "profile":
+                    self.assertIn("profile is a view, not a reason to pull back", prompt)
+                else:
+                    self.assertIn(f"declared `{shot}` shot/framing hard", prompt)
+
+    def test_camera_and_ink_direction_preserve_new_prompt_budget(self) -> None:
+        brief = self.brief("new")
+        brief["shot"] = None
+        brief["request"] = "x" * 4300
+        self.assertLessEqual(
+            len(compile_prompt(brief, {"references": []})), prompt_limit("new")
+        )
 
     def test_explicit_full_body_manga_shot_is_preserved_as_narrative_staging(
         self,
@@ -2290,9 +2310,9 @@ class IntentWorkflowTests(unittest.TestCase):
         brief = self.brief("new")
         brief["shot"] = "full-body"
         prompt = compile_prompt(brief, {"references": []})
-        self.assertIn("explicitly requires full-body framing", prompt)
-        self.assertIn("keep the complete silhouette and ground contact visible", prompt)
-        self.assertIn("not a neutral character sheet", prompt)
+        self.assertIn("keep the declared full-body shot hard", prompt)
+        self.assertIn("silhouette and ground contact", prompt)
+        self.assertIn("rather than a character sheet", prompt)
 
     def test_explicit_two_hand_request_compiles_visible_contact_topology(self) -> None:
         brief = self.brief("new")
@@ -2300,6 +2320,7 @@ class IntentWorkflowTests(unittest.TestCase):
         prompt = compile_prompt(brief, {"references": []})
         self.assertIn("Named contact topology", prompt)
         self.assertIn("exactly two distinct, visible hands", prompt)
+        self.assertIn("both wrists and two nonoverlapping hand silhouettes", prompt)
         self.assertIn("Both hands must participate", prompt)
         self.assertIn("every named prop and body-part contact", prompt)
 
@@ -2325,7 +2346,7 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertNotIn("repeated roof tiles", prompt)
         self.assertIn("uniform fine texture", prompt)
         self.assertIn("the rendering fails", prompt)
-        self.assertIn("Complete objects and correct perspective do not excuse", prompt)
+        self.assertIn("Correct perspective does not excuse", prompt)
         self.assertNotIn("empty architecture", prompt)
         self.assertNotIn("Economy means selecting the right marks", prompt)
 
@@ -2398,7 +2419,7 @@ class IntentWorkflowTests(unittest.TestCase):
         prompt = compile_prompt(self.brief("new"), {"references": []})
         self.assertIn("canonical garment component", prompt)
         self.assertIn("paper-white, flat-black", prompt)
-        self.assertIn("Never copy the style source's costume design", prompt)
+        self.assertIn("without copying its costume", prompt)
 
     def test_manga_qa_checks_character_marks_and_garment_values(self) -> None:
         checks = qa_items("manga", "new")
@@ -3081,7 +3102,7 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertIn("Per-character rendering map", prompt)
         self.assertIn("犬夜叉=child-form: Input 1 (exact)", prompt)
         self.assertIn("十六夜=default-form: Input 2 (exact)", prompt)
-        self.assertIn("Manga finish calibration", prompt)
+        self.assertIn("Manga finish:", prompt)
         self.assertIn("Monochrome output or screen tone alone is insufficient", prompt)
         self.assertNotIn("continuous shine bands", prompt)
         self.assertNotIn("wet reflections", prompt)
