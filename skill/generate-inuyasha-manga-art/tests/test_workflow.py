@@ -10,7 +10,7 @@ import unittest
 from argparse import ArgumentTypeError
 from contextlib import redirect_stdout
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
@@ -20,12 +20,16 @@ from benchmark_reference_retrieval import (
     first_relevant_rank,
     load_dataset,
     metric_summary,
+    run_case,
     search_command,
 )
 from browse_curated_styles import (
     candidate_sort_key,
     hard_facet_filters,
 )
+from browse_curated_styles import main as browse_curated_styles_main
+from build_reference_index import SCHEMA_VERSION as CATALOG_SCHEMA_VERSION
+from build_reference_index import freshness as catalog_freshness
 from composite_local_microfix import composite_local_edit, outside_edit_box_equal
 from continue_art_task import (
     context_box_for,
@@ -68,10 +72,10 @@ from record_attempt import (
     requires_manga_medium_components,
     style_comparison_failures,
 )
-from search_reference_index import collapse_candidate_series
-from search_reference_index import main as search_reference_index_main
 from reference_feedback_report import duration_summary
 from reference_feedback_report import main as reference_feedback_report_main
+from search_reference_index import collapse_candidate_series
+from search_reference_index import main as search_reference_index_main
 from start_response_window import main as start_response_window_main
 from task_workflow import (
     CHANGE_CATEGORIES,
@@ -94,6 +98,7 @@ from task_workflow import (
     style_scope_for_entry,
 )
 from technical_failures import transport_retry_exhausted
+from validate_all_tasks import lifecycle_in_scope, task_lifecycle_state
 from validate_art_task import (
     candidate_source_failures,
     character_style_view_coverage_failures,
@@ -105,10 +110,10 @@ from validate_art_task import (
     retrieval_result,
     scene_economy_reference_failures,
     scene_style_coverage_evidence_failures,
+    style_domain_count,
     technical_retry_limit_reached,
     unchanged_consecutive_errors,
 )
-from validate_all_tasks import lifecycle_in_scope, task_lifecycle_state
 from validate_workflow import identity_ledger_failures
 from workflow_common import (
     CONFIG_PATH,
@@ -135,6 +140,24 @@ from workflow_common import (
 
 
 class PortabilityTests(unittest.TestCase):
+    def test_catalog_rule_change_invalidates_the_previous_schema(self) -> None:
+        self.assertGreaterEqual(CATALOG_SCHEMA_VERSION, 9)
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "catalog.sqlite3"
+            connection = sqlite3.connect(database)
+            connection.execute("CREATE TABLE meta (key TEXT, value TEXT)")
+            connection.execute(
+                "INSERT INTO meta VALUES ('schema_version', ?)",
+                (str(CATALOG_SCHEMA_VERSION - 1),),
+            )
+            connection.commit()
+            connection.close()
+            fresh, reason = catalog_freshness(
+                database, {}, {}, Path(directory) / "annotations.jsonl"
+            )
+        self.assertFalse(fresh)
+        self.assertEqual(reason, "catalog schema changed")
+
     def test_config_resolves_bundled_sources_from_repository_root(self) -> None:
         raw = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
         config = load_config()
@@ -486,6 +509,125 @@ class MetadataTests(unittest.TestCase):
         tags = infer_tags(Path("场景/场景__不适用__远景__山间寺庙__01.png"), source)
         self.assertIn("background:nature", tags)
         self.assertIn("background:architecture", tags)
+
+    def test_village_boundary_uses_settlement_before_nature_background(self) -> None:
+        traits = infer_retrieval_traits("村界回望村庄，右侧山路通向低矮山脊")
+        self.assertIn("scene-family:settlement", traits)
+        self.assertIn("background:nature", traits)
+        self.assertNotIn("scene-family:nature", traits)
+
+        source = {"default_tags": ["manga", "curated"]}
+        tags = infer_tags(Path("场景/场景__不适用__远景__乡村聚落__01.png"), source)
+        self.assertIn("scene-family:settlement", tags)
+
+    def test_negated_scene_aliases_do_not_boost_excluded_content(self) -> None:
+        for request in (
+            "不要村庄，只画山路；不出现食骨之井",
+            "不要有村庄，只画山路",
+            "不能出现村庄，只画山路",
+            "不得出现村庄，只画山路",
+            "不要在背景远处出现村庄，只画山路",
+            "别在村庄里，改成山路",
+            "不要让背景中出现村庄，只画山路",
+            "避免出现村庄，只画山路",
+        ):
+            with self.subTest(request=request):
+                traits = infer_retrieval_traits(request)
+                self.assertNotIn("scene-family:settlement", traits)
+                self.assertIn("background:nature", traits)
+        self.assertNotIn(
+            "scene-id:bone-eaters-well",
+            infer_retrieval_traits("不要在食骨之井，只画普通山路"),
+        )
+        self.assertNotIn(
+            "scene-id:bone-eaters-well",
+            infer_retrieval_traits("不在食骨之井，而在普通山路"),
+        )
+        self.assertNotIn(
+            "scene-id:bone-eaters-well",
+            infer_retrieval_traits("不要让画面里出现食骨之井，只画普通山路"),
+        )
+        self.assertNotIn(
+            "scene-id:bone-eaters-well",
+            infer_retrieval_traits("避免出现食骨之井，只画普通山路"),
+        )
+        tree_traits = infer_retrieval_traits("不要御神木，只画普通山路")
+        self.assertNotIn("scene-id:goshinboku", tree_traits)
+        self.assertNotIn("content-object:tree", tree_traits)
+        self.assertIsNone(infer_canonical_scene("不要食骨之井，只画普通山路"))
+        self.assertIsNone(infer_canonical_scene("不要在食骨之井，只画普通山路"))
+        self.assertIsNone(infer_canonical_scene("不在食骨之井，而在普通山路"))
+        self.assertIsNone(
+            infer_canonical_scene("不要让画面里出现食骨之井，只画普通山路")
+        )
+        self.assertIsNone(infer_canonical_scene("避免出现食骨之井，只画普通山路"))
+        self.assertIsNone(infer_canonical_scene("不要御神木，只画普通山路"))
+
+    def test_exact_scene_family_outranks_generic_economy_match(self) -> None:
+        base = {
+            "filename_terms": [],
+            "subjects": [],
+            "subject_forms": {},
+            "shot_types": ["wide-shot"],
+            "folder_tags": [],
+            "content_label": "",
+            "relative_path": "",
+            "note": "",
+            "eligible_roles": ["rendering"],
+        }
+        terms = [
+            "scene-family:settlement",
+            "background:nature",
+            "scene-economy:authored-negative-space",
+            "detail-falloff:strong",
+        ]
+        settlement_score, _ = retrieval_relevance(
+            {**base, "tags": ["scene-family:settlement"]},
+            query_terms=terms,
+            shots=["wide-shot"],
+            role="rendering",
+            shot_weight=1,
+        )
+        generic_score, _ = retrieval_relevance(
+            {
+                **base,
+                "tags": [
+                    "background:nature",
+                    "scene-economy:authored-negative-space",
+                    "detail-falloff:strong",
+                ],
+            },
+            query_terms=terms,
+            shots=["wide-shot"],
+            role="rendering",
+            shot_weight=1,
+        )
+        self.assertGreater(settlement_score, generic_score)
+
+    def test_exact_and_inferred_scene_terms_score_only_once(self) -> None:
+        item = {
+            "tags": ["scene-id:bone-eaters-well"],
+            "filename_terms": [],
+            "subjects": [],
+            "subject_forms": {},
+            "shot_types": [],
+            "folder_tags": [],
+            "content_label": "",
+            "relative_path": "",
+            "note": "",
+            "eligible_roles": ["rendering"],
+        }
+        score, reasons = retrieval_relevance(
+            item,
+            exact_terms=["scene-id:bone-eaters-well"],
+            query_terms=["SCENE-ID:BONE-EATERS-WELL"],
+            role="rendering",
+        )
+        self.assertEqual(score, 12)
+        self.assertEqual(
+            sum("scene-id:bone-eaters-well" in reason.casefold() for reason in reasons),
+            1,
+        )
 
     def test_shrine_request_retains_specific_and_broad_scene_traits(self) -> None:
         traits = retrieval_traits_for_domain(
@@ -2148,6 +2290,7 @@ class IntentWorkflowTests(unittest.TestCase):
         brief = {
             "schema_version": 5,
             "intent": "new",
+            "shot": "upper-body",
             "view_angle": "profile",
             "characters": ["戈薇"],
         }
@@ -2228,6 +2371,69 @@ class IntentWorkflowTests(unittest.TestCase):
                 brief, [(front, entry), (general_profile, entry)]
             ),
             [],
+        )
+
+    def test_wide_shot_requires_honest_view_insufficiency_without_retry(self) -> None:
+        brief = {
+            "schema_version": 5,
+            "intent": "new",
+            "shot": "wide-shot",
+            "view_angle": "three-quarter-back",
+            "characters": ["犬夜叉"],
+        }
+        front = {
+            "item_id": "manga-curated:file:front-inuyasha",
+            "reference_domain": "character-style",
+            "subjects": json.dumps(["犬夜叉"]),
+            "tags": json.dumps(["view-angle:front"]),
+            "shot_types": json.dumps(["close-up"]),
+        }
+        official = {
+            "item_id": "official:file:front-inuyasha",
+            "tags": json.dumps(["official", "view-angle:front"]),
+            "shot_types": json.dumps(["full-body"]),
+        }
+        self.assertEqual(
+            identity_focus_failures(brief, official, {"crop_box": None}), []
+        )
+
+        insufficient = """## Layer 2: character rendering
+- Result: `INSUFFICIENT`
+## Layer 3: scene identity or construction
+"""
+        self.assertEqual(
+            character_style_view_coverage_failures(
+                brief, [(front, {"role": "style"})], insufficient
+            ),
+            [],
+        )
+        hit = insufficient.replace("INSUFFICIENT", "HIT")
+        failures = character_style_view_coverage_failures(
+            brief, [(front, {"role": "style"})], hit
+        )
+        self.assertEqual(len(failures), 1)
+        self.assertIn("record Layer 2 Result as INSUFFICIENT", failures[0])
+        missing_layer_two = """## Layer 1: official identity
+- Result: `INSUFFICIENT`
+## Layer 3: scene identity or construction
+"""
+        self.assertEqual(
+            len(
+                character_style_view_coverage_failures(
+                    brief, [(front, {"role": "style"})], missing_layer_two
+                )
+            ),
+            1,
+        )
+
+        full_body = {**brief, "shot": "full-body"}
+        self.assertEqual(
+            len(
+                character_style_view_coverage_failures(
+                    full_body, [(front, {"role": "style"})], insufficient
+                )
+            ),
+            1,
         )
 
     def test_retry_limit_depends_on_failures_not_elapsed_time(self) -> None:
@@ -2706,7 +2912,7 @@ class IntentWorkflowTests(unittest.TestCase):
             [("铁碎牙", "untransformed-form")],
         )
 
-    def test_continuity_plan_has_shotless_fallback_without_identity_filter(
+    def test_continuity_plan_is_bounded_without_shotless_fallback(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -2741,13 +2947,10 @@ class IntentWorkflowTests(unittest.TestCase):
                 if layer.get("source") == "selected-output"
             )
             primary = continuity["primary_commands"][0]
-            fallback = continuity["fallback_without_shot"][0]
             self.assertIn("--shot", primary)
-            self.assertNotIn("--shot", fallback)
-            self.assertNotIn("--subject", fallback)
-            self.assertNotIn("--form", fallback)
+            self.assertNotIn("fallback_without_shot", continuity)
 
-    def test_canonical_scene_plan_has_explicit_style_coverage_fallback(self) -> None:
+    def test_canonical_scene_stays_inside_one_combined_style_retrieval(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             arguments = [
                 "plan_art_task.py",
@@ -2767,24 +2970,253 @@ class IntentWorkflowTests(unittest.TestCase):
             plan = json.loads(
                 Path(result["retrieval_plan"]).read_text(encoding="utf-8")
             )
-            identity_layer = next(
-                layer
-                for layer in plan["layers"]
-                if layer.get("role") == "canonical-scene"
-            )
             style_layer = next(
                 layer
                 for layer in plan["layers"]
-                if layer.get("role") == "scene-style-fallback"
+                if layer.get("role") == "combined-rendering"
             )
-            self.assertEqual(
-                identity_layer["coverage_gate"]["allowed_values"],
-                ["HIT", "INSUFFICIENT"],
-            )
-            self.assertIn("scene_style_coverage", style_layer["run_when"][1])
             command = style_layer["primary_commands"][0]
-            self.assertIn("--exclude-exact-term", command)
+            self.assertIn("--combined-rendering", command)
+            self.assertIn("--scene-exact-term", command)
             self.assertIn("scene-id:bone-eaters-well", command)
+            self.assertEqual(len(plan["layers"]), 2)
+
+    def test_combined_scene_ranking_is_isolated_from_character_preferences(self) -> None:
+        def browse_scene(form: str, view: str, output: Path) -> list[dict]:
+            arguments = [
+                "browse_curated_styles.py",
+                "--source",
+                "manga-curated",
+                "--combined-rendering",
+                "--role",
+                "rendering",
+                "--intent-text",
+                "村界回望村庄，右侧山路通向低矮山脊",
+                "--prefer-subject-form",
+                f"犬夜叉={form}",
+                "--shot",
+                "wide-shot",
+                "--view-angle",
+                view,
+                "--limit",
+                "4",
+                "--columns",
+                "4",
+                "--output",
+                str(output),
+                "--json",
+            ]
+            stdout = io.StringIO()
+            with (
+                patch("sys.argv", arguments),
+                patch(
+                    "browse_curated_styles.freshness",
+                    return_value=(True, "test catalog"),
+                ),
+                patch("browse_curated_styles.build_contact_sheet"),
+                redirect_stdout(stdout),
+            ):
+                self.assertEqual(browse_curated_styles_main(), 0)
+            return json.loads(stdout.getvalue())["groups"]["scene"]
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            human = browse_scene("human-form", "front", root / "human.jpg")
+            half_demon = browse_scene(
+                "half-demon-form", "back", root / "half-demon.jpg"
+            )
+        self.assertEqual(
+            [(item["item_id"], item["score"]) for item in human],
+            [(item["item_id"], item["score"]) for item in half_demon],
+        )
+        self.assertTrue(human)
+        for item in human:
+            reasons = "\n".join(item["match_reasons"])
+            self.assertNotIn("preferred subject", reasons)
+            self.assertNotIn("view angle", reasons)
+
+    def test_combined_rendering_rejects_character_sql_filters(self) -> None:
+        arguments = [
+            "browse_curated_styles.py",
+            "--source",
+            "manga-curated",
+            "--combined-rendering",
+            "--subject",
+            "犬夜叉",
+            "--form",
+            "human-form",
+        ]
+        with patch("sys.argv", arguments), self.assertRaisesRegex(
+            SystemExit, "cannot filter out the scene group"
+        ):
+            browse_curated_styles_main()
+
+    def test_combined_rendering_rejects_cross_domain_sql_filters(self) -> None:
+        for flag, value in (
+            ("--query", "村庄"),
+            ("--exact-term", "scene-id:bone-eaters-well"),
+            ("--exclude-exact-term", "scene-id:bone-eaters-well"),
+            ("--folder", "场景"),
+            ("--content", "食骨之井"),
+        ):
+            with self.subTest(flag=flag):
+                arguments = [
+                    "browse_curated_styles.py",
+                    "--combined-rendering",
+                    flag,
+                    value,
+                ]
+                with patch("sys.argv", arguments), self.assertRaisesRegex(
+                    SystemExit, "global hard filters"
+                ):
+                    browse_curated_styles_main()
+
+        arguments = [
+            "browse_curated_styles.py",
+            "--source",
+            "selected-output",
+            "--combined-rendering",
+        ]
+        with patch("sys.argv", arguments), self.assertRaisesRegex(
+            SystemExit, "selected-medium curated source"
+        ):
+            browse_curated_styles_main()
+
+    def test_official_soft_preferences_reorder_without_filtering(self) -> None:
+        def search(extra: list[str]) -> list[dict]:
+            arguments = [
+                "search_reference_index.py",
+                "--source",
+                "official",
+                "--role",
+                "identity",
+                "--subject-form",
+                "杀生丸=default-form",
+                "--limit",
+                "200",
+                "--json",
+                *extra,
+            ]
+            stdout = io.StringIO()
+            with (
+                patch("sys.argv", arguments),
+                patch(
+                    "search_reference_index.freshness",
+                    return_value=(True, "test catalog"),
+                ),
+                redirect_stdout(stdout),
+            ):
+                self.assertEqual(search_reference_index_main(), 0)
+            return json.loads(stdout.getvalue())
+
+        baseline = search([])
+        preferred = search(
+            ["--prefer-shot", "back-view", "--prefer-view-angle", "back"]
+        )
+        self.assertEqual(
+            {item["item_id"] for item in baseline},
+            {item["item_id"] for item in preferred},
+        )
+        self.assertIn("shot exact: back-view", preferred[0]["match_reasons"])
+        self.assertIn("view angle exact: back", preferred[0]["match_reasons"])
+
+    def test_canonical_scene_scores_once_and_prefers_overall_structure(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            arguments = [
+                "browse_curated_styles.py",
+                "--source",
+                "manga-curated",
+                "--combined-rendering",
+                "--role",
+                "rendering",
+                "--intent-text",
+                "人类形态犬夜叉站在食骨之井旁",
+                "--prefer-subject-form",
+                "犬夜叉=human-form",
+                "--scene-exact-term",
+                "scene-id:bone-eaters-well",
+                "--limit",
+                "4",
+                "--columns",
+                "4",
+                "--output",
+                str(Path(directory) / "canonical.jpg"),
+                "--json",
+            ]
+            stdout = io.StringIO()
+            with (
+                patch("sys.argv", arguments),
+                patch(
+                    "browse_curated_styles.freshness",
+                    return_value=(True, "test catalog"),
+                ),
+                patch("browse_curated_styles.build_contact_sheet"),
+                redirect_stdout(stdout),
+            ):
+                self.assertEqual(browse_curated_styles_main(), 0)
+            scene = json.loads(stdout.getvalue())["groups"]["scene"]
+        first = scene[0]
+        self.assertIn("scene-structure:overall", first["tags"])
+        self.assertNotIn("犬夜叉", first["subjects"])
+        self.assertIn("canonical scene structure: overall", first["match_reasons"])
+        self.assertEqual(
+            first["match_reasons"].count(
+                "tag exact: scene-id:bone-eaters-well"
+            ),
+            1,
+        )
+
+    def test_canonical_structure_boost_stays_with_the_requested_scene(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            arguments = [
+                "browse_curated_styles.py",
+                "--source",
+                "manga-curated",
+                "--combined-rendering",
+                "--role",
+                "rendering",
+                "--intent-text",
+                "人类形态犬夜叉比较御神木与食骨之井结构",
+                "--prefer-subject-form",
+                "犬夜叉=human-form",
+                "--scene-exact-term",
+                "scene-id:goshinboku",
+                "--limit",
+                "30",
+                "--columns",
+                "4",
+                "--output",
+                str(Path(directory) / "goshinboku.jpg"),
+                "--json",
+            ]
+            stdout = io.StringIO()
+            with (
+                patch("sys.argv", arguments),
+                patch(
+                    "browse_curated_styles.freshness",
+                    return_value=(True, "test catalog"),
+                ),
+                patch("browse_curated_styles.build_contact_sheet"),
+                redirect_stdout(stdout),
+            ):
+                self.assertEqual(browse_curated_styles_main(), 0)
+            scene = json.loads(stdout.getvalue())["groups"]["scene"]
+        other_scene_structures = [
+            item
+            for item in scene
+            if "scene-id:bone-eaters-well" in item["tags"]
+            and any(tag.startswith("scene-structure:") for tag in item["tags"])
+        ]
+        self.assertTrue(other_scene_structures)
+        self.assertTrue(
+            all(
+                not any(
+                    reason.startswith("canonical scene structure:")
+                    for reason in item["match_reasons"]
+                )
+                for item in other_scene_structures
+            )
+        )
 
     def test_wide_shot_adds_positive_scene_economy_traits(self) -> None:
         traits = retrieval_traits_for("雨夜神社", "wide-shot", medium="manga")
@@ -3646,6 +4078,25 @@ class IntentWorkflowTests(unittest.TestCase):
             1,
         )
 
+    def test_manga_wide_shot_cannot_drop_the_economy_gate_from_the_brief(self) -> None:
+        brief = {"medium": "manga", "shot": "wide-shot", "retrieval_traits": []}
+        scene = {
+            "item_id": "manga-curated:file:wide-scene",
+            "reference_domain": "scene",
+            "tags": json.dumps(["scene-economy:authored-negative-space"]),
+        }
+        self.assertEqual(
+            len(scene_economy_reference_failures(brief, scene, {"role": "style"})),
+            1,
+        )
+        scene["tags"] = json.dumps(
+            ["scene-economy:authored-negative-space", "detail-falloff:strong"]
+        )
+        self.assertEqual(
+            scene_economy_reference_failures(brief, scene, {"role": "style"}),
+            [],
+        )
+
     def test_prop_qa_uses_ledger_topology_without_failure_examples(self) -> None:
         checks = qa_items(
             "manga",
@@ -3690,6 +4141,9 @@ class IntentWorkflowTests(unittest.TestCase):
             brief = json.loads((task_dir / "brief.json").read_text(encoding="utf-8"))
             self.assertEqual(plan["schema_version"], 5)
             self.assertEqual(plan["candidate_limit"], 4)
+            self.assertEqual(len(plan["layers"]), 2)
+            self.assertEqual(len(plan["layers"][1]["primary_commands"]), 1)
+            self.assertTrue(all("fallback_without" not in key for layer in plan["layers"] for key in layer))
             self.assertEqual(plan["view_angle"], "profile")
             self.assertEqual(
                 plan["character_style_fallbacks"],
@@ -3706,12 +4160,17 @@ class IntentWorkflowTests(unittest.TestCase):
                 "戈薇侧身站立，双手托住大型纸灯笼",
             )
             self.assertEqual(primary[primary.index("--limit") + 1], "4")
-            self.assertEqual(primary[primary.index("--shot") + 1], "upper-body")
-            self.assertEqual(primary[primary.index("--view-angle") + 1], "profile")
-            viewless = identity["fallback_without_view_angle"][0]
-            self.assertNotIn("--view-angle", viewless)
+            self.assertNotIn("--shot", primary)
+            self.assertNotIn("--view-angle", primary)
+            self.assertEqual(primary[primary.index("--prefer-shot") + 1], "upper-body")
+            self.assertEqual(
+                primary[primary.index("--prefer-view-angle") + 1], "profile"
+            )
+            self.assertNotIn("fallback_without_shot", identity)
+            self.assertNotIn("fallback_without_view_angle", identity)
             character_style = plan["layers"][1]["primary_commands"][0]
             self.assertNotIn("--collapse-candidate-series", character_style)
+            self.assertIn("--combined-rendering", character_style)
             self.assertEqual(character_style[character_style.index("--limit") + 1], "4")
             self.assertEqual(character_style[character_style.index("--columns") + 1], "4")
             self.assertEqual(
@@ -3728,11 +4187,56 @@ class IntentWorkflowTests(unittest.TestCase):
                 preferred_pairs,
                 ["戈薇=default-form"],
             )
+            self.assertEqual(character_style.count("--prefer-subject-form"), 1)
             selection_budget = plan["layers"][1]["selection_budget"]
             self.assertIn("exact requested forms", selection_budget)
             self.assertIn("ineligible before ranking", selection_budget)
+            self.assertIn("one additional scene-style anchor", selection_budget)
+            self.assertIn("do not run another retrieval", selection_budget)
             self.assertNotIn("ranking preferences, not eligibility gates", selection_budget)
             self.assertNotIn("compatible same-view subject", selection_budget)
+
+    def test_prop_identity_query_does_not_inherit_character_view_preferences(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            arguments = [
+                "plan_art_task.py",
+                "--workflow-root",
+                directory,
+                "--slug",
+                "prop-view-isolation",
+                "--request",
+                "人类形态犬夜叉手持未变化铁碎牙",
+                "--identity-form",
+                "犬夜叉=human-form",
+                "--prop-form",
+                "铁碎牙=untransformed-form",
+                "--shot",
+                "upper-body",
+                "--view-angle",
+                "profile",
+            ]
+            stdout = io.StringIO()
+            with patch("sys.argv", arguments), redirect_stdout(stdout):
+                self.assertEqual(plan_art_task_main(), 0)
+            result = json.loads(stdout.getvalue())
+            plan = json.loads(Path(result["retrieval_plan"]).read_text(encoding="utf-8"))
+        commands = plan["layers"][0]["primary_commands"]
+        character = next(
+            command
+            for command in commands
+            if command[command.index("--subject") + 1] == "犬夜叉"
+        )
+        prop = next(
+            command
+            for command in commands
+            if command[command.index("--subject") + 1] == "铁碎牙"
+        )
+        self.assertIn("--prefer-shot", character)
+        self.assertIn("--prefer-view-angle", character)
+        self.assertNotIn("--prefer-shot", prop)
+        self.assertNotIn("--prefer-view-angle", prop)
 
     def test_manga_edit_preserves_two_sided_finish_band(self) -> None:
         prompt = compile_prompt(self.brief("edit"), {"references": []})
@@ -3992,16 +4496,22 @@ class IntentWorkflowTests(unittest.TestCase):
             )
         )
 
-    def test_runtime_contract_does_not_pin_a_manga_volume_or_page(self) -> None:
+    def test_runtime_contract_uses_two_positive_retrieval_operations(self) -> None:
         skill_root = Path(__file__).resolve().parents[1]
-        runtime_contracts = [
-            skill_root / "SKILL.md",
-            skill_root / "references" / "workflow-contract.md",
-        ]
-        for path in runtime_contracts:
-            text = path.read_text(encoding="utf-8")
-            self.assertNotIn("Volume 13", text)
-            self.assertNotIn("Volume-13", text)
+        skill = (skill_root / "SKILL.md").read_text(encoding="utf-8")
+        contract = (skill_root / "references" / "workflow-contract.md").read_text(
+            encoding="utf-8"
+        )
+        source_map = (skill_root / "references" / "source-map.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("same bounded selected-medium retrieval", skill)
+        self.assertIn("exactly two bounded retrieval operations", contract)
+        self.assertIn("exactly two bounded retrieval operations", source_map)
+        self.assertIn("separately grouped", source_map)
+        self.assertNotIn(
+            "Search `manga-curated`, hard-filtered to `scene`", source_map
+        )
 
     def test_rendering_layer_result_can_be_read_without_fixed_style_input(self) -> None:
         evidence = """## Layer 1: official identity
@@ -4039,6 +4549,39 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertTrue(
             any("authority instruction is incomplete" in item for item in failures)
         )
+
+    def test_scene_style_does_not_count_as_character_rendering_coverage(self) -> None:
+        resolved = [("style", "manga-curated:file:scene")]
+        domains = {"manga-curated:file:scene": "scene"}
+        character_style_count = style_domain_count(
+            resolved, domains, "character-style"
+        )
+        self.assertEqual(character_style_count, 0)
+        evidence = """- Character mark-making coverage: N/A
+- Hair and face linework coverage: N/A
+- Fabric and fold treatment coverage: N/A
+- Garment value hierarchy coverage: N/A
+"""
+        failures = rendering_coverage_failures(
+            evidence,
+            [
+                {
+                    "role": "style",
+                    "item_id": "manga-curated:file:scene",
+                    "style_scope": "scene",
+                    "focus": "纸白留白与远近细节衰减",
+                    "instructions": instruction_for(
+                        "style",
+                        "manga",
+                        focus="纸白留白与远近细节衰减",
+                        reference_domain="scene",
+                    ),
+                }
+            ],
+            character_style_count,
+            "manga",
+        )
+        self.assertEqual(failures, [])
 
     def test_scene_material_scope_allows_second_core_style_anchor(self) -> None:
         instruction = instruction_for(
@@ -4305,9 +4848,12 @@ class IntentWorkflowTests(unittest.TestCase):
 
     def test_style_planning_does_not_filter_rendering_by_identity(self) -> None:
         plan_source = (SCRIPTS / "plan_art_task.py").read_text(encoding="utf-8")
-        style_block = plan_source.split("style_base =", 1)[1].split("layers =", 1)[0]
+        style_block = plan_source.split("combined_style_command =", 1)[1].split(
+            "layers =", 1
+        )[0]
         self.assertNotIn('"--subject"', style_block)
         self.assertNotIn('"--form"', style_block)
+        self.assertIn('"--prefer-subject-form"', plan_source)
 
     def test_multi_character_plan_uses_one_ranked_style_search_with_all_preferences(
         self,
@@ -4350,7 +4896,7 @@ class IntentWorkflowTests(unittest.TestCase):
             self.assertIn("Character style preference 犬夜叉=child-form", evidence)
             self.assertIn("Character style preference 十六夜=default-form", evidence)
             self.assertIn(
-                "one combined character-style candidate set",
+                "one bounded selected-medium result",
                 style_layer["selection_budget"],
             )
             self.assertIn(
@@ -4666,6 +5212,71 @@ class IntentWorkflowTests(unittest.TestCase):
         self.assertIn("browse_curated_styles.py", command[1])
         self.assertEqual(command.count("--prefer-subject-form"), 2)
         self.assertEqual(command[command.index("--view-angle") + 1], "profile")
+
+    def test_retrieval_benchmark_routes_soft_official_preferences(self) -> None:
+        case = {
+            "id": "official-soft-view",
+            "intent_text": "杀生丸背面后腰佩刀结构",
+            "query": {
+                "source": "official",
+                "role": "identity",
+                "subject_form": ["杀生丸=default-form"],
+                "prefer_shot": ["back-view"],
+                "prefer_view_angle": "back",
+            },
+            "relevant_item_ids": ["official:file:example"],
+        }
+        command = search_command(case, Path("/tmp/workflow"), 3)
+        self.assertEqual(command[command.index("--prefer-shot") + 1], "back-view")
+        self.assertEqual(
+            command[command.index("--prefer-view-angle") + 1], "back"
+        )
+        self.assertNotIn("--shot", command)
+        self.assertNotIn("--view-angle", command)
+
+    def test_retrieval_benchmark_browser_uses_temporary_contact_sheet(self) -> None:
+        root = Path("/tmp/workflow")
+        case = {
+            "id": "temporary-browser-output",
+            "tool": "browse_curated_styles",
+            "intent_text": "戈薇侧身托住灯笼",
+            "query": {},
+            "relevant_item_ids": ["manga-curated:file:example"],
+        }
+        completed = Mock(returncode=0, stdout='{"candidates": []}', stderr="")
+        with patch(
+            "benchmark_reference_retrieval.subprocess.run",
+            return_value=completed,
+        ) as runner:
+            run_case(case, root, 3)
+        command = runner.call_args.args[0]
+        output = Path(command[command.index("--output") + 1])
+        self.assertFalse(output.is_relative_to(root))
+        self.assertFalse(output.exists())
+
+    def test_retrieval_benchmark_rejects_search_only_preferences_for_browser(
+        self,
+    ) -> None:
+        dataset = {
+            "schema_version": 1,
+            "cases": [
+                {
+                    "id": "invalid-browser-preference",
+                    "tool": "browse_curated_styles",
+                    "intent_text": "村庄远景",
+                    "query": {
+                        "source": "manga-curated",
+                        "prefer_shot": ["wide-shot"],
+                    },
+                    "relevant_item_ids": ["manga-curated:file:example"],
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "benchmark.json"
+            path.write_text(json.dumps(dataset, ensure_ascii=False), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "requires search_reference_index"):
+                load_dataset(path)
 
     def test_retrieval_benchmark_requires_strict_character_style_pairs(self) -> None:
         dataset = {

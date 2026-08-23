@@ -7,6 +7,7 @@ import argparse
 import json
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,7 @@ REPEATABLE_FLAGS = {
     "subject": "--subject",
     "form": "--form",
     "shot": "--shot",
+    "prefer_shot": "--prefer-shot",
     "folder": "--folder",
     "content": "--content",
     "prefer_subject_form": "--prefer-subject-form",
@@ -40,6 +42,7 @@ SCALAR_FLAGS = {
     "query": "--query",
     "match": "--match",
     "view_angle": "--view-angle",
+    "prefer_view_angle": "--prefer-view-angle",
 }
 BOOLEAN_FLAGS = {
     "collapse_candidate_series": "--collapse-candidate-series",
@@ -92,6 +95,12 @@ def load_dataset(path: Path) -> dict[str, Any]:
         tool = case.get("tool", "search_reference_index")
         if tool not in SUPPORTED_TOOLS:
             raise ValueError(f"benchmark case {case_id} uses unknown tool: {tool}")
+        if tool != "search_reference_index":
+            for key in ("prefer_shot", "prefer_view_angle"):
+                if query.get(key):
+                    raise ValueError(
+                        f"benchmark case {case_id} {key} requires search_reference_index"
+                    )
         for key in BOOLEAN_FLAGS:
             if key in query and not isinstance(query[key], bool):
                 raise ValueError(f"benchmark case {case_id} {key} must be boolean")
@@ -189,12 +198,18 @@ def search_command(case: dict[str, Any], root: Path, limit: int) -> list[str]:
 
 def run_case(case: dict[str, Any], root: Path, limit: int) -> dict[str, Any]:
     started = time.perf_counter()
-    completed = subprocess.run(
-        search_command(case, root, limit),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    with tempfile.TemporaryDirectory(
+        prefix="inuyasha-retrieval-benchmark-"
+    ) as directory:
+        command = search_command(case, root, limit)
+        if case.get("tool") == "browse_curated_styles":
+            command.extend(["--output", str(Path(directory) / "contact-sheet.jpg")])
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
     elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
     if completed.returncode not in (0, 1):
         raise RuntimeError(

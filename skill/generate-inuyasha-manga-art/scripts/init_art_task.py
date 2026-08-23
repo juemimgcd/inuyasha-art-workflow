@@ -581,7 +581,7 @@ Intent: `{intent}`
 Change category: `{args.change_category or 'N/A'}`
 Change scope: `{args.change_scope or 'target-only'}`
 
-Run the required retrieval layers in order and record one of `HIT`, `MISS`, `INSUFFICIENT`, or `SKIP` before advancing: official identity -> character rendering -> scene identity or construction -> scene rendering -> optional exact content -> optional continuity. Canonical scenes search the selected-medium scene domain first. When scene identity is `HIT`, separately record `Scene style coverage: HIT|INSUFFICIENT`; only `HIT` may skip Layer 4. On identity `MISS`/`INSUFFICIENT`, ImageGen constructs the scene and Layer 4 becomes mandatory. Actions, expressions, and complex staging are always generated, never retrieved as authority.
+Run exactly two bounded retrieval operations for a normal new task: official identity, then one selected-medium result grouped into character rendering and scene rendering. Record `HIT`, `MISS`, `INSUFFICIENT`, or `SKIP` in the semantic coverage sections below, but never paginate or run shotless/viewless retries. Missing coverage ends retrieval and ImageGen constructs the uncovered pose or scene. Actions, expressions, and complex staging are always generated, never retrieved as authority.
 
 ## Layer 1: official identity
 

@@ -23,7 +23,8 @@ description: "Generate, edit, microfix, or art-direct character-accurate Inuyash
   participate because face, bangs, jaw, and hair mark-making must be applicable
   to the requested direction; it never grants pose or composition authority.
 - Scene evidence comes only from `origin-photos/.../场景`, indexed as
-  `reference_domain=scene`. Search an exact `scene-id` first for work-specific
+  `reference_domain=scene`. Within the one combined selected-medium retrieval,
+  rank an exact `scene-id` first for work-specific
   places such as 食骨之井 or 御神木. A canonical-scene `HIT` must separately
   record `scene_style_coverage=HIT|INSUFFICIENT` plus a concrete visible
   inspection basis; evidence, brief, and manifest must agree. Only `HIT` lets
@@ -38,8 +39,8 @@ description: "Generate, edit, microfix, or art-direct character-accurate Inuyash
 - The request and ImageGen control the new staging, pose, action, expression,
   interaction, camera and any non-canonical scene construction.
 
-Never select a style image by a fixed volume, page, episode, or file. Retrieve it
-from the current scene need. Never let it control identity or copy its characters,
+Select style evidence dynamically from the current task's selected-medium
+originals. Never let it control identity or copy its characters,
 costume construction, dialogue, layout, pose, or story. Never let cross-medium
 content control style or identity.
 
@@ -308,8 +309,8 @@ shot and narrative focus. Reject both polished prestige line art and generic,
 under-rendered coloring-book linework. Economy means preserving the right marks,
 especially identity-bearing eyes, bangs, jaw, hair silhouette, costume layers,
 hands, contact, and necessary setting cues. Treat the guide as offline
-calibration, not as an instruction to retrieve a fixed source volume or page.
-Choose one dynamic style image for every new image and named medium replacement.
+calibration. Choose one dynamic style image from the current task's
+selected-medium originals for every new image and named medium replacement.
 Never turn the guide into numeric caps or percentage reductions for strands,
 folds, tones, rain lines, or background marks.
 
@@ -361,7 +362,7 @@ candidate as the target and reopen only the stated failure category.
 
 ## Fast new-image path
 
-Initialize the task and retrieve at most four exact candidates per layer. Only
+Initialize the task and retrieve at most four exact candidates per result group. Only
 official setting sheets assigned to an explicitly curated similar-content series
 share one candidate slot; choose that series' representative from the current
 request, and keep the full catalog available for explicit inspection:
@@ -385,16 +386,19 @@ Choose the single source whose view and visible construction best match the shot
 when the needed face, garment overlap, weapon mount, hand, or footwear occupies
 only a small part of a sheet, prepare the smallest focused task-local crop and
 record its source hash, crop box, rendered hash, and focus. Then inspect the
-character-style domain. Never filter it to a predetermined volume or page.
+character-style domain.
 For schema-5 `new` tasks using `face`, `profile`, `close-up`, or `medium-shot`,
 pre-generation validation blocks an uncropped official setting sheet when its
 shot facets do not match the requested view. Use `prepare_reference_set.py
 --crop ITEM_ID=X,Y,W,H --focus ITEM_ID=...`; do not compensate with a manga
 style image or an identity collage.
-When `brief.view_angle` is present, official identity evidence must carry that
-exact controlled view facet or be a focused task-local crop of the required
-view. Character-style evidence must also visibly cover the same view angle.
-Viewless fallbacks are crop candidates only and never count as view coverage.
+For non-wide schema-5 `new` tasks, `brief.view_angle` requires official identity
+evidence with that exact controlled view facet or a focused task-local crop of
+the required view. Character-style evidence must also visibly cover the same
+view angle. For `wide-shot`, keep exact character/form identity hard, rank view
+matches first, and when the bounded character-style anchor misses the requested
+view record Layer 2 `Result: INSUFFICIENT`; do not retrieve again. ImageGen owns
+the small figure's pose. Viewless candidates never count as a same-view `HIT`.
 An image-level view tag on a multi-character panel is ambiguous unless the
 requested character is the only possible owner of that view; do not transfer a
 co-character's profile tag to the focal character.
@@ -408,14 +412,17 @@ candidates must depict at least one requested focal character in the exact
 requested form and must not contain any unrequested known character. Only then
 rank view applicability, shot, character mark-making and value hierarchy; do not
 score action, interaction, expression, camera or scene similarity. If no eligible
-candidate covers the requested view, record `MISS` or `INSUFFICIENT` and curate
-same-character, same-form evidence. Never broaden across character or form. Next
-search the scene domain. Exact canonical places
+candidate covers the requested view, record `MISS` or `INSUFFICIENT` and stop
+retrieval. Only a `wide-shot` may continue to generation with that view gap;
+other new shots remain blocked until same-view evidence exists.
+Keep character and form fixed. The same bounded selected-medium retrieval
+also returns a separate scene-domain group. Exact canonical places
 use `scene-id`; generic places use scene/background/weather traits for rendering
 only. ImageGen owns all actions and complex staging. For scene rendering, a
 requested shot is a soft ranking signal rather than an eligibility filter.
-Prefer an anchor that covers the requested scene family, materials or weather
-plus the needed economy traits over one that matches only camera distance.
+Rank an exact requested scene family above a generic economy-only match, then
+prefer family/material/weather candidates that also carry the needed economy
+traits over candidates matching only camera distance.
 Controlled scene traits explicitly present in structured folders or filenames
 participate in ranking; manual annotations remain for visual distinctions such
 as authored negative space and detail falloff that a filename cannot prove.
@@ -426,10 +433,10 @@ mark-making but never the prop silhouette or construction.
 When the identity ledger supplies a topology contract, preserve its counted
 features and connected part sequence. Form aliases and topology remain ledger
 data so planner, prompt, and QA share one mechanism without prop-specific code.
-Do not search `selected-output` unless continuity was requested. Add a
-content layer only when identity and style evidence cannot resolve an exact named
-fact. Expand beyond four candidates only after recording `MISS` or
-`INSUFFICIENT`; never broaden across character form.
+Use `selected-output` only when continuity was requested. Add a content layer
+only when the user explicitly asks for that additional lookup. The bounded
+candidate result is final; record `MISS` or `INSUFFICIENT` when coverage is
+incomplete. Keep character form fixed.
 
 After choosing references, fill `brief.scene`, `brief.invariants`, and the
 serial evidence results. Character and scene rendering are separate coverage
@@ -698,8 +705,4 @@ roll back a partial write; never bypass it with a direct copy.
 - `references/visual-traits.md`: controlled retrieval annotation.
 
 For maintenance, run `reference_feedback_report.py`, `validate_workflow.py`, and
-the relevant task validation. The complete local manga PDFs are offline
-calibration/evaluation material and a cold fallback after curated evidence is
-recorded insufficient; do not attach whole volumes at runtime, upload them as
-"training data", or claim model fine-tuning. Preserve original libraries and
-historical attempts.
+the relevant task validation. Preserve original libraries and historical attempts.
