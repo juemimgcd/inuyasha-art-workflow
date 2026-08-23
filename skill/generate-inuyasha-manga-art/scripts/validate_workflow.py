@@ -16,6 +16,7 @@ from workflow_common import (
     FORM_VALUES,
     SKILL_DIR,
     VIEW_ANGLE_VALUES,
+    candidate_series_index,
     library_signature,
     load_config,
     workflow_paths,
@@ -358,6 +359,12 @@ def main() -> int:
             )
         if source["id"] == "official" and "identity" not in roles:
             failures.append("official must declare identity evidence authority")
+        if source["id"] == "official":
+            for relative_path in candidate_series_index(source):
+                if not (path / relative_path).is_file():
+                    failures.append(
+                        f"official candidate-series member is missing: {relative_path}"
+                    )
     source_ids = {source["id"] for source in config["sources"]}
     for source_id in ("official", "manga-curated", "tv-curated", "selected-output"):
         if source_id not in source_ids:
@@ -422,16 +429,16 @@ def main() -> int:
                         "SELECT relative_path, forms, subject_forms FROM items "
                         "WHERE source_id = 'official' AND relative_path IN (?, ?, ?, ?, ?)",
                         (
-                            "犬夜叉设定集/犬夜叉人类形态图01.jpg",
+                            "犬夜叉设定集/犬夜叉人类形态全身头部表情细节图01.jpg",
                             "犬夜叉设定集/犬夜叉全身图带铁碎牙01.jpg",
-                            "珊瑚设定集/珊瑚战斗服与飞来骨图01.jpg",
+                            "珊瑚设定集/珊瑚战斗服全身与飞来骨图01.jpg",
                             "珊瑚设定集/珊瑚退治屋服全身图02.jpg",
                             "铁碎牙设定集/铁碎牙变化前后形态图01.jpg",
                         ),
                     )
                 }
                 human_sheet = form_rows.get(
-                    "犬夜叉设定集/犬夜叉人类形态图01.jpg", ([], {})
+                    "犬夜叉设定集/犬夜叉人类形态全身头部表情细节图01.jpg", ([], {})
                 )
                 if human_sheet[1].get("犬夜叉") != ["human-form"]:
                     failures.append("official human-form sheet is not indexed exactly")
@@ -447,7 +454,7 @@ def main() -> int:
                         "Inuyasha full-body sheet must keep Tessaiga untransformed-form"
                     )
                 sango_battle = form_rows.get(
-                    "珊瑚设定集/珊瑚战斗服与飞来骨图01.jpg", ([], {})
+                    "珊瑚设定集/珊瑚战斗服全身与飞来骨图01.jpg", ([], {})
                 )
                 if sango_battle[1].get("珊瑚") != ["battle-armor-form"]:
                     failures.append("Sango battle sheet is not indexed exactly")

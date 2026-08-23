@@ -41,6 +41,9 @@ SCALAR_FLAGS = {
     "match": "--match",
     "view_angle": "--view-angle",
 }
+BOOLEAN_FLAGS = {
+    "collapse_candidate_series": "--collapse-candidate-series",
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -89,6 +92,13 @@ def load_dataset(path: Path) -> dict[str, Any]:
         tool = case.get("tool", "search_reference_index")
         if tool not in SUPPORTED_TOOLS:
             raise ValueError(f"benchmark case {case_id} uses unknown tool: {tool}")
+        for key in BOOLEAN_FLAGS:
+            if key in query and not isinstance(query[key], bool):
+                raise ValueError(f"benchmark case {case_id} {key} must be boolean")
+            if query.get(key) and tool != "search_reference_index":
+                raise ValueError(
+                    f"benchmark case {case_id} {key} requires search_reference_index"
+                )
         strict_pairs = case.get("strict_subject_forms", [])
         if not isinstance(strict_pairs, list) or any(
             not isinstance(pair, list)
@@ -171,6 +181,9 @@ def search_command(case: dict[str, Any], root: Path, limit: int) -> list[str]:
             continue
         for value in query.get(key, []):
             command.extend([flag, str(value)])
+    for key, flag in BOOLEAN_FLAGS.items():
+        if query.get(key):
+            command.append(flag)
     return command
 
 

@@ -26,14 +26,14 @@
       "panels": [
         {
           "item_id": "official:file:798eaba650545b06b4a7",
-          "source_relative_path": "犬夜叉设定集/犬夜叉半妖形态图01.jpg",
+          "source_relative_path": "犬夜叉设定集/犬夜叉半妖形态全身图01.jpg",
           "focus": "正面、背面、宽袖、袴、赤足与佩刀位置",
           "crop_box": [60, 50, 900, 630],
           "target_box": [20, 20, 1560, 650]
         },
         {
           "item_id": "official:file:149a0334451c6119c480",
-          "source_relative_path": "犬夜叉设定集/犬夜叉上身图01.jpg",
+          "source_relative_path": "犬夜叉设定集/犬夜叉半妖形态头部表情图01.jpg",
           "focus": "正面与四分之三面部、犬耳、刘海和念珠",
           "crop_box": [250, 50, 460, 360],
           "target_box": [20, 700, 750, 480]
@@ -73,35 +73,35 @@
       "panels": [
         {
           "item_id": "official:file:efe7eafd42e0ab48e48f",
-          "source_relative_path": "犬夜叉设定集/犬夜叉人类形态图01.jpg",
+          "source_relative_path": "犬夜叉设定集/犬夜叉人类形态全身头部表情细节图01.jpg",
           "focus": "正面全身、少年体型、黑发、人耳、宽袖、袴与赤足",
           "crop_box": [300, 50, 225, 630],
           "target_box": [20, 20, 460, 560]
         },
         {
           "item_id": "official:file:efe7eafd42e0ab48e48f",
-          "source_relative_path": "犬夜叉设定集/犬夜叉人类形态图01.jpg",
+          "source_relative_path": "犬夜叉设定集/犬夜叉人类形态全身头部表情细节图01.jpg",
           "focus": "背面全身、少年体型、黑发、普通人耳位置、宽袖、袴与赤足",
           "crop_box": [45, 65, 310, 590],
           "target_box": [20, 620, 460, 560]
         },
         {
           "item_id": "official:file:efe7eafd42e0ab48e48f",
-          "source_relative_path": "犬夜叉设定集/犬夜叉人类形态图01.jpg",
+          "source_relative_path": "犬夜叉设定集/犬夜叉人类形态全身头部表情细节图01.jpg",
           "focus": "放大的四分之三面部、少年面型、刘海、黑发和普通人耳",
           "crop_box": [535, 55, 245, 250],
           "target_box": [500, 20, 520, 550]
         },
         {
           "item_id": "official:file:efe7eafd42e0ab48e48f",
-          "source_relative_path": "犬夜叉设定集/犬夜叉人类形态图01.jpg",
+          "source_relative_path": "犬夜叉设定集/犬夜叉人类形态全身头部表情细节图01.jpg",
           "focus": "放大的正面面部、少年眼型、刘海轮廓、黑发与念珠关系",
           "crop_box": [725, 215, 270, 250],
           "target_box": [1060, 20, 520, 550]
         },
         {
           "item_id": "official:file:efe7eafd42e0ab48e48f",
-          "source_relative_path": "犬夜叉设定集/犬夜叉人类形态图01.jpg",
+          "source_relative_path": "犬夜叉设定集/犬夜叉人类形态全身头部表情细节图01.jpg",
           "focus": "放大的侧脸、额鼻下颌轮廓、普通人耳、颈部与念珠关系",
           "crop_box": [510, 405, 300, 230],
           "target_box": [500, 610, 1080, 570]
@@ -214,7 +214,7 @@
         },
         {
           "item_id": "official:file:b39f9560182059f260b7",
-          "source_relative_path": "戈薇设定集/戈薇弓箭装备图01.jpg",
+          "source_relative_path": "戈薇设定集/戈薇弓箭装备全身图01.jpg",
           "focus": "弓的长度与握持、箭、箭筒和背负位置，仅在场景需要弓箭装备时使用",
           "crop_box": [70, 40, 860, 620],
           "target_box": [820, 620, 760, 560]
@@ -386,21 +386,21 @@
       "panels": [
         {
           "item_id": "official:file:f49fb704ab4479e230fe",
-          "source_relative_path": "珊瑚设定集/珊瑚战斗服与飞来骨图01.jpg",
+          "source_relative_path": "珊瑚设定集/珊瑚战斗服全身与飞来骨图01.jpg",
           "focus": "战斗服背面、侧面与正面全身，高马尾、肩甲、胸甲纹样、护臂、腰胯护片、护膝、长靴，以及背负武器关系",
           "crop_box": [70, 45, 860, 620],
           "target_box": [20, 20, 1560, 760]
         },
         {
           "item_id": "official:file:f49fb704ab4479e230fe",
-          "source_relative_path": "珊瑚设定集/珊瑚战斗服与飞来骨图01.jpg",
+          "source_relative_path": "珊瑚设定集/珊瑚战斗服全身与飞来骨图01.jpg",
           "focus": "正面头部与上身特写，稳定脸型、眼型、整齐额发、两侧鬓发、高马尾起点、肩甲与胸口鳞片纹样",
           "crop_box": [650, 50, 300, 350],
           "target_box": [20, 820, 760, 360]
         },
         {
           "item_id": "official:file:f49fb704ab4479e230fe",
-          "source_relative_path": "珊瑚设定集/珊瑚战斗服与飞来骨图01.jpg",
+          "source_relative_path": "珊瑚设定集/珊瑚战斗服全身与飞来骨图01.jpg",
           "focus": "侧面头部特写，稳定侧脸、耳部、鬓发、颈肩、高马尾走向与肩甲层次",
           "crop_box": [650, 340, 300, 300],
           "target_box": [820, 820, 760, 360]

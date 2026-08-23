@@ -31,9 +31,9 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if (-not $SkipDependencyInstall) {
-    & $venvPython -m pip install --upgrade pip
+    & $venvPython -m pip install --no-cache-dir --upgrade pip
     if ($LASTEXITCODE -ne 0) { throw "pip upgrade failed." }
-    & $venvPython -m pip install -r (Join-Path $repoRoot "requirements.txt")
+    & $venvPython -m pip install --no-cache-dir -r (Join-Path $repoRoot "requirements-dev.txt")
     if ($LASTEXITCODE -ne 0) { throw "Python dependency installation failed." }
 }
 

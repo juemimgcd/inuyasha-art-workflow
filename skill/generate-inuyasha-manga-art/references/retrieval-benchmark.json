@@ -254,6 +254,30 @@
       ]
     },
     {
+      "id": "inuyasha-face-series-default-member",
+      "intent_text": "犬夜叉半妖形态头部表情参考",
+      "query": {
+        "source": "official",
+        "role": "identity",
+        "subject_form": ["犬夜叉=half-demon-form"],
+        "shot": ["face"],
+        "collapse_candidate_series": true
+      },
+      "relevant_item_ids": ["official:file:149a0334451c6119c480"]
+    },
+    {
+      "id": "inuyasha-face-series-eye-correction-member",
+      "intent_text": "犬夜叉眼部修正和眼睛细节",
+      "query": {
+        "source": "official",
+        "role": "identity",
+        "subject_form": ["犬夜叉=half-demon-form"],
+        "shot": ["face"],
+        "collapse_candidate_series": true
+      },
+      "relevant_item_ids": ["official:file:883e56452e7af61cbcb4"]
+    },
+    {
       "id": "kagome-profile-character-style-strict",
       "tool": "browse_curated_styles",
       "intent_text": "戈薇侧身站立，双手托住大型纸灯笼",

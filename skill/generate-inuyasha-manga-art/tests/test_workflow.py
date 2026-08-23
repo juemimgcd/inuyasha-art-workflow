@@ -68,6 +68,8 @@ from record_attempt import (
     requires_manga_medium_components,
     style_comparison_failures,
 )
+from search_reference_index import collapse_candidate_series
+from search_reference_index import main as search_reference_index_main
 from reference_feedback_report import duration_summary
 from reference_feedback_report import main as reference_feedback_report_main
 from start_response_window import main as start_response_window_main
@@ -111,6 +113,7 @@ from validate_workflow import identity_ledger_failures
 from workflow_common import (
     CONFIG_PATH,
     annotation_shot_types,
+    candidate_series_index,
     certified_style_anchor_rank,
     eligible_character_style_candidate,
     eligible_reference_roles,
@@ -677,13 +680,149 @@ class MetadataTests(unittest.TestCase):
             root = Path(directory)
             (root / "official").mkdir()
             (root / "output").mkdir()
+            (root / "outputs").mkdir()
             (root / "official" / "sheet.png").write_bytes(b"sheet")
             (root / "output" / "candidate.png").write_bytes(b"candidate")
+            (root / "outputs" / "candidate.png").write_bytes(b"candidate")
             relative = {
                 path.relative_to(root).as_posix()
-                for path in visible_files(root, ["output/**"])
+                for path in visible_files(root, ["output/**", "outputs/**"])
             }
             self.assertEqual(relative, {"official/sheet.png"})
+
+    def test_official_setting_sheet_repairs_keep_structured_facets(self) -> None:
+        official = next(
+            source for source in load_config()["sources"] if source["id"] == "official"
+        )
+        face = infer_structured_metadata(
+            Path("犬夜叉设定集/犬夜叉半妖形态头部表情图01.jpg"), official
+        )
+        self.assertEqual(face["subject_forms"], {"犬夜叉": ["half-demon-form"]})
+        self.assertEqual(face["shot_types"], ["face"])
+
+        kirara = infer_structured_metadata(
+            Path("云母设定集/云母巨大形态飞行动作效果图01.jpg"), official
+        )
+        self.assertEqual(kirara["subject_forms"], {"云母": ["giant-form"]})
+        self.assertEqual(kirara["shot_types"], ["action"])
+
+    def test_configured_official_candidate_series_members_exist(self) -> None:
+        official = next(
+            source for source in load_config()["sources"] if source["id"] == "official"
+        )
+        members = candidate_series_index(official)
+        self.assertGreaterEqual(len(members), 2)
+        missing = [
+            relative_path
+            for relative_path in members
+            if not (Path(official["path"]) / relative_path).is_file()
+        ]
+        self.assertEqual(missing, [])
+
+    def test_explicit_official_candidate_series_uses_default_member(self) -> None:
+        candidates = [
+            {
+                "item_id": "face-01",
+                "source_id": "official",
+                "relative_path": "犬夜叉设定集/犬夜叉半妖形态头部表情图01.jpg",
+            },
+            {
+                "item_id": "face-02",
+                "source_id": "official",
+                "relative_path": "犬夜叉设定集/犬夜叉半妖形态头部表情图02.jpg",
+            },
+            {
+                "item_id": "face-03",
+                "source_id": "official",
+                "relative_path": "犬夜叉设定集/犬夜叉半妖形态头部表情图03.jpg",
+            },
+            {
+                "item_id": "full-body-01",
+                "source_id": "official",
+                "relative_path": "犬夜叉设定集/犬夜叉半妖形态全身图01.jpg",
+            },
+        ]
+        official = next(
+            source for source in load_config()["sources"] if source["id"] == "official"
+        )
+        collapsed = collapse_candidate_series(candidates, official)
+        self.assertEqual(
+            [item["item_id"] for item in collapsed], ["face-01", "full-body-01"]
+        )
+        self.assertEqual(collapsed[0]["candidate_series_size"], 3)
+        self.assertNotIn("candidate_series_size", collapsed[1])
+
+    def test_explicit_official_candidate_series_uses_request_specific_member(self) -> None:
+        candidates = [
+            {
+                "item_id": f"face-0{number}",
+                "source_id": "official",
+                "relative_path": (
+                    "犬夜叉设定集/犬夜叉半妖形态头部表情图"
+                    f"0{number}.jpg"
+                ),
+                "match_reasons": [],
+            }
+            for number in (1, 2, 3)
+        ]
+        official = next(
+            source for source in load_config()["sources"] if source["id"] == "official"
+        )
+        collapsed = collapse_candidate_series(
+            candidates, official, "需要犬夜叉眼部修正和眼睛细节"
+        )
+        self.assertEqual([item["item_id"] for item in collapsed], ["face-03"])
+        self.assertEqual(
+            collapsed[0]["candidate_series_selection_terms"],
+            ["眼睛细节", "眼部修正"],
+        )
+
+    def test_unconfigured_numbered_files_remain_separate(self) -> None:
+        candidates = [
+            {
+                "item_id": f"samurai-0{number}",
+                "source_id": "official",
+                "relative_path": (
+                    f"普通人物设定集/普通人物武士铠甲全身图0{number}.jpg"
+                ),
+            }
+            for number in (1, 2)
+        ]
+        official = next(
+            source for source in load_config()["sources"] if source["id"] == "official"
+        )
+        collapsed = collapse_candidate_series(candidates, official)
+        self.assertEqual(
+            [item["item_id"] for item in collapsed], ["samurai-01", "samurai-02"]
+        )
+
+    def test_candidate_series_collapse_rejects_nonofficial_source(self) -> None:
+        arguments = [
+            "search_reference_index.py",
+            "--source",
+            "manga-curated",
+            "--collapse-candidate-series",
+        ]
+        with patch("sys.argv", arguments), self.assertRaisesRegex(
+            SystemExit, "requires an explicit --source official"
+        ):
+            search_reference_index_main()
+
+    def test_group_height_sheet_keeps_subject_specific_forms(self) -> None:
+        official = next(
+            source for source in load_config()["sources"] if source["id"] == "official"
+        )
+        metadata = infer_structured_metadata(
+            Path(
+                "珊瑚-弥勒-犬夜叉-杀生丸-戈薇-桔梗-七宝-云母-枫婆婆"
+                "全身身高对比图01.jpg"
+            ),
+            official,
+        )
+        self.assertEqual(metadata["subject_forms"]["犬夜叉"], ["half-demon-form"])
+        self.assertEqual(metadata["subject_forms"]["珊瑚"], ["demon-slayer-form"])
+        self.assertEqual(metadata["subject_forms"]["云母"], ["tiny-form"])
+        self.assertEqual(metadata["shot_types"], ["full-body", "group-shot"])
 
     def test_item_role_tag_can_remove_identity_authority(self) -> None:
         self.assertEqual(
@@ -3497,6 +3636,7 @@ class IntentWorkflowTests(unittest.TestCase):
             )
             brief = json.loads((task_dir / "brief.json").read_text(encoding="utf-8"))
             self.assertEqual(plan["schema_version"], 5)
+            self.assertEqual(plan["candidate_limit"], 4)
             self.assertEqual(plan["view_angle"], "profile")
             self.assertEqual(
                 plan["character_style_fallbacks"],
@@ -3507,11 +3647,20 @@ class IntentWorkflowTests(unittest.TestCase):
             self.assertIn("额头到短而克制的鼻尖", prompt)
             identity = plan["layers"][0]
             primary = identity["primary_commands"][0]
+            self.assertIn("--collapse-candidate-series", primary)
+            self.assertEqual(
+                primary[primary.index("--intent-text") + 1],
+                "戈薇侧身站立，双手托住大型纸灯笼",
+            )
+            self.assertEqual(primary[primary.index("--limit") + 1], "4")
             self.assertEqual(primary[primary.index("--shot") + 1], "upper-body")
             self.assertEqual(primary[primary.index("--view-angle") + 1], "profile")
             viewless = identity["fallback_without_view_angle"][0]
             self.assertNotIn("--view-angle", viewless)
             character_style = plan["layers"][1]["primary_commands"][0]
+            self.assertNotIn("--collapse-candidate-series", character_style)
+            self.assertEqual(character_style[character_style.index("--limit") + 1], "4")
+            self.assertEqual(character_style[character_style.index("--columns") + 1], "4")
             self.assertEqual(
                 character_style[character_style.index("--view-angle") + 1],
                 "profile",

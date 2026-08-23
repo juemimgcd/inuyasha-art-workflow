@@ -58,6 +58,13 @@ skill/generate-inuyasha-manga-art/scripts/run-python \
   skill/generate-inuyasha-manga-art/scripts/<script>.py <args>
 ```
 
+If the launcher reports that Pillow is unavailable, do not install into system,
+Homebrew, Codex-bundled, or another project's Python. In the package checkout,
+run `./setup-python-env.sh` to create its ignored `.venv`; in a temporary
+worktree, set `INUYASHA_PYTHON` for that command to an existing project `.venv`.
+Package-maintenance validation must use `requirements-dev.txt`, which adds
+PyYAML to the same repository-only environment.
+
 From PowerShell after running `setup-windows.ps1`:
 
 ```powershell
@@ -342,7 +349,10 @@ candidate as the target and reopen only the stated failure category.
 
 ## Fast new-image path
 
-Initialize the task and retrieve at most three exact candidates per layer:
+Initialize the task and retrieve at most four exact candidates per layer. Only
+official setting sheets assigned to an explicitly curated similar-content series
+share one candidate slot; choose that series' representative from the current
+request, and keep the full catalog available for explicit inspection:
 
 ```bash
 scripts/run-python scripts/plan_art_task.py \
@@ -406,7 +416,7 @@ features and connected part sequence. Form aliases and topology remain ledger
 data so planner, prompt, and QA share one mechanism without prop-specific code.
 Do not search `selected-output` unless continuity was requested. Add a
 content layer only when identity and style evidence cannot resolve an exact named
-fact. Expand beyond three candidates only after recording `MISS` or
+fact. Expand beyond four candidates only after recording `MISS` or
 `INSUFFICIENT`; never broaden across character form.
 
 After choosing references, fill `brief.scene`, `brief.invariants`, and the

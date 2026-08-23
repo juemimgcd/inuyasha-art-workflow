@@ -18,6 +18,7 @@ from workflow_common import (
     SHOT_VALUES,
     VIEW_ANGLE_SHOT_MAP,
     VIEW_ANGLE_VALUES,
+    candidate_series_index,
     certified_style_anchor_rank,
     eligible_character_style_candidate,
     library_signature,
@@ -30,6 +31,72 @@ from workflow_common import (
     workflow_paths,
     workflow_root,
 )
+
+
+def collapse_candidate_series(
+    items: list[dict[str, Any]],
+    source: dict[str, Any],
+    intent_text: str = "",
+) -> list[dict[str, Any]]:
+    """Keep one request-aware representative of each explicitly curated series."""
+    member_index = candidate_series_index(source)
+    if not member_index:
+        return list(items)
+
+    grouped: dict[str, list[tuple[int, dict[str, Any], dict[str, Any]]]] = {}
+    for rank, item in enumerate(items):
+        metadata = member_index.get(str(item.get("relative_path", "")))
+        if metadata:
+            grouped.setdefault(metadata["series_id"], []).append(
+                (rank, item, metadata)
+            )
+
+    normalized_intent = intent_text.casefold()
+    representatives: dict[str, dict[str, Any]] = {}
+    for series_id, candidates in grouped.items():
+
+        def selection_key(
+            candidate: tuple[int, dict[str, Any], dict[str, Any]],
+        ) -> tuple[int, int, int]:
+            rank, _item, metadata = candidate
+            matches = sum(
+                1
+                for term in metadata["selection_terms"]
+                if term.casefold() in normalized_intent
+            )
+            return matches, int(metadata["default"]), -rank
+
+        _rank, selected, metadata = max(candidates, key=selection_key)
+        representative = dict(selected)
+        representative["candidate_series_id"] = series_id
+        representative["candidate_series_size"] = metadata["series_size"]
+        matched_terms = [
+            term
+            for term in metadata["selection_terms"]
+            if term.casefold() in normalized_intent
+        ]
+        if matched_terms:
+            representative["candidate_series_selection_terms"] = matched_terms
+            match_reasons = list(representative.get("match_reasons", []))
+            match_reasons.append(
+                "candidate-series request match: " + ", ".join(matched_terms)
+            )
+            representative["match_reasons"] = match_reasons
+        representatives[series_id] = representative
+
+    emitted_series: set[str] = set()
+    collapsed: list[dict[str, Any]] = []
+    for item in items:
+        metadata = member_index.get(str(item.get("relative_path", "")))
+        if not metadata:
+            collapsed.append(item)
+            continue
+        series_id = metadata["series_id"]
+        if series_id in emitted_series:
+            continue
+        emitted_series.add(series_id)
+        collapsed.append(representatives[series_id])
+    return collapsed
 
 
 def parse_subject_form(value: str) -> tuple[str, str]:
@@ -156,6 +223,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--curated-only", action="store_true")
     parser.add_argument("--include-unannotated-pages", action="store_true")
     parser.add_argument("--limit", type=int, default=20)
+    parser.add_argument(
+        "--collapse-candidate-series",
+        "--collapse-numbered-series",
+        dest="collapse_candidate_series",
+        action="store_true",
+        help=(
+            "For --source official only, keep one request-aware representative "
+            "from each explicitly configured candidate series. The numbered-series "
+            "spelling remains as a compatibility alias."
+        ),
+    )
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
 
@@ -164,7 +242,15 @@ def main() -> int:
     args = parse_args()
     if args.limit < 1 or args.limit > 200:
         raise SystemExit("--limit must be between 1 and 200")
+    if args.collapse_candidate_series and args.source != "official":
+        raise SystemExit(
+            "--collapse-candidate-series requires an explicit --source official"
+        )
     config = load_config()
+    source_config = next(
+        (source for source in config["sources"] if source["id"] == args.source),
+        None,
+    )
     root = workflow_root(config, args.workflow_root)
     database = workflow_paths(root)["database"]
     if not database.is_file():
@@ -453,6 +539,10 @@ def main() -> int:
             item["relative_path"].casefold(),
         )
     )
+    if args.collapse_candidate_series:
+        if source_config is None:
+            raise SystemExit(f"Unknown source: {args.source}")
+        output = collapse_candidate_series(output, source_config, args.intent_text)
     output = output[: args.limit]
 
     if args.json:
@@ -486,6 +576,12 @@ def main() -> int:
             )
         if item["duplicate_count"] > 1:
             print(f"  duplicate locations: {item['duplicate_count']}")
+        if item.get("candidate_series_size", 1) > 1:
+            print(
+                "  candidate series: "
+                f"showing one representative of {item['candidate_series_size']} "
+                "explicitly curated items"
+            )
         print(
             "  facets: "
             f"subjects={','.join(item['subjects']) or '-'}; "

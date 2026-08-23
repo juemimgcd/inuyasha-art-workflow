@@ -20,7 +20,7 @@ For every named character:
 5. Translate the ledger into observable prompt details. Keep canonical markers even when pose, camera, or manga period changes.
 6. After generation, compare the output with the same setting sheets. Reject name swaps and borrowed features before judging the drawing style.
 
-For group scenes, inspect `/Users/jquery/Documents/inuyahsa-official/全体人物对比图01.jpg` and preserve the depicted height relationships. This sheet includes only part of the cast; do not extrapolate absent characters from it.
+For group scenes, inspect `/Users/jquery/Documents/inuyahsa-official/珊瑚-弥勒-犬夜叉-杀生丸-戈薇-桔梗-七宝-云母-枫婆婆全身身高对比图01.jpg` and preserve the depicted height relationships. This sheet includes only part of the cast; do not extrapolate absent characters from it.
 
 ## Canonical index
 

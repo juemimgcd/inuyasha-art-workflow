@@ -421,10 +421,15 @@ image is indexed with `default-form`, and never leak 犬夜叉 form aliases to �
 
 Do not rerun unchanged parent evidence for a microfix. Reuse it only when the parent task, catalog item IDs, medium, and identity forms remain valid.
 
-Show at most three exact candidates per layer by default. Expanding first to four
-and then to six
-requires a recorded `MISS` or `INSUFFICIENT`; large speculative contact sheets
-are not part of the normal path.
+Show at most four exact candidates per layer by default. In the official layer,
+only members declared together in `source-library.json.candidate_series` occupy
+one candidate slot. Select the representative from the current request's
+member-specific terms, fall back to the configured default member, and never
+infer a series merely from a trailing filename number. Keep every source item
+independently indexed and available when series collapsing is omitted. This
+collapse mode is invalid for selected-medium or continuity sources. Expanding to
+six requires a recorded `MISS` or `INSUFFICIENT`; large speculative contact
+sheets are not part of the normal path.
 
 ## Reference authority and order
 

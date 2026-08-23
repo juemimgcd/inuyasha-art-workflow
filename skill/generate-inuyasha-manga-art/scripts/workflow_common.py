@@ -262,9 +262,76 @@ def load_config(path: Path = CONFIG_PATH) -> dict[str, Any]:
         config["workflow_root"] = str(expand_config_path(config["workflow_root"]))
     for source in config.get("sources", []):
         source["path"] = str(expand_config_path(source["path"]))
+        candidate_series_index(source)
     for alias in config.get("path_aliases", []):
         alias["to"] = str(expand_config_path(alias["to"]))
     return config
+
+
+def candidate_series_index(source: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Return validated, path-keyed candidate-series metadata for one source."""
+    raw_series = source.get("candidate_series", [])
+    if not isinstance(raw_series, list):
+        raise ValueError(
+            f"{source.get('id', 'source')}.candidate_series must be a list"
+        )
+    if raw_series and source.get("id") != "official":
+        raise ValueError("candidate_series may be declared only by the official source")
+
+    index: dict[str, dict[str, Any]] = {}
+    series_ids: set[str] = set()
+    for raw in raw_series:
+        if not isinstance(raw, dict):
+            raise ValueError("candidate_series entries must be objects")
+        series_id = raw.get("id")
+        members = raw.get("members")
+        default_member = raw.get("default_member")
+        if not isinstance(series_id, str) or not series_id.strip():
+            raise ValueError("candidate_series.id must be a non-empty string")
+        if series_id in series_ids:
+            raise ValueError(f"duplicate candidate series id: {series_id}")
+        series_ids.add(series_id)
+        if not isinstance(members, list) or len(members) < 2:
+            raise ValueError(
+                f"candidate series {series_id} must have at least two members"
+            )
+
+        member_paths: list[str] = []
+        normalized_members: list[tuple[str, list[str]]] = []
+        for member in members:
+            if not isinstance(member, dict):
+                raise ValueError(
+                    f"candidate series {series_id} members must be objects"
+                )
+            member_path = member.get("path")
+            selection_terms = member.get("selection_terms", [])
+            if not isinstance(member_path, str) or not member_path.strip():
+                raise ValueError(
+                    f"candidate series {series_id} member.path must be non-empty"
+                )
+            member_path = member_path.replace("\\", "/")
+            if member_path in index or member_path in member_paths:
+                raise ValueError(f"duplicate candidate series member: {member_path}")
+            if not isinstance(selection_terms, list) or not all(
+                isinstance(term, str) and term.strip() for term in selection_terms
+            ):
+                raise ValueError(
+                    f"candidate series {series_id} selection_terms must be strings"
+                )
+            member_paths.append(member_path)
+            normalized_members.append((member_path, selection_terms))
+        if default_member not in member_paths:
+            raise ValueError(
+                f"candidate series {series_id} default_member must name one member"
+            )
+        for member_path, selection_terms in normalized_members:
+            index[member_path] = {
+                "series_id": series_id,
+                "series_size": len(member_paths),
+                "default": member_path == default_member,
+                "selection_terms": selection_terms,
+            }
+    return index
 
 
 def workflow_root(config: dict[str, Any], override: Path | None = None) -> Path:
