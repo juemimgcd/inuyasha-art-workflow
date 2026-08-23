@@ -666,7 +666,8 @@ def _medium_construction(medium: str, shot: str | None = None) -> str:
             "keep coherent axes, scale, depth, overlap, and ground contact, then "
             "concentrate marks only where they clarify the focal path. Organize the "
             "scene with large silhouettes, authored white-paper intervals, decisive "
-            "flat black masses, and one restrained middle-tone family. Before secondary "
+            "hand-inked black masses with tapered contours and sparse intentional white "
+            "breaks, and one restrained middle-tone family. Before secondary "
             "marks, reserve contiguous paper-white fields from open scene shapes and keep "
             "them unfilled. Collapse repeated foliage, architecture, "
             "and terrain into a few outline, flat-black, or restrained-tone groups. Let "
@@ -680,27 +681,22 @@ def _medium_construction(medium: str, shot: str | None = None) -> str:
             "the same finish density across every surface. If a small thumbnail reads mainly as uniform "
             "fine texture instead of a few clear white, black, and middle-tone masses, "
             "the rendering fails even when the perspective is correct. "
-            "Complete objects and correct perspective do not excuse a globally engraved finish. "
-            "Apply the selected style anchor's same economy consistently across every "
-            "scene material instead of completing each surface independently. "
-            "Keep every canonical garment component and overlap defined by official "
-            "identity, but redraw it with the style reference's contour, fabric, fold, "
-            "and paper-white, flat-black, and restrained-tone hierarchy. Never copy the "
-            "style source's costume design."
+            "Correct perspective does not excuse a globally engraved finish. Apply the same "
+            "economy consistently across the scene. Keep all canonical garment "
+            "components, but apply the character reference's paper-white, flat-black, "
+            "tone, and ink treatment without copying its costume."
         )
     return (
         "Make it read first as a late-1990s serialized black-and-white manga image, "
         "not a polished monochrome illustration or under-rendered coloring-book outline. Follow the "
-        "mapped character-style inputs with economical ink shapes, decisive contour "
-        "hierarchy, open paper-white, flat-black masses, and selective tone. Preserve the "
+        "mapped character-style inputs with economical ink, tapered contours, open "
+        "paper-white, decisive hand-inked blacks with sparse white breaks, and selective "
+        "tone; no gloss, gradients, gray fill, uniform digital fill, or distress. Preserve the "
         "identity-bearing eye shapes, bangs, jaw, hair silhouette, costume layers, hands, "
-        "contact, and required setting cues. Concentrate marks at the narrative focus "
-        "and let nonfocal detail fall away. Keep every canonical garment component and "
-        "overlap defined by official identity, but redraw it with the style reference's "
-        "paper-white, flat-black, and restrained-tone hierarchy. Never copy the style "
-        "source's costume design. "
-        "Economy means selecting the right marks, "
-        "not merely minimizing them."
+        "contact, and required setting cues. Concentrate marks at the focus and let nonfocal "
+        "detail fall away. Keep all canonical garment components, but apply the character "
+        "reference's paper-white, flat-black, tone, and ink treatment without copying "
+        "its costume. Economy means selecting the right marks, not merely minimizing them."
     )
 
 
@@ -755,9 +751,8 @@ def _manga_finish_calibration(
         )
     if intent == "new":
         return (
-            "\nManga finish calibration: selected character and scene references "
-            "control contour rhythm, information density, material abstraction, "
-            "negative space, and black-white/tone hierarchy. Concentrate marks at "
+            "\nManga finish: selected character/scene references control contour, density, abstraction, "
+            "negative space, and value hierarchy. Concentrate marks at "
             "identity, action, contact, and setting cues; let nonfocal information "
             "fall away. Preserve requested scene phenomena, rendered with selective "
             "reference-matched marks rather than uniform refinement. Monochrome "
@@ -808,6 +803,7 @@ def _contact_topology_clause(brief: dict[str, Any]) -> str:
         return ""
     return (
         "\nNamed contact topology: `双手` requires exactly two distinct, visible hands. "
+        "Frame both wrists and two nonoverlapping hand silhouettes. "
         "Both hands must participate in the requested action rather than hiding one "
         "behind hair, cloth, a body, or the frame. Trace each hand through every named "
         "prop and body-part contact in one mechanically continuous chain; reject a "
@@ -824,42 +820,34 @@ def _manga_finish_preservation(medium: str) -> str:
     )
 
 
-def _manga_camera_and_black_ink_direction(
-    medium: str, intent: str, shot: str | None
-) -> str:
-    if medium != "manga" or intent != "new":
-        return ""
+def _new_composition_direction(medium: str, shot: str | None) -> str:
+    copy_guard = "Do not copy the style reference's people, text, layout, pose, or story."
+    if medium != "manga":
+        return (
+            "Composition: design a new composition from the request with one clear "
+            f"focal hierarchy. {copy_guard}"
+        )
     if shot is None:
-        camera = (
-            "Camera distance is not specified: choose the crop that makes the requested "
-            "moment most expressive and readable. Prefer a narrative close, medium, "
-            "partial-body, or foreground-occluded composition when it strengthens the "
-            "focal action; do not default to a full-body character sheet. Use full-body "
-            "framing only when complete silhouette, garment construction, weapon/body "
-            "topology, stance, or ground contact is itself necessary to the story."
+        direction = (
+            "choose the most expressive crop; use full-body only when silhouette, "
+            "topology, stance, or ground contact needs it"
         )
     elif shot == "full-body":
-        camera = (
-            "The request explicitly requires full-body framing; keep the complete "
-            "silhouette and ground contact visible while still staging a narrative image, "
-            "not a neutral character sheet."
+        direction = (
+            "keep the declared full-body shot hard, with silhouette and ground contact "
+            "in narrative staging rather than a character sheet"
+        )
+    elif shot == "profile":
+        direction = (
+            "keep a strict side profile and the crop or distance stated in the request; "
+            "profile is a view, not a reason to pull back"
         )
     else:
-        camera = (
-            f"Honor the declared {shot} camera distance and its expressive crop; do not "
-            "pull back to a full-body character sheet merely to display the whole costume."
+        direction = (
+            f"keep the declared `{shot}` shot/framing hard; do not pull back just to show "
+            "the whole costume"
         )
-    return (
-        "\nManga camera and black-ink direction: "
-        + camera
-        + " Render large black hair and garment groups as manually inked graphic shapes: "
-        "keep decisive coverage, but use organic contour taper, small edge irregularity, "
-        "and only the sparse intentional white breaks supported by the selected character "
-        "reference. Avoid glossy highlights, smooth volume gradients, and perfectly "
-        "uniform digital flood-fill that reads like animation paint or pristine printing "
-        "ink. Do not compensate by turning black groups gray, scratchy, or arbitrarily "
-        "distressed."
-    )
+    return f"Composition: {direction}. Keep one clear focus. {copy_guard}"
 
 
 def _manga_medium_edit_clause(
@@ -1219,10 +1207,21 @@ Use the target as the exact continuity and composition authority. Change only wh
         period = brief.get("period_mode") or "classic-balanced"
         shot = brief.get("shot")
         view_angle = brief.get("view_angle")
-        construction = _medium_construction(medium, shot)
-        manga_camera_and_black_ink = _manga_camera_and_black_ink_direction(
-            medium, intent, shot
+        shot_label = (
+            "Camera distance"
+            if shot
+            in {
+                "full-body",
+                "upper-body",
+                "face",
+                "close-up",
+                "medium-shot",
+                "wide-shot",
+            }
+            else "Shot/framing"
         )
+        construction = _medium_construction(medium, shot)
+        composition_direction = _new_composition_direction(medium, shot)
         deliverable = brief.get("deliverable", "illustration")
         if medium == "manga" and deliverable == "illustration":
             deliverable = "single borderless serialized-manga panel, not a standalone illustration"
@@ -1231,7 +1230,7 @@ Use the target as the exact continuity and composition authority. Change only wh
 
 {goal_line}Scene and exact moment: {scene}
 Format: {aspect}; {deliverable}; {period}.
-Camera distance: {shot or "unspecified"}; character view angle: {view_angle or "unspecified"}. Keep these as separate constraints.
+{shot_label}: {shot or "unspecified"}; character view angle: {view_angle or "unspecified"}. Keep these as separate constraints.
 
 Identity requirements:
 {chr(10).join(_identity_lines(brief))}
@@ -1244,8 +1243,7 @@ Reference authority:
 
 Priority order: requested scene and focal hierarchy first, official identity anchors second, selected-medium rendering third, and exact-focus content evidence fourth. Never blend the roles. Character-style evidence may affect only the character; scene-style evidence may affect only the environment and must never increase character detail density.
 
-Composition: design a new composition from the request with one clear focal hierarchy. Do not copy a style screenshot's characters, dialogue, panel layout, pose, or story.
-{manga_camera_and_black_ink}
+{composition_direction}
 
 Spatial construction: use one coherent depth system; keep body direction, relative scale, overlap, ground contact, and prop attachment mechanically continuous.
 {contact_topology_clause}
