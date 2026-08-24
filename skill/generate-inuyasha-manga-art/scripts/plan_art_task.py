@@ -17,7 +17,9 @@ from workflow_common import (
     VIEW_ANGLE_VALUES,
     atomic_write_json,
     infer_canonical_scene,
+    has_nonnegated_alias,
     load_config,
+    required_official_facets,
     retrieval_traits_for,
     workflow_root,
 )
@@ -33,7 +35,12 @@ def infer_prop_forms(request: str) -> list[tuple[str, str]]:
     inferred: list[tuple[str, str]] = []
     for prop, profile in profiles.items():
         inference = profile.get("form_inference") or {}
-        if profile.get("kind") != "prop" or prop not in request or not inference:
+        request_aliases = [prop, *profile.get("request_aliases", [])]
+        if (
+            profile.get("kind") != "prop"
+            or not has_nonnegated_alias(request.casefold(), request_aliases)
+            or not inference
+        ):
             continue
         matches_by_strength: dict[str, list[str]] = {"explicit": [], "context": []}
         for form, rules in inference.items():
@@ -52,6 +59,8 @@ def infer_prop_forms(request: str) -> list[tuple[str, str]]:
                 break
             if len(matches) > 1:
                 break
+        if resolved_form is None and len(inference) == 1:
+            resolved_form = next(iter(inference))
         if resolved_form is not None:
             inferred.append((prop, resolved_form))
             continue
@@ -95,8 +104,9 @@ def main() -> int:
         "--view-angle",
         choices=VIEW_ANGLE_VALUES,
         help=(
-            "Character view direction, stored separately from camera distance. "
-            "When omitted, one unambiguous explicit request cue is inferred."
+            "Character view direction or camera elevation, stored separately "
+            "from camera distance. When omitted, one unambiguous explicit "
+            "request cue is inferred."
         ),
     )
     parser.add_argument("--aspect-ratio", default="2:3 portrait")
@@ -154,6 +164,13 @@ def main() -> int:
     if len(dict(prop_forms)) != len(prop_forms):
         raise SystemExit("Each prop may have only one --prop-form")
     scene_materials = list(dict.fromkeys(args.scene_material))
+    facet_requirements = required_official_facets(
+        dict(args.identity_form), dict(prop_forms), args.shot
+    )
+    facets_by_pair = {
+        (row["subject"], row["form"]): row["required"]
+        for row in facet_requirements
+    }
     inferred_traits = retrieval_traits_for(args.request, args.shot, medium=args.medium)
     inferred_view_angles = list(
         dict.fromkeys(
@@ -260,6 +277,7 @@ def main() -> int:
         official_preferences.extend(["--prefer-view-angle", view_angle])
     official_commands = []
     for character, form in args.identity_form:
+        required_facets = facets_by_pair[(character, form)]
         official_commands.append(
             [
             launcher,
@@ -268,10 +286,14 @@ def main() -> int:
             "official",
             "--role",
             "identity",
-            "--subject",
-            character,
-            "--form",
-            form,
+            "--subject-form",
+            f"{character}={form}",
+            "--coverage",
+            *(
+                value
+                for facet in required_facets
+                for value in ("--required-facet", facet)
+            ),
             "--intent-text",
             args.request,
             *official_preferences,
@@ -281,6 +303,7 @@ def main() -> int:
             ]
         )
     for prop, form in prop_forms:
+        required_facets = facets_by_pair[(prop, form)]
         official_commands.append(
             [
                 launcher,
@@ -289,10 +312,14 @@ def main() -> int:
                 "official",
                 "--role",
                 "identity",
-                "--subject",
-                prop,
-                "--form",
-                form,
+                "--subject-form",
+                f"{prop}={form}",
+                "--coverage",
+                *(
+                    value
+                    for facet in required_facets
+                    for value in ("--required-facet", facet)
+                ),
                 "--intent-text",
                 args.request,
                 "--collapse-candidate-series",
@@ -334,18 +361,23 @@ def main() -> int:
             "identity_cards": [],
             "prepare_arguments": [],
             "primary_commands": official_commands,
+            "coverage_requirements": facet_requirements,
             "retrieval_complete": True,
             "selection_budget": (
-                "inspect at most four official setting-sheet candidates per focal "
+                "Top-K is only the visual preview budget; compute subject/form facet "
+                "coverage on the complete eligible official set before truncation. "
+                "Inspect at most four official setting-sheet candidates per focal "
                 "character; one explicitly curated similar-content series occupies "
                 "one candidate slot and its representative follows the current request, "
                 "while every source remains indexed; choose "
                 "one shot-matched source or the smallest focused "
                 "crop that preserves the required face, form, costume, or construction; "
-                "a declared view angle ranks matching official facets first. For a "
-                "non-wide shot it must match an exact controlled view facet or a "
-                "focused crop; a wide-shot may retain exact-form identity evidence "
-                "and record view coverage as INSUFFICIENT. "
+                "a declared directional view ranks matching official facets first. "
+                "For a non-wide directional view it must match an exact controlled "
+                "view facet or a focused crop; a wide-shot may retain exact-form "
+                "identity evidence and record directional view coverage as "
+                "INSUFFICIENT. High/low camera elevation affects only ranking and "
+                "composition and never creates a same-view authority requirement. "
                 "If the bounded result is insufficient, record INSUFFICIENT and stop "
                 "retrieval; schema-5 "
                 "face/profile/close-up/medium-shot tasks must crop an unmatched "
@@ -370,10 +402,12 @@ def main() -> int:
                 "default. When canonical scene identity is HIT but its scene-style "
                 "coverage is INSUFFICIENT, retain that structural anchor and choose one "
                 "additional scene-style anchor from the same bounded scene group; do "
-                "not run another retrieval. Shot and view affect ranking inside this "
-                "final result. "
+                "not run another retrieval. Shot, directional view, and camera "
+                "elevation affect ranking inside this final result. High/low camera "
+                "elevation never creates a same-view gap. "
                 "For a wide-shot whose exact-form character anchor misses the requested "
-                "view, record Layer 2 INSUFFICIENT without another retrieval. Record "
+                "directional view, record Layer 2 INSUFFICIENT without another "
+                "retrieval. Record "
                 "MISS or INSUFFICIENT for a missing group and let ImageGen "
                 "construct the uncovered pose or scene."
             ),
@@ -463,6 +497,7 @@ def main() -> int:
         "view_angle": view_angle,
         "character_style_fallbacks": [],
         "prop_forms": dict(prop_forms),
+        "official_facet_requirements": facet_requirements,
         "dominant_scene_materials": scene_materials,
         "timing_policy": {
             "pre_generation_target_seconds": 90,
@@ -492,6 +527,7 @@ def main() -> int:
     brief_path = task_dir / "brief.json"
     brief = json.loads(brief_path.read_text(encoding="utf-8"))
     brief["retrieval_traits"] = inferred_traits
+    brief["official_facet_requirements"] = facet_requirements
     if canonical_scene:
         brief["style_strategy"] = f"{args.medium}-character-style-canonical-scene"
         brief["scene"] = canonical_scene["label"]

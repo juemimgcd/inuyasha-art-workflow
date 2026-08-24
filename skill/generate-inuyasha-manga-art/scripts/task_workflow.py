@@ -511,12 +511,17 @@ def prompt_limit(intent: str) -> int:
 
 
 def _reference_lines(manifest: dict[str, Any]) -> list[str]:
-    lines = []
+    grouped: dict[str, list[str]] = {}
     for index, entry in enumerate(manifest.get("references", []), 1):
         role = entry.get("role", "unknown")
-        instruction = entry.get("instructions") or "Use only for its declared role."
-        lines.append(f"- Input {index} ({role}): {instruction}")
-    return lines or ["- No references prepared yet."]
+        instruction = str(
+            entry.get("instructions") or "Use only for its declared role."
+        )
+        grouped.setdefault(instruction, []).append(f"Input {index} ({role})")
+    return [
+        f"- {'; '.join(inputs)}: {instruction}"
+        for instruction, inputs in grouped.items()
+    ] or ["- No references prepared yet."]
 
 
 def character_style_assignments(
@@ -1207,6 +1212,11 @@ Use the target as the exact continuity and composition authority. Change only wh
         period = brief.get("period_mode") or "classic-balanced"
         shot = brief.get("shot")
         view_angle = brief.get("view_angle")
+        view_constraint_label = (
+            "camera elevation"
+            if view_angle in {"high-angle", "low-angle"}
+            else "character view angle"
+        )
         shot_label = (
             "Camera distance"
             if shot
@@ -1230,7 +1240,7 @@ Use the target as the exact continuity and composition authority. Change only wh
 
 {goal_line}Scene and exact moment: {scene}
 Format: {aspect}; {deliverable}; {period}.
-{shot_label}: {shot or "unspecified"}; character view angle: {view_angle or "unspecified"}. Keep these as separate constraints.
+{shot_label}: {shot or "unspecified"}; {view_constraint_label}: {view_angle or "unspecified"}. Keep these as separate constraints.
 
 Identity requirements:
 {chr(10).join(_identity_lines(brief))}

@@ -31,9 +31,18 @@
       "source_type": "image-directory",
       "medium": "identity",
       "authority": "canonical-identity",
-      "evidence_roles": ["identity"],
-      "exclude_globs": ["output/**", "outputs/**"],
-      "default_tags": ["official", "setting-sheet", "identity"],
+      "evidence_roles": [
+        "identity"
+      ],
+      "exclude_globs": [
+        "output/**",
+        "outputs/**"
+      ],
+      "default_tags": [
+        "official",
+        "setting-sheet",
+        "identity"
+      ],
       "candidate_series": [
         {
           "id": "inuyasha-half-demon-face-expressions",
@@ -45,11 +54,19 @@
             },
             {
               "path": "犬夜叉设定集/犬夜叉半妖形态头部表情图02.jpg",
-              "selection_terms": ["咬牙", "龇牙"]
+              "selection_terms": [
+                "咬牙",
+                "龇牙"
+              ]
             },
             {
               "path": "犬夜叉设定集/犬夜叉半妖形态头部表情图03.jpg",
-              "selection_terms": ["眼睛细节", "眼部细节", "眼睛修正", "眼部修正"]
+              "selection_terms": [
+                "眼睛细节",
+                "眼部细节",
+                "眼睛修正",
+                "眼部修正"
+              ]
             }
           ]
         },
@@ -59,7 +76,10 @@
           "members": [
             {
               "path": "弥勒设定集/弥勒持锡杖全身图01.jpg",
-              "selection_terms": ["耳朵细节", "耳部细节"]
+              "selection_terms": [
+                "耳朵细节",
+                "耳部细节"
+              ]
             },
             {
               "path": "弥勒设定集/弥勒持锡杖全身图02.jpg",
@@ -73,7 +93,10 @@
           "members": [
             {
               "path": "戈薇爷爷设定集/戈薇爷爷全身表情图01.jpg",
-              "selection_terms": ["捂嘴", "手捂嘴"]
+              "selection_terms": [
+                "捂嘴",
+                "手捂嘴"
+              ]
             },
             {
               "path": "戈薇爷爷设定集/戈薇爷爷全身表情图02.jpg",
@@ -87,7 +110,10 @@
           "members": [
             {
               "path": "枫婆婆设定集/枫婆婆头部表情图01.jpg",
-              "selection_terms": ["眼睛细节", "眼部细节"]
+              "selection_terms": [
+                "眼睛细节",
+                "眼部细节"
+              ]
             },
             {
               "path": "枫婆婆设定集/枫婆婆头部表情图02.jpg",
@@ -101,11 +127,18 @@
           "members": [
             {
               "path": "桔梗设定集/桔梗头部表情图01.jpg",
-              "selection_terms": ["闭眼", "痛苦", "悲伤", "抬头"]
+              "selection_terms": [
+                "闭眼",
+                "痛苦",
+                "悲伤",
+                "抬头"
+              ]
             },
             {
               "path": "桔梗设定集/桔梗头部表情图02.jpg",
-              "selection_terms": ["平静正面"]
+              "selection_terms": [
+                "平静正面"
+              ]
             }
           ]
         },
@@ -119,72 +152,572 @@
             },
             {
               "path": "杀生丸设定集/杀生丸全身图03.jpg",
-              "selection_terms": ["黑色纹样", "袖口花纹", "衣服花纹", "色指定", "黑色填充"]
+              "selection_terms": [
+                "黑色纹样",
+                "袖口花纹",
+                "衣服花纹",
+                "色指定",
+                "黑色填充"
+              ]
             }
           ]
         }
       ],
       "folder_form_defaults": {
-        "犬夜叉设定集": ["half-demon-form"],
-        "戈薇设定集": ["default-form"],
-        "桔梗设定集": ["default-form"],
-        "杀生丸设定集": ["default-form"],
-        "弥勒设定集": ["default-form"],
-        "七宝设定集": ["default-form"],
-        "云母设定集": ["tiny-form"],
-        "邪见设定集": ["default-form"],
-        "玲设定集": ["default-form"],
-        "琥珀设定集": ["default-form"],
-        "钢牙设定集": ["default-form"],
-        "神乐设定集": ["default-form"],
-        "神无设定集": ["default-form"],
-        "十六夜设定集": ["default-form"],
-        "枫婆婆设定集": ["default-form"],
-        "幼年枫设定集": ["child-form"],
-        "刀刀斋设定集": ["default-form"],
-        "哞哞设定集": ["default-form"],
-        "戈薇爷爷设定集": ["default-form"],
-        "普通人物设定集": ["default-form"],
-        "铁碎牙设定集": ["untransformed-form", "transformed-form"]
+        "犬夜叉设定集": [
+          "half-demon-form"
+        ],
+        "戈薇设定集": [
+          "default-form"
+        ],
+        "桔梗设定集": [
+          "default-form"
+        ],
+        "杀生丸设定集": [
+          "default-form"
+        ],
+        "弥勒设定集": [
+          "default-form"
+        ],
+        "七宝设定集": [
+          "default-form"
+        ],
+        "云母设定集": [
+          "tiny-form"
+        ],
+        "邪见设定集": [
+          "default-form"
+        ],
+        "玲设定集": [
+          "default-form"
+        ],
+        "琥珀设定集": [
+          "default-form"
+        ],
+        "钢牙设定集": [
+          "default-form"
+        ],
+        "神乐设定集": [
+          "default-form"
+        ],
+        "神无设定集": [
+          "default-form"
+        ],
+        "十六夜设定集": [
+          "default-form"
+        ],
+        "枫婆婆设定集": [
+          "default-form"
+        ],
+        "幼年枫设定集": [
+          "child-form"
+        ],
+        "刀刀斋设定集": [
+          "default-form"
+        ],
+        "哞哞设定集": [
+          "default-form"
+        ],
+        "戈薇爷爷设定集": [
+          "default-form"
+        ],
+        "普通人物设定集": [
+          "default-form"
+        ],
+        "铁碎牙设定集": [
+          "untransformed-form",
+          "transformed-form"
+        ]
       },
       "path_form_overrides": {
-        "犬夜叉设定集/犬夜叉人类形态全身头部表情细节图01.jpg": ["human-form"]
+        "犬夜叉设定集/犬夜叉人类形态全身头部表情细节图01.jpg": [
+          "human-form"
+        ]
       },
       "path_subject_form_overrides": {
         "珊瑚-弥勒-犬夜叉-杀生丸-戈薇-桔梗-七宝-云母-枫婆婆全身身高对比图01.jpg": {
-          "珊瑚": ["demon-slayer-form"],
-          "弥勒": ["default-form"],
-          "犬夜叉": ["half-demon-form"],
-          "杀生丸": ["default-form"],
-          "戈薇": ["default-form"],
-          "桔梗": ["default-form"],
-          "七宝": ["default-form"],
-          "云母": ["tiny-form"],
-          "枫婆婆": ["default-form"]
+          "珊瑚": [
+            "demon-slayer-form"
+          ],
+          "弥勒": [
+            "default-form"
+          ],
+          "犬夜叉": [
+            "half-demon-form"
+          ],
+          "杀生丸": [
+            "default-form"
+          ],
+          "戈薇": [
+            "default-form"
+          ],
+          "桔梗": [
+            "default-form"
+          ],
+          "七宝": [
+            "default-form"
+          ],
+          "云母": [
+            "tiny-form"
+          ],
+          "枫婆婆": [
+            "default-form"
+          ],
+          "飞来骨": [
+            "default-form"
+          ],
+          "锡杖": [
+            "default-form"
+          ],
+          "铁碎牙": [
+            "untransformed-form"
+          ]
+        },
+        "犬夜叉设定集/犬夜叉上身细节图01.jpg": {
+          "犬夜叉": [
+            "half-demon-form"
+          ],
+          "铁碎牙": [
+            "untransformed-form"
+          ]
+        },
+        "犬夜叉设定集/犬夜叉人类形态全身头部表情细节图01.jpg": {
+          "犬夜叉": [
+            "human-form"
+          ],
+          "铁碎牙": [
+            "untransformed-form"
+          ]
         },
         "犬夜叉设定集/犬夜叉全身图带铁碎牙01.jpg": {
-          "犬夜叉": ["half-demon-form"],
-          "铁碎牙": ["untransformed-form"]
+          "犬夜叉": [
+            "half-demon-form"
+          ],
+          "铁碎牙": [
+            "untransformed-form"
+          ]
+        },
+        "犬夜叉设定集/犬夜叉半妖形态全身图01.jpg": {
+          "犬夜叉": [
+            "half-demon-form"
+          ],
+          "铁碎牙": [
+            "untransformed-form"
+          ]
+        },
+        "犬夜叉设定集/犬夜叉半妖形态未穿火鼠裘全身图01.jpg": {
+          "犬夜叉": [
+            "half-demon-unrobed-form"
+          ]
+        },
+        "念珠设定集/犬夜叉言灵念珠结构图01.jpg": {
+          "言灵念珠": [
+            "default-form"
+          ]
+        },
+        "十六夜设定集/十六夜和服全身图01.jpg": {
+          "十六夜": [
+            "default-form"
+          ],
+          "犬夜叉": []
+        },
+        "十六夜设定集/十六夜墓碑图.png": {
+          "十六夜墓碑": [
+            "default-form"
+          ]
+        },
+        "幼年枫设定集/幼年枫全身表情图01.jpg": {
+          "幼年枫": [
+            "child-form"
+          ],
+          "桔梗": [
+            "default-form"
+          ]
+        },
+        "弥勒设定集/弥勒持锡杖全身图01.jpg": {
+          "弥勒": [
+            "default-form"
+          ],
+          "锡杖": [
+            "default-form"
+          ]
+        },
+        "弥勒设定集/弥勒持锡杖全身图02.jpg": {
+          "弥勒": [
+            "default-form"
+          ],
+          "锡杖": [
+            "default-form"
+          ]
+        },
+        "弥勒设定集/弥勒锡杖头部细节图01.jpg": {
+          "弥勒": [
+            "default-form"
+          ]
+        },
+        "弥勒设定集/弥勒风穴念珠细节图01.jpg": {
+          "弥勒": [
+            "default-form"
+          ],
+          "锡杖": [
+            "default-form"
+          ]
+        },
+        "冥加设定集/冥加全身表情动作图01.jpg": {
+          "冥加": [
+            "default-form"
+          ],
+          "戈薇": []
+        },
+        "云母设定集/云母巨大形态全身图01.jpg": {
+          "云母": [
+            "giant-form"
+          ],
+          "珊瑚": [],
+          "飞来骨": [
+            "default-form"
+          ]
+        },
+        "云母设定集/云母巨大形态动作图01.jpg": {
+          "云母": [
+            "giant-form"
+          ],
+          "珊瑚": [],
+          "飞来骨": [
+            "default-form"
+          ]
+        },
+        "云母设定集/云母巨大形态飞行动作效果图01.jpg": {
+          "云母": [
+            "giant-form"
+          ]
+        },
+        "哞哞设定集/哞哞全身细节图01.jpg": {
+          "哞哞": [
+            "default-form"
+          ],
+          "杀生丸": []
+        },
+        "哞哞设定集/哞哞飞行动作图01.jpg": {
+          "哞哞": [
+            "default-form"
+          ],
+          "杀生丸": []
+        },
+        "普通人物设定集/普通人物青年男性全身表情图01.jpg": {
+          "普通人物": [
+            "default-form"
+          ],
+          "戈薇": []
+        },
+        "普通人物设定集/普通人物武士铠甲全身图01.jpg": {
+          "普通人物": [
+            "default-form"
+          ],
+          "戈薇": []
+        },
+        "钢牙设定集/钢牙全身装备图01.jpg": {
+          "钢牙": [
+            "default-form"
+          ],
+          "犬夜叉": []
+        },
+        "神无设定集/神无持镜全身图01.jpg": {
+          "神无": [
+            "default-form"
+          ],
+          "神无圆镜": [
+            "default-form"
+          ]
+        },
+        "神乐设定集/神乐和服全身图01.jpg": {
+          "神乐": [
+            "default-form"
+          ],
+          "神乐折扇": [
+            "default-form"
+          ]
+        },
+        "邪见设定集/邪见与杀生丸身高对比图01.jpg": {
+          "邪见": [
+            "default-form"
+          ],
+          "杀生丸": [
+            "default-form"
+          ],
+          "人头杖": [
+            "default-form"
+          ]
         },
         "珊瑚设定集/珊瑚战斗服全身与飞来骨图01.jpg": {
-          "珊瑚": ["battle-armor-form"]
+          "珊瑚": [
+            "battle-armor-form"
+          ],
+          "飞来骨": [
+            "default-form"
+          ]
         },
         "珊瑚设定集/珊瑚抱云母上身图01.jpg": {
-          "珊瑚": ["demon-slayer-form"],
-          "云母": ["tiny-form"]
+          "珊瑚": [
+            "demon-slayer-form"
+          ],
+          "云母": [
+            "tiny-form"
+          ]
         },
         "珊瑚设定集/珊瑚退治屋服全身图02.jpg": {
-          "珊瑚": ["demon-slayer-form"]
+          "珊瑚": [
+            "demon-slayer-form"
+          ],
+          "飞来骨": [
+            "default-form"
+          ]
         },
         "珊瑚设定集/珊瑚退治屋服全身细节图01.jpg": {
-          "珊瑚": ["demon-slayer-form"]
+          "珊瑚": [
+            "demon-slayer-form"
+          ]
         },
         "铁碎牙设定集/铁碎牙变化前后形态图01.jpg": {
-          "铁碎牙": ["untransformed-form", "transformed-form"]
+          "铁碎牙": [
+            "untransformed-form",
+            "transformed-form"
+          ]
         }
       },
       "path_authority_overrides": {
         "犬夜叉设定集/犬夜叉幼年形态全身图01.png": "user-directed-derived-identity"
+      },
+      "path_shot_overrides": {
+        "七宝设定集/七宝表情动作图01.jpg": [
+          "action",
+          "face",
+          "full-body",
+          "upper-body",
+          "detail"
+        ],
+        "云母设定集/云母小形态动作图01.jpg": [
+          "action",
+          "full-body",
+          "detail"
+        ],
+        "十六夜设定集/十六夜表情图01.jpg": [
+          "face",
+          "detail"
+        ],
+        "戈薇爷爷设定集/戈薇爷爷全身表情图02.jpg": [
+          "face",
+          "full-body",
+          "detail"
+        ],
+        "普通人物设定集/普通人物村民群像图01.jpg": [
+          "group-shot",
+          "full-body"
+        ],
+        "普通人物设定集/普通人物武士弓箭动作图01.jpg": [
+          "action",
+          "full-body"
+        ],
+        "普通人物设定集/普通人物男性村民群像图01.jpg": [
+          "group-shot",
+          "face",
+          "full-body"
+        ],
+        "枫婆婆设定集/枫婆婆头部表情图01.jpg": [
+          "face",
+          "detail"
+        ],
+        "神乐设定集/神乐头部表情图01.jpg": [
+          "face",
+          "detail"
+        ],
+        "神无设定集/神无头部表情图01.jpg": [
+          "face",
+          "detail"
+        ],
+        "钢牙设定集/钢牙头部表情图01.jpg": [
+          "face",
+          "detail"
+        ],
+        "十六夜设定集/十六夜墓碑图.png": [
+          "detail",
+          "close-up"
+        ],
+        "犬夜叉设定集/犬夜叉上身细节图01.jpg": [
+          "upper-body",
+          "detail"
+        ],
+        "犬夜叉设定集/犬夜叉全身图带铁碎牙01.jpg": [
+          "full-body",
+          "action"
+        ],
+        "犬夜叉设定集/犬夜叉半妖形态全身图01.jpg": [
+          "full-body",
+          "detail"
+        ],
+        "犬夜叉设定集/犬夜叉半妖形态头部表情图03.jpg": [
+          "face",
+          "detail"
+        ],
+        "犬夜叉设定集/犬夜叉半妖形态未穿火鼠裘全身图01.jpg": [
+          "full-body",
+          "detail"
+        ],
+        "念珠设定集/犬夜叉言灵念珠结构图01.jpg": [
+          "detail"
+        ],
+        "弥勒设定集/弥勒锡杖头部细节图01.jpg": [
+          "action",
+          "upper-body",
+          "detail"
+        ],
+        "弥勒设定集/弥勒风穴动作效果图01.jpg": [
+          "face",
+          "detail"
+        ],
+        "弥勒设定集/弥勒风穴念珠细节图01.jpg": [
+          "detail",
+          "face"
+        ],
+        "弥勒设定集/弥勒持锡杖全身图01.jpg": [
+          "full-body",
+          "detail"
+        ],
+        "弥勒设定集/弥勒持锡杖全身图02.jpg": [
+          "full-body",
+          "detail"
+        ],
+        "弥勒设定集/弥勒法衣全身图01.jpg": [
+          "full-body",
+          "detail"
+        ],
+        "铁碎牙设定集/铁碎牙变化前后形态图01.jpg": [
+          "detail"
+        ],
+        "七宝设定集/七宝狐火效果图01.jpg": [
+          "action",
+          "detail"
+        ],
+        "戈薇设定集/戈薇弓箭装备全身图01.jpg": [
+          "medium-shot",
+          "detail"
+        ],
+        "戈薇设定集/戈薇冬装全身与书包图01.jpg": [
+          "full-body",
+          "detail"
+        ],
+        "戈薇设定集/戈薇日常服全身图01.jpg": [
+          "full-body",
+          "detail"
+        ],
+        "戈薇设定集/戈薇校服动作图01.jpg": [
+          "action",
+          "full-body"
+        ],
+        "戈薇设定集/戈薇校服动作细节图01.jpg": [
+          "action",
+          "detail",
+          "full-body",
+          "upper-body",
+          "face"
+        ],
+        "桔梗设定集/桔梗巫女服全身细节图01.jpg": [
+          "full-body",
+          "face",
+          "detail"
+        ],
+        "桔梗设定集/桔梗弓箭全身图01.jpg": [
+          "full-body",
+          "detail"
+        ],
+        "桔梗设定集/桔梗弓箭动作图01.jpg": [
+          "action",
+          "upper-body"
+        ],
+        "杀生丸设定集/杀生丸上身服饰细节图01.jpg": [
+          "upper-body",
+          "face",
+          "detail"
+        ],
+        "邪见设定集/邪见与杀生丸身高对比图01.jpg": [
+          "full-body",
+          "two-shot"
+        ],
+        "邪见设定集/邪见头部表情图01.jpg": [
+          "face",
+          "full-body"
+        ],
+        "刀刀斋设定集/刀刀斋表情动作图01.jpg": [
+          "action",
+          "upper-body",
+          "detail"
+        ],
+        "刀刀斋设定集/刀刀斋骑哞哞动作图01.jpg": [
+          "action",
+          "two-shot",
+          "full-body"
+        ],
+        "珊瑚设定集/珊瑚战斗服全身与飞来骨图01.jpg": [
+          "full-body",
+          "upper-body",
+          "face",
+          "detail"
+        ],
+        "珊瑚设定集/珊瑚退治屋服全身图02.jpg": [
+          "full-body",
+          "detail"
+        ],
+        "十六夜设定集/十六夜和服全身图01.jpg": [
+          "full-body"
+        ],
+        "冥加设定集/冥加全身表情动作图01.jpg": [
+          "action",
+          "face",
+          "full-body"
+        ],
+        "云母设定集/云母巨大形态全身图01.jpg": [
+          "full-body"
+        ],
+        "云母设定集/云母巨大形态动作图01.jpg": [
+          "action"
+        ],
+        "哞哞设定集/哞哞全身细节图01.jpg": [
+          "detail",
+          "full-body"
+        ],
+        "哞哞设定集/哞哞飞行动作图01.jpg": [
+          "action"
+        ],
+        "普通人物设定集/普通人物青年男性全身表情图01.jpg": [
+          "face",
+          "full-body"
+        ],
+        "普通人物设定集/普通人物武士铠甲全身图01.jpg": [
+          "full-body"
+        ],
+        "钢牙设定集/钢牙全身装备图01.jpg": [
+          "full-body"
+        ]
+      },
+      "path_tag_suppressions": {
+        "弥勒设定集/弥勒锡杖头部细节图01.jpg": [
+          "face",
+          "staff",
+          "content-object:staff",
+          "弥勒锡杖头部细节图01"
+        ],
+        "弥勒设定集/弥勒风穴动作效果图01.jpg": [
+          "action",
+          "wind-tunnel",
+          "弥勒风穴动作效果图01"
+        ],
+        "犬夜叉设定集/犬夜叉半妖形态未穿火鼠裘全身图01.jpg": [
+          "half-demon-form"
+        ],
+        "戈薇设定集/戈薇弓箭装备全身图01.jpg": [
+          "full-body",
+          "suitable-for:full-body"
+        ]
       }
     },
     {
@@ -194,12 +727,22 @@
       "source_type": "image-directory",
       "medium": "manga",
       "authority": "selected-medium-original",
-      "evidence_roles": ["rendering", "composition", "content"],
-      "default_tags": ["manga", "curated", "original-panel"],
+      "evidence_roles": [
+        "rendering",
+        "composition",
+        "content"
+      ],
+      "default_tags": [
+        "manga",
+        "curated",
+        "original-panel"
+      ],
       "collection_policy": "user-curated-growing",
       "subject_form_aliases": {
         "犬夜叉": {
-          "default-form": ["half-demon-form"]
+          "default-form": [
+            "half-demon-form"
+          ]
         }
       },
       "metadata_policy": {
@@ -207,6 +750,404 @@
         "content_label": "leaf-folder",
         "inherit_ancestor_folders": true,
         "deduplicate_by_content": true
+      },
+      "path_subject_form_overrides": {
+        "犬夜叉/犬夜叉__人类形态__近景__人物参考__03.png": {
+          "犬夜叉": [
+            "human-form"
+          ],
+          "戈薇": []
+        },
+        "犬夜叉/犬夜叉__人类形态__近景__人物参考__07.png": {
+          "犬夜叉": [
+            "human-form"
+          ],
+          "铁碎牙": [
+            "untransformed-form"
+          ]
+        },
+        "犬夜叉/犬夜叉__默认形态__上身__人物参考__03.png": {
+          "犬夜叉": [
+            "half-demon-form"
+          ],
+          "铁碎牙": [
+            "untransformed-form"
+          ]
+        },
+        "犬夜叉/犬夜叉__默认形态__上身__人物参考__04.png": {
+          "犬夜叉": [
+            "half-demon-form"
+          ],
+          "铁碎牙": [
+            "untransformed-form"
+          ]
+        },
+        "十六夜/十六夜__默认形态__上身__人物参考__02.png": {
+          "十六夜": [
+            "default-form"
+          ],
+          "犬夜叉": [
+            "half-demon-form"
+          ]
+        },
+        "十六夜/十六夜__默认形态__全身__人物参考__02.png": {
+          "十六夜": [
+            "default-form"
+          ],
+          "铁碎牙": [
+            "untransformed-form"
+          ]
+        },
+        "戈薇/戈薇__默认形态__全身__人物参考__02.png": {
+          "戈薇": [
+            "default-form"
+          ],
+          "犬夜叉": [
+            "half-demon-form"
+          ]
+        },
+        "桔梗/桔梗__默认形态__上身__人物参考__02.png": {
+          "桔梗": [
+            "default-form"
+          ],
+          "犬夜叉": [
+            "half-demon-form"
+          ]
+        },
+        "珊瑚/珊瑚-琥珀__默认形态__双人__同框__01.png": {
+          "珊瑚": [
+            "demon-slayer-form"
+          ],
+          "琥珀": [
+            "default-form"
+          ],
+          "云母": [
+            "tiny-form"
+          ]
+        },
+        "琥珀/珊瑚-琥珀__默认形态__双人__同框__01.png": {
+          "珊瑚": [
+            "demon-slayer-form"
+          ],
+          "琥珀": [
+            "default-form"
+          ],
+          "云母": [
+            "tiny-form"
+          ]
+        },
+        "珊瑚/珊瑚__默认形态__上身__人物参考__01.png": {
+          "珊瑚": [
+            "battle-armor-form"
+          ]
+        },
+        "珊瑚/珊瑚__默认形态__侧脸__人物参考__01.png": {
+          "珊瑚": [
+            "demon-slayer-form"
+          ]
+        },
+        "珊瑚/珊瑚__默认形态__全身__人物参考__01.png": {
+          "珊瑚": [
+            "demon-slayer-form"
+          ]
+        },
+        "珊瑚/珊瑚__默认形态__全身__人物参考__02.png": {
+          "珊瑚": [
+            "battle-armor-form"
+          ]
+        },
+        "刀刀斋/刀刀斋__默认形态__上身__人物参考__01.png": {
+          "刀刀斋": [
+            "default-form"
+          ],
+          "哞哞": [
+            "default-form"
+          ]
+        },
+        "弥勒/弥勒__默认形态__上身__人物参考__01.png": {
+          "弥勒": [
+            "default-form"
+          ],
+          "锡杖": [
+            "default-form"
+          ]
+        },
+        "弥勒/弥勒__默认形态__上身__人物参考__02.png": {
+          "弥勒": [
+            "default-form"
+          ],
+          "锡杖": [
+            "default-form"
+          ]
+        },
+        "弥勒/弥勒__默认形态__上身__人物参考__05.png": {
+          "弥勒": [
+            "default-form"
+          ],
+          "锡杖": [
+            "default-form"
+          ]
+        },
+        "弥勒/弥勒__默认形态__侧身__人物参考__01.png": {
+          "弥勒": [
+            "default-form"
+          ],
+          "锡杖": [
+            "default-form"
+          ]
+        },
+        "普通人物/和尚__默认形态__近景__人物参考__01.png": {
+          "和尚": [
+            "default-form"
+          ]
+        },
+        "玲/玲__默认形态__上身__人物参考__01.png": {
+          "玲": [
+            "default-form"
+          ],
+          "杀生丸": [
+            "default-form"
+          ]
+        },
+        "神乐/神乐__默认形态__上身__人物参考__01.png": {
+          "神乐": [
+            "default-form"
+          ],
+          "神乐折扇": [
+            "default-form"
+          ]
+        },
+        "神无/神无__默认形态__上身__人物参考__01.png": {
+          "神无": [
+            "default-form"
+          ],
+          "神无圆镜": [
+            "default-form"
+          ]
+        },
+        "神无/神无__默认形态__上身__人物参考__02.png": {
+          "神无": [
+            "default-form"
+          ],
+          "神无圆镜": [
+            "default-form"
+          ]
+        },
+        "神无/神无__默认形态__上身__人物参考__03.png": {
+          "神无": [
+            "default-form"
+          ],
+          "神无圆镜": [
+            "default-form"
+          ]
+        }
+      },
+      "path_shot_overrides": {
+        "犬夜叉/犬夜叉__人类形态__近景__人物参考__02.png": [
+          "medium-shot"
+        ],
+        "犬夜叉/犬夜叉__人类形态__近景__人物参考__07.png": [
+          "upper-body"
+        ],
+        "犬夜叉/犬夜叉__全妖形态__上身__人物参考__02.jpg": [
+          "close-up"
+        ],
+        "十六夜/十六夜__默认形态__上身__人物参考__02.png": [
+          "upper-body",
+          "two-shot"
+        ],
+        "十六夜/十六夜__默认形态__全身__人物参考__01.png": [
+          "medium-shot"
+        ],
+        "戈薇/戈薇__默认形态__上身__人物参考__06.png": [
+          "face",
+          "close-up"
+        ],
+        "戈薇/戈薇__默认形态__全身__人物参考__02.png": [
+          "full-body",
+          "close-up"
+        ],
+        "戈薇/犬夜叉-戈薇__默认形态__双人__同框__03.png": [
+          "face",
+          "close-up"
+        ],
+        "犬夜叉/犬夜叉-戈薇__默认形态__双人__同框__03.png": [
+          "face",
+          "close-up"
+        ],
+        "桔梗/桔梗__默认形态__上身__人物参考__02.png": [
+          "medium-shot",
+          "close-up"
+        ],
+        "桔梗/桔梗__默认形态__上身__人物参考__03.png": [
+          "face",
+          "close-up"
+        ],
+        "桔梗/桔梗__默认形态__上身__人物参考__04.png": [
+          "face",
+          "close-up"
+        ],
+        "桔梗/桔梗__默认形态__上身__人物参考__06.png": [
+          "face",
+          "close-up"
+        ],
+        "珊瑚/珊瑚-琥珀__默认形态__双人__同框__01.png": [
+          "group-shot"
+        ],
+        "琥珀/珊瑚-琥珀__默认形态__双人__同框__01.png": [
+          "group-shot"
+        ],
+        "普通人物/和尚__默认形态__近景__人物参考__01.png": [
+          "medium-shot"
+        ]
+      },
+      "path_tag_suppressions": {
+        "犬夜叉/犬夜叉__人类形态__近景__人物参考__02.png": [
+          "close-up",
+          "suitable-for:close-up",
+          "近景"
+        ],
+        "犬夜叉/犬夜叉__人类形态__近景__人物参考__07.png": [
+          "close-up",
+          "suitable-for:close-up",
+          "近景"
+        ],
+        "犬夜叉/犬夜叉__全妖形态__上身__人物参考__02.jpg": [
+          "upper-body",
+          "上身"
+        ],
+        "铁碎牙/铁碎牙__不适用__细节__未变化铁碎牙__01.png": [
+          "not-applicable",
+          "不适用"
+        ],
+        "铁碎牙/铁碎牙__不适用__细节__未变化铁碎牙__02.png": [
+          "not-applicable",
+          "不适用"
+        ],
+        "十六夜/十六夜__默认形态__全身__人物参考__01.png": [
+          "full-body",
+          "suitable-for:full-body",
+          "全身"
+        ],
+        "戈薇/戈薇__默认形态__上身__人物参考__06.png": [
+          "upper-body",
+          "上身"
+        ],
+        "戈薇/犬夜叉-戈薇__默认形态__双人__同框__02.png": [
+          "action:embrace-from-behind"
+        ],
+        "犬夜叉/犬夜叉-戈薇__默认形态__双人__同框__02.png": [
+          "action:embrace-from-behind"
+        ],
+        "戈薇/犬夜叉-戈薇__默认形态__双人__同框__03.png": [
+          "two-shot",
+          "同框",
+          "interaction:face-to-face",
+          "interaction:shared-gaze",
+          "interaction:romantic"
+        ],
+        "犬夜叉/犬夜叉-戈薇__默认形态__双人__同框__03.png": [
+          "two-shot",
+          "同框",
+          "interaction:face-to-face",
+          "interaction:shared-gaze",
+          "interaction:romantic"
+        ],
+        "桔梗/桔梗__默认形态__上身__人物参考__02.png": [
+          "upper-body",
+          "上身"
+        ],
+        "桔梗/桔梗__默认形态__上身__人物参考__03.png": [
+          "upper-body",
+          "上身"
+        ],
+        "桔梗/桔梗__默认形态__上身__人物参考__04.png": [
+          "upper-body",
+          "上身"
+        ],
+        "桔梗/桔梗__默认形态__上身__人物参考__06.png": [
+          "upper-body",
+          "上身"
+        ],
+        "桔梗/犬夜叉-桔梗__默认形态__双人__同框__02.png": [
+          "action:embrace",
+          "contact-type:body",
+          "expression:gentle",
+          "interaction:body-contact",
+          "interaction:romantic"
+        ],
+        "犬夜叉/犬夜叉-桔梗__默认形态__双人__同框__02.png": [
+          "action:embrace",
+          "contact-type:body",
+          "expression:gentle",
+          "interaction:body-contact",
+          "interaction:romantic"
+        ],
+        "珊瑚/珊瑚-琥珀__默认形态__双人__同框__01.png": [
+          "two-shot",
+          "双人",
+          "interaction:shared-gaze"
+        ],
+        "琥珀/珊瑚-琥珀__默认形态__双人__同框__01.png": [
+          "two-shot",
+          "双人",
+          "interaction:shared-gaze"
+        ],
+        "珊瑚/珊瑚__默认形态__上身__人物参考__01.png": [
+          "default-form",
+          "默认形态"
+        ],
+        "珊瑚/珊瑚__默认形态__侧脸__人物参考__01.png": [
+          "default-form",
+          "默认形态"
+        ],
+        "珊瑚/珊瑚__默认形态__全身__人物参考__01.png": [
+          "default-form",
+          "默认形态"
+        ],
+        "珊瑚/珊瑚__默认形态__全身__人物参考__02.png": [
+          "default-form",
+          "默认形态"
+        ],
+        "七宝/犬夜叉-七宝__默认形态__双人__同框__01.png": [
+          "action:carry",
+          "contact-type:body",
+          "interaction:body-contact"
+        ],
+        "犬夜叉/犬夜叉-七宝__默认形态__双人__同框__01.png": [
+          "action:carry",
+          "contact-type:body",
+          "interaction:body-contact"
+        ],
+        "七宝/犬夜叉-七宝__默认形态__双人__同框__02.png": [
+          "action:hold"
+        ],
+        "犬夜叉/犬夜叉-七宝__默认形态__双人__同框__02.png": [
+          "action:hold"
+        ],
+        "弥勒/弥勒-珊瑚__默认形态__双人__同框__01.png": [
+          "interaction:face-to-face",
+          "interaction:shared-gaze",
+          "view-angle:profile"
+        ],
+        "珊瑚/弥勒-珊瑚__默认形态__双人__同框__02.png": [
+          "interaction:face-to-face",
+          "interaction:shared-gaze",
+          "view-angle:profile"
+        ],
+        "普通人物/和尚__默认形态__近景__人物参考__01.png": [
+          "close-up",
+          "suitable-for:close-up",
+          "近景"
+        ]
+      },
+      "path_evidence_role_overrides": {
+        "铁碎牙/铁碎牙__不适用__细节__未变化铁碎牙__01.png": [
+          "content"
+        ],
+        "铁碎牙/铁碎牙__不适用__细节__未变化铁碎牙__02.png": [
+          "content"
+        ]
       }
     },
     {
@@ -216,13 +1157,37 @@
       "source_type": "image-directory",
       "medium": "tv",
       "authority": "selected-medium-original",
-      "evidence_roles": ["rendering", "composition", "content", "palette"],
-      "default_tags": ["tv", "curated", "anime-frame"],
+      "evidence_roles": [
+        "rendering",
+        "composition",
+        "content",
+        "palette"
+      ],
+      "default_tags": [
+        "tv",
+        "curated",
+        "anime-frame"
+      ],
       "collection_policy": "user-curated-growing",
       "subject_form_aliases": {
         "犬夜叉": {
-          "default-form": ["half-demon-form"]
+          "default-form": [
+            "half-demon-form"
+          ]
         }
+      },
+      "path_evidence_role_overrides": {
+        "场景/十六夜墓碑__默认形态__中景__侧后层级__01.jpg": [
+          "content"
+        ],
+        "场景/十六夜墓碑__默认形态__近景__正面细节__01.jpg": [
+          "content"
+        ]
+      },
+      "path_tag_suppressions": {
+        "场景/十六夜墓碑__默认形态__近景__正面细节__01.jpg": [
+          "view-angle:front"
+        ]
       },
       "metadata_policy": {
         "primary": "folder-names",
@@ -238,8 +1203,14 @@
       "source_type": "image-directory",
       "medium": "user-original",
       "authority": "selected-user-original",
-      "evidence_roles": ["continuity"],
-      "default_tags": ["selected-output", "user-original", "accepted-quality"],
+      "evidence_roles": [
+        "continuity"
+      ],
+      "default_tags": [
+        "selected-output",
+        "user-original",
+        "accepted-quality"
+      ],
       "collection_policy": "user-selected-growing",
       "metadata_policy": {
         "primary": "structured-filenames",

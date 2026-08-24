@@ -14,6 +14,7 @@ from task_workflow import feedback_rank, reference_performance
 from workflow_common import (
     FORM_VALUES,
     KNOWN_SUBJECTS,
+    OFFICIAL_IDENTITY_FACETS,
     REFERENCE_DOMAINS,
     SHOT_VALUES,
     VIEW_ANGLE_SHOT_MAP,
@@ -21,9 +22,11 @@ from workflow_common import (
     candidate_series_index,
     certified_style_anchor_rank,
     eligible_character_style_candidate,
+    item_identity_facets,
     library_signature,
     load_config,
     open_database,
+    official_facet_coverage,
     retrieval_relevance,
     retrieval_traits_for,
     retrieval_traits_for_domain,
@@ -234,6 +237,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--page-range", type=parse_page_range)
     parser.add_argument("--curated-only", action="store_true")
     parser.add_argument("--include-unannotated-pages", action="store_true")
+    parser.add_argument(
+        "--coverage",
+        action="store_true",
+        help="Audit the complete exact official subject/form set before Top-K truncation.",
+    )
+    parser.add_argument(
+        "--required-facet",
+        action="append",
+        default=[],
+        choices=OFFICIAL_IDENTITY_FACETS,
+        help="Required official identity facet; repeat with --coverage.",
+    )
     parser.add_argument("--limit", type=int, default=20)
     parser.add_argument(
         "--collapse-candidate-series",
@@ -257,6 +272,45 @@ def main() -> int:
     if args.collapse_candidate_series and args.source != "official":
         raise SystemExit(
             "--collapse-candidate-series requires an explicit --source official"
+        )
+    if args.coverage and (
+        args.source != "official"
+        or args.role != "identity"
+        or len(args.subject_form) != 1
+        or args.subject
+        or args.form
+    ):
+        raise SystemExit(
+            "--coverage requires --source official --role identity and one exact "
+            "--subject-form"
+        )
+    if args.required_facet and not args.coverage:
+        raise SystemExit("--required-facet requires --coverage")
+    if args.coverage and not args.required_facet:
+        raise SystemExit("--coverage requires at least one --required-facet")
+    coverage_hard_filters = {
+        "--reference-domain": args.reference_domain,
+        "--medium": args.medium,
+        "--kind": args.kind,
+        "--query": args.query,
+        "--folder": args.folder,
+        "--content": args.content,
+        "--exclude-form": args.exclude_form,
+        "--shot": args.shot,
+        "--view-angle": args.view_angle,
+        "--volume": args.volume,
+        "--page": args.page,
+        "--page-range": args.page_range,
+        "--curated-only": args.curated_only,
+        "--include-unannotated-pages": args.include_unannotated_pages,
+    }
+    active_coverage_filters = [
+        flag for flag, value in coverage_hard_filters.items() if value
+    ]
+    if args.coverage and active_coverage_filters:
+        raise SystemExit(
+            "--coverage rejects hard filters that narrow the complete eligible set: "
+            + ", ".join(active_coverage_filters)
         )
     config = load_config()
     source_config = next(
@@ -560,14 +614,57 @@ def main() -> int:
             item["relative_path"].casefold(),
         )
     )
+    coverage = None
+    if args.coverage:
+        subject, form = args.subject_form[0]
+        coverage = official_facet_coverage(
+            output, subject, form, args.required_facet
+        )
     if args.collapse_candidate_series:
         if source_config is None:
             raise SystemExit(f"Unknown source: {args.source}")
         output = collapse_candidate_series(output, source_config, args.intent_text)
+    coverage_rows = []
+    if coverage:
+        uncovered = set(coverage["required_facets"])
+        coverage_item_ids = []
+        remaining = list(output)
+        while uncovered and remaining:
+            ranked = [
+                (item_identity_facets(item, subject, form) & uncovered, rank, item)
+                for rank, item in enumerate(remaining)
+            ]
+            newly_covered, _rank, selected = max(
+                ranked, key=lambda row: (len(row[0]), -row[1])
+            )
+            if not newly_covered:
+                break
+            coverage_item_ids.append(selected["item_id"])
+            coverage_rows.append(selected)
+            uncovered.difference_update(newly_covered)
+            remaining.remove(selected)
+        coverage["coverage_item_ids"] = coverage_item_ids
+        unavailable = set(coverage["missing_facets"])
+        hidden = uncovered - unavailable
+        if hidden:
+            raise SystemExit(
+                "--collapse-candidate-series hides catalog-available facet "
+                f"providers: {sorted(hidden)}"
+            )
+        if len(coverage_rows) > args.limit:
+            raise SystemExit(
+                f"--limit {args.limit} cannot show all {len(coverage_rows)} "
+                "facet coverage providers; increase --limit"
+            )
+        coverage_ids = {item["item_id"] for item in coverage_rows}
+        output = coverage_rows + [
+            item for item in output if item["item_id"] not in coverage_ids
+        ]
     output = output[: args.limit]
 
     if args.json:
-        print(json.dumps(output, ensure_ascii=False, indent=2))
+        payload = {"coverage": coverage, "results": output} if coverage else output
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0 if output else 1
 
     if not output:
@@ -575,6 +672,14 @@ def main() -> int:
         return 1
     if intent_traits:
         print(f"Scoring traits: {' '.join(intent_traits)}")
+    if coverage:
+        print(
+            "Official facet coverage: "
+            f"{coverage['status']} {coverage['subject']}={coverage['form']}; "
+            f"missing={','.join(coverage['missing_facets']) or 'none'}"
+        )
+        for facet, providers in coverage["providers"].items():
+            print(f"  {facet}: {','.join(providers) or 'INSUFFICIENT'}")
     for item in output:
         locator = item["path"]
         if item["kind"] == "pdf_page":

@@ -25,6 +25,16 @@
       "alias_id": "manga-curated:file:be0e4bb23d3c",
       "item_id": "manga-curated:file:c15b8e276680ee0585eb",
       "reason": "pre-content-id flat path"
+    },
+    {
+      "alias_id": "official:file:2d1c041cac7dd654044e",
+      "item_id": "tv-curated:file:2d1c041cac7dd654044e",
+      "reason": "TV screenshot moved out of official identity source"
+    },
+    {
+      "alias_id": "official:file:d1f6b39c1717d915ec76",
+      "item_id": "tv-curated:file:d1f6b39c1717d915ec76",
+      "reason": "TV screenshot moved out of official identity source"
     }
   ]
 }

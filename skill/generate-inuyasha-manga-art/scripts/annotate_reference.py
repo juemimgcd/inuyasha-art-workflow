@@ -8,6 +8,9 @@ import json
 from pathlib import Path
 
 from workflow_common import (
+    FORM_VALUES,
+    OFFICIAL_IDENTITY_FACETS,
+    identity_facet_tag,
     load_config,
     now_iso,
     open_database,
@@ -46,6 +49,13 @@ VISUAL_TRAIT_VALUES = {
         "comb-hair",
         "touch-ears",
         "adjust-clothing",
+        "activate-wind-tunnel",
+        "sheath-weapon",
+        "ride",
+        "fly",
+        "transform",
+        "conjure",
+        "fall",
     },
     "interaction": {
         "mother-child",
@@ -60,6 +70,8 @@ VISUAL_TRAIT_VALUES = {
         "caregiving",
         "teaching",
         "ear-touch",
+        "rider-mount",
+        "scale-reference",
     },
     "expression": {
         "alert-sad",
@@ -88,6 +100,27 @@ VISUAL_TRAIT_VALUES = {
         "hair-ribbon",
         "robe-sleeve",
         "shrine",
+        "beads-of-subjugation",
+        "staff",
+        "prayer-beads",
+        "wind-tunnel-seal",
+        "hiraikotsu",
+        "arrow",
+        "quiver",
+        "backpack",
+        "medical-kit",
+        "sword",
+        "staff-of-two-heads",
+        "hammer",
+        "harness",
+        "fan",
+        "feather",
+        "horse",
+        "mask",
+        "eyepatch",
+        "travel-pack",
+        "walking-stick",
+        "spear",
     },
     "scene-energy": {"quiet", "dialogue", "action", "impact"},
     "face-clarity": {"low", "medium", "high"},
@@ -120,6 +153,9 @@ VISUAL_TRAIT_VALUES = {
         "speed-lines",
         "impact",
         "aura",
+        "wind-tunnel",
+        "fox-fire",
+        "transformation",
     },
     "suitable-for": {
         "close-up",
@@ -133,6 +169,7 @@ VISUAL_TRAIT_VALUES = {
         "garment-overlap",
         "footwear",
         "ground-contact",
+        "weapon-construction",
     },
     "view-angle": {
         "front",
@@ -147,7 +184,8 @@ VISUAL_TRAIT_VALUES = {
     "depth-layout": {"same-plane", "foreground-midground", "foreground-background", "layered"},
     "occlusion": {"clear", "partial", "heavy", "body-body", "garment-body", "garment-prop"},
     "contact-type": {"none", "ground", "body", "prop", "clothing"},
-    "prop-attachment": {"none", "waist", "back", "hand", "shoulder", "clothing"},
+    "prop-attachment": {"none", "waist", "back", "hand", "shoulder", "clothing", "body"},
+    "costume-state": {"without-fire-rat-robe"},
     "perspective-risk": {"low", "medium", "high"},
     "scene-economy": {
         "authored-negative-space",
@@ -174,20 +212,45 @@ def parse_trait(value: str) -> str:
     return f"{key}:{normalized}"
 
 
+def parse_identity_facet(value: str) -> tuple[str, str, str]:
+    subject, equals, remainder = value.partition("=")
+    form, colon, facet = remainder.partition(":")
+    if (
+        not equals
+        or not colon
+        or not subject.strip()
+        or form not in FORM_VALUES
+        or facet not in OFFICIAL_IDENTITY_FACETS
+    ):
+        raise argparse.ArgumentTypeError(
+            "identity facet must look like SUBJECT=FORM:FACET"
+        )
+    return subject.strip(), form, facet
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workflow-root", type=Path)
     parser.add_argument("--item-id", required=True)
     parser.add_argument("--tags", nargs="+", default=[])
     parser.add_argument("--trait", type=parse_trait, action="append", default=[])
+    parser.add_argument(
+        "--identity-facet",
+        type=parse_identity_facet,
+        action="append",
+        default=[],
+        help="Bind one construction facet to an exact subject/form on this item.",
+    )
     parser.add_argument("--note", default="")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    if not args.tags and not args.trait and not args.note:
-        raise SystemExit("Provide --tags, --trait, --note, or a combination")
+    if not args.tags and not args.trait and not args.identity_facet and not args.note:
+        raise SystemExit(
+            "Provide --tags, --trait, --identity-facet, --note, or a combination"
+        )
     config = load_config()
     root = workflow_root(config, args.workflow_root)
     paths = workflow_paths(root)
@@ -196,22 +259,34 @@ def main() -> int:
     connection = open_database(paths["database"], read_only=True)
     resolved = connection.execute(
         """
-        SELECT item_id FROM items WHERE item_id = ?
+        SELECT item_id, subject_forms FROM items WHERE item_id = ?
         UNION ALL
-        SELECT item_id FROM item_aliases WHERE alias_id = ?
+        SELECT items.item_id, items.subject_forms FROM item_aliases
+        JOIN items ON items.item_id = item_aliases.item_id
+        WHERE item_aliases.alias_id = ?
         LIMIT 1
         """,
         (args.item_id, args.item_id),
     ).fetchone()
-    connection.close()
     if resolved is None:
+        connection.close()
         raise SystemExit(f"Unknown catalog item: {args.item_id}")
+    subject_forms = json.loads(resolved["subject_forms"] or "{}")
+    facet_tags = []
+    for subject, form, facet in args.identity_facet:
+        if form not in subject_forms.get(subject, []):
+            connection.close()
+            raise SystemExit(
+                f"Item does not contain exact subject/form {subject}={form}"
+            )
+        facet_tags.append(identity_facet_tag(subject, form, facet))
+    connection.close()
     canonical_item_id = resolved["item_id"]
     annotations = paths["annotations"]
     annotations.parent.mkdir(parents=True, exist_ok=True)
     row = {
         "item_id": canonical_item_id,
-        "tags": sorted(set(args.tags) | set(args.trait)),
+        "tags": sorted(set(args.tags) | set(args.trait) | set(facet_tags)),
         "note": args.note,
         "annotated_at": now_iso(),
     }

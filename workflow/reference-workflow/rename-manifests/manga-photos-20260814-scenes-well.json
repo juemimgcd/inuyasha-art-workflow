@@ -1,0 +1,203 @@
+{
+  "root": "/Users/jquery/Documents/inuYasha-design/origin-photos/manga-photos",
+  "mode": "apply",
+  "scope": [
+    "场景",
+    "食骨之井"
+  ],
+  "file_count": 31,
+  "rename_count": 31,
+  "unchanged_count": 0,
+  "status": "complete",
+  "created_at": "2026-08-14T19:02:59.765928+08:00",
+  "renames": [
+    {
+      "old": "场景/014d3ccc-ce89-413e-9666-a567be9811d2.png",
+      "new": "场景/场景__不适用__远景__溪谷古树__01.png",
+      "sha256": "468f5b6087040df9dfebb62bab3b7bbf854b647cfddb309e63a518d69bb930b5",
+      "changed": true
+    },
+    {
+      "old": "场景/01655b31-f289-456b-9aa1-c1d61c9979d0.png",
+      "new": "场景/场景__不适用__远景__传统宅邸群__01.png",
+      "sha256": "e126735f2a5bdc9b307c0e7da27e52c8c11c10ea096065576ef2d24a09c4c5fa",
+      "changed": true
+    },
+    {
+      "old": "场景/08740a40-2ab1-44d2-b930-136de5777a72.png",
+      "new": "场景/场景__不适用__远景__密林溪谷__01.png",
+      "sha256": "ac8262fc1bfa13ecd536baf7102f46d2af166e45571250b5f38ce37af72256ca",
+      "changed": true
+    },
+    {
+      "old": "场景/08bbadb0-90e4-4e37-888c-8f078b389ce8.png",
+      "new": "场景/场景__不适用__远景__山麓农田__01.png",
+      "sha256": "b335718879d5422b22112a2df8697ede9bad428e48226bf4828795ee65d8c3d5",
+      "changed": true
+    },
+    {
+      "old": "场景/1732c3a4-4430-4440-b86b-542d36772b64.png",
+      "new": "场景/场景__不适用__远景__寺庙正殿__01.png",
+      "sha256": "aa2751d82a1e366e18c21e293b8886388f3867fe0fee35a547860b076cef7e40",
+      "changed": true
+    },
+    {
+      "old": "场景/2f84e6d1-a59e-45ed-bf4a-e799a469a79c.png",
+      "new": "场景/场景__不适用__近景__寺庙屋檐__01.png",
+      "sha256": "4b057686a68b3990b9556a4e05dc7bdeb4f304f06bac2ea652d8faf2fd5db021",
+      "changed": true
+    },
+    {
+      "old": "场景/37b4958b-82fc-429c-8d23-63bc279d42d4.png",
+      "new": "场景/场景__不适用__近景__寺庙石阶__01.png",
+      "sha256": "ae231b4b411522e98755091e971714aec51f42b86a9529fd2ceb04c5e6b67691",
+      "changed": true
+    },
+    {
+      "old": "场景/391afd1e-8f7b-425c-9c02-eb0aaefdd483.png",
+      "new": "场景/场景__不适用__远景__乡村聚落__01.png",
+      "sha256": "a742347bca8fb0183a4795b83f2fdd20bb09eee44e177a11931bffee8b7c5409",
+      "changed": true
+    },
+    {
+      "old": "场景/55ffdd1e-30ea-491c-9ead-03958b9b6d7d.png",
+      "new": "场景/场景__不适用__远景__俯瞰村庄街道__01.png",
+      "sha256": "d996a920375f70b8a3ed8f52ff8e850975997448d5b968f46c1d49ad43fa9e55",
+      "changed": true
+    },
+    {
+      "old": "场景/59c3d9c8-f89f-4c75-b63c-6a0b1ed5e2b4.png",
+      "new": "场景/场景__不适用__近景__雨中寺庙屋顶__01.png",
+      "sha256": "4f408e84c037d18cc9fb20a9f873b6673835f180c64ccc8c28e3a049cb0360b9",
+      "changed": true
+    },
+    {
+      "old": "场景/635c6669-2c72-46b3-9251-f5631f687334.png",
+      "new": "场景/场景__不适用__远景__传统宅邸正面__01.png",
+      "sha256": "f9a7fa9e5933c0e723fff3029d7a6e9022a3399065cc2f92d8cb45835f13e3f2",
+      "changed": true
+    },
+    {
+      "old": "场景/656310b1-4f00-493e-9e62-7c8bd8a9c335.png",
+      "new": "场景/场景__不适用__远景__山间吊桥__01.png",
+      "sha256": "c757d5ed607f49c7f172c8cf09b0f9c084439e5231ef2448476f94d51bbf2b5f",
+      "changed": true
+    },
+    {
+      "old": "场景/6b88b88d-f1fd-4e78-8657-89bef272f829.png",
+      "new": "场景/场景__不适用__远景__城郭全景__01.png",
+      "sha256": "d60ed5d323c40dd2f2f4d1dd3f506d2e329f46cefd7eddaa4aa339c6280a60cb",
+      "changed": true
+    },
+    {
+      "old": "场景/79084633-3f3a-4223-871b-09d8455f2581.png",
+      "new": "场景/场景__不适用__远景__山村梯田__01.png",
+      "sha256": "c2e2b797094463e4dc201e5a5beae76ded088a40ab584faa51932234ab1eb209",
+      "changed": true
+    },
+    {
+      "old": "场景/8f02e3db-fa6e-47c0-9bb7-cb77501a333a.png",
+      "new": "场景/场景__不适用__远景__峡谷城门__01.png",
+      "sha256": "7df1355ecc0027a3e3b2a38da2763a221636f2165724e7b26a4ab662f9cc5392",
+      "changed": true
+    },
+    {
+      "old": "场景/96c42b07-53b2-4cee-8d87-4e18dd963ba4.png",
+      "new": "场景/场景__不适用__远景__山崖城门__01.png",
+      "sha256": "d56aee4cca4f4904cc65f87714f82f9863c46017fdbf6c3b13bf7e8ae5d1ef92",
+      "changed": true
+    },
+    {
+      "old": "场景/9ad44559-6cfb-4377-ba96-696b12c111b3.png",
+      "new": "场景/场景__不适用__远景__山林树海__01.png",
+      "sha256": "57f349f0fd4e6d8483497245977579533a3bb337da128e9708f66f07eb19b732",
+      "changed": true
+    },
+    {
+      "old": "场景/a365d7c2-3833-4d66-aa17-67932dae286d.png",
+      "new": "场景/场景__不适用__远景__海湾港口__01.png",
+      "sha256": "8d476556c2a24036729c5a482bf662b34cc20486c674431be4b06da11c1aee4f",
+      "changed": true
+    },
+    {
+      "old": "场景/ae7fee02-744a-41d8-948e-e6ddc47d4eef.png",
+      "new": "场景/场景__不适用__远景__山间寺庙__01.png",
+      "sha256": "18cc3dfc78b28e7af836f956c968e13b6ac77d5ea28aeb988cd02dab5d889a0a",
+      "changed": true
+    },
+    {
+      "old": "场景/b0f3fcf5-ab9d-4824-b72b-6063e954d893.png",
+      "new": "场景/场景__不适用__远景__山村农舍__01.png",
+      "sha256": "c2a8da2ca9149bcd84473228b588e2f37b49d7a2f9764e4ccc0612d4bbe03ee4",
+      "changed": true
+    },
+    {
+      "old": "场景/be475077-e845-4ba4-8688-890730356264.png",
+      "new": "场景/场景__不适用__近景__寺庙大殿屋顶__01.png",
+      "sha256": "71d99bc6dac141fd197b48ae30d3a896bf9c94ffa6877378986ef6b8e398c4c7",
+      "changed": true
+    },
+    {
+      "old": "场景/d4a0a037-4a2b-4ad0-8841-169fe59b4598.png",
+      "new": "场景/场景__不适用__远景__悬崖城楼__01.png",
+      "sha256": "0377eaca963f0c04d1ff597ad563e95b1dad3dddcc1d60cf2cf95daa5a917faf",
+      "changed": true
+    },
+    {
+      "old": "场景/db0bba41-bed4-441f-bd9a-043f5edd6407.png",
+      "new": "场景/场景__不适用__远景__城墙石垣__01.png",
+      "sha256": "07b55824104ed662a5cc2ac0fad0a5c3fff93c887e4ff927a74da3b9a2bf7b8e",
+      "changed": true
+    },
+    {
+      "old": "场景/dc7e00af-b722-4a70-ad69-7eacb3404552.png",
+      "new": "场景/场景__不适用__远景__月夜村庄__01.png",
+      "sha256": "63a2a85020495359bc8d2bdce38cac880e9f2f2ebb6fd3ec6b4cc6158ac3e0b4",
+      "changed": true
+    },
+    {
+      "old": "场景/e7b42211-4b9f-46ad-bfe1-021d395c8901.png",
+      "new": "场景/场景__不适用__远景__丘陵森林__01.png",
+      "sha256": "d4264866a981edc3c8ecb946232011f70c4ef4a2e2893cb07cf4c8c72bb4862b",
+      "changed": true
+    },
+    {
+      "old": "场景/ea9eb293-17f4-4980-9713-0035eaf23ecd.png",
+      "new": "场景/场景__不适用__远景__岩山石林__01.png",
+      "sha256": "2f4657b16851b93017dacc84b9dd4f06620ade99585362f8fe7b2fd4e4a9be7e",
+      "changed": true
+    },
+    {
+      "old": "场景/ee0d86a4-2b7e-4afa-97c4-4bba01f0f9c2.png",
+      "new": "场景/场景__不适用__远景__夜间山村__01.png",
+      "sha256": "107e463fed18c6fd4696202a4a028fb1152c7684f4244bf21967228b2029f5f0",
+      "changed": true
+    },
+    {
+      "old": "食骨之井/276cd4e5-f73d-4368-b7ad-f3397f789dd2.png",
+      "via": "场景/食骨之井/食骨之井__不适用__远景__食骨之井正面__01.png",
+      "new": "场景/食骨之井__不适用__远景__食骨之井正面__01.png",
+      "sha256": "43374f02629515244270d1beaba1eb1cad7d7f994713afd8e457f22262f8b917",
+      "changed": true
+    },
+    {
+      "old": "食骨之井/80b247e4-5987-4a22-8062-d20bdf5f72cc.png",
+      "via": "场景/食骨之井/食骨之井__不适用__细节__食骨之井井身__01.png",
+      "new": "场景/食骨之井__不适用__细节__食骨之井井身__01.png",
+      "sha256": "92518485ea6c2909104207789dd63fda0a59bdd48953dffe929ea2f6b0a59c55",
+      "changed": true
+    },
+    {
+      "old": "食骨之井/犬夜叉-食骨之井__默认形态__动作__食骨之井__01.png",
+      "new": "场景/犬夜叉-食骨之井__默认形态__动作__食骨之井__01.png",
+      "sha256": "41443db099c7d3393a8585e0025f8d7a14ab40bb55b7ba98752406e3b273c91b",
+      "changed": true
+    },
+    {
+      "old": "食骨之井/犬夜叉-食骨之井__默认形态__动作__食骨之井__02.png",
+      "new": "场景/犬夜叉-食骨之井__默认形态__动作__食骨之井__02.png",
+      "sha256": "66888293995b507c50b4f207f2060d562118d55be59db06bfff76d75d46a8e3e",
+      "changed": true
+    }
+  ]
+}

@@ -63,6 +63,15 @@ class SyncInstalledSkillTests(unittest.TestCase):
         )
         self.assertFalse(sync_tool.is_protected(Path("references/other.json")))
 
+    def test_source_files_ignore_machine_caches(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / ".ruff_cache/0.16.3").mkdir(parents=True)
+            (root / ".ruff_cache/0.16.3/result").write_text("cache")
+            (root / "scripts").mkdir()
+            (root / "scripts/main.py").write_text("VALUE = 1\n")
+            self.assertEqual(sync_tool.source_files(root), [Path("scripts/main.py")])
+
     def test_staging_rejects_unselected_package_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

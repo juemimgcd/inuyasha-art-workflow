@@ -25,6 +25,7 @@ FORM_VALUES = (
     "default-form",
     "human-form",
     "half-demon-form",
+    "half-demon-unrobed-form",
     "full-demon-form",
     "child-form",
     "tiny-form",
@@ -134,6 +135,13 @@ KNOWN_SUBJECTS = (
     "冥加",
     "铁碎牙",
     "天生牙",
+    "言灵念珠",
+    "飞来骨",
+    "锡杖",
+    "人头杖",
+    "神无圆镜",
+    "神乐折扇",
+    "十六夜墓碑",
     "食骨之井",
     "普通人物",
     "和尚",
@@ -142,7 +150,34 @@ KNOWN_SUBJECTS = (
 CHARACTER_SUBJECTS = frozenset(
     subject
     for subject in KNOWN_SUBJECTS
-    if subject not in {"铁碎牙", "天生牙", "食骨之井", "场景"}
+    if subject
+    not in {
+        "铁碎牙",
+        "天生牙",
+        "言灵念珠",
+        "飞来骨",
+        "锡杖",
+        "人头杖",
+        "神无圆镜",
+        "神乐折扇",
+        "十六夜墓碑",
+        "食骨之井",
+        "场景",
+    }
+)
+OFFICIAL_IDENTITY_FACETS = (
+    "face",
+    "hair-ear",
+    "costume",
+    "garment-overlap",
+    "hands",
+    "feet",
+    "prop-attachment",
+    "construction",
+)
+NON_HUMANOID_SUBJECTS = frozenset({"云母", "哞哞"})
+OFFICIAL_PROP_SUBJECTS = frozenset(
+    {"人头杖", "神乐折扇", "神无圆镜", "言灵念珠", "铁碎牙", "锡杖", "飞来骨"}
 )
 REFERENCE_DOMAINS = (
     "identity",
@@ -164,6 +199,171 @@ SCENE_ECONOMY_CUE_PREFIXES = (
     "effect-type:",
     "content-object:",
 )
+
+
+def identity_facet_tag(subject: str, form: str, facet: str) -> str:
+    if form not in FORM_VALUES:
+        raise ValueError(f"unsupported identity form: {form}")
+    if facet not in OFFICIAL_IDENTITY_FACETS:
+        raise ValueError(f"unsupported official identity facet: {facet}")
+    return f"identity-facet:{subject}:{form}:{facet}"
+
+
+def parse_identity_facet_tag(tag: str) -> tuple[str, str, str] | None:
+    parts = tag.split(":", 3)
+    if (
+        len(parts) != 4
+        or parts[0] != "identity-facet"
+        or parts[2] not in FORM_VALUES
+        or parts[3] not in OFFICIAL_IDENTITY_FACETS
+    ):
+        return None
+    return parts[1], parts[2], parts[3]
+
+
+def _json_record_value(item: Any, field: str, default: Any) -> Any:
+    try:
+        value = item[field]
+    except (KeyError, IndexError, TypeError):
+        return default
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return default
+    return value if value is not None else default
+
+
+def item_identity_facets(item: Any, subject: str, form: str) -> set[str]:
+    facets = set()
+    tags = set(_json_record_value(item, "tags", []))
+    for tag in tags:
+        parsed = parse_identity_facet_tag(str(tag))
+        if parsed and parsed[:2] == (subject, form):
+            facets.add(parsed[2])
+    subject_forms = _json_record_value(item, "subject_forms", {})
+    if subject_forms.get(subject) != [form]:
+        return facets
+    shots = set(_json_record_value(item, "shot_types", []))
+    exact_subjects = {
+        name for name, forms in subject_forms.items() if len(forms) == 1
+    }
+    exact_characters = exact_subjects & set(CHARACTER_SUBJECTS)
+    exact_props = exact_subjects & set(OFFICIAL_PROP_SUBJECTS)
+    if subject in exact_characters and len(exact_characters) == 1:
+        if "face" in shots or (
+            subject in NON_HUMANOID_SUBJECTS and "full-body" in shots
+        ):
+            facets.update({"face", "hair-ear"})
+        if subject not in NON_HUMANOID_SUBJECTS:
+            if shots & {"full-body", "upper-body"}:
+                facets.add("costume")
+            if shots & {"full-body", "upper-body", "action"}:
+                facets.add("hands")
+            if (
+                "suitable-for:garment-overlap" in tags
+                or "occlusion:garment-prop" in tags
+            ):
+                facets.add("garment-overlap")
+            if len(exact_props) == 1 and any(
+                tag.startswith("prop-attachment:") for tag in tags
+            ):
+                facets.add("prop-attachment")
+        if "full-body" in shots or "suitable-for:footwear" in tags:
+            facets.add("feet")
+    if subject in exact_props and len(exact_props) == 1:
+        if any(tag.startswith("prop-attachment:") for tag in tags):
+            facets.add("prop-attachment")
+        try:
+            relative_path = str(item["relative_path"])
+        except (KeyError, IndexError, TypeError):
+            relative_path = ""
+        if "suitable-for:weapon-construction" in tags or (
+            "detail" in shots and subject in relative_path
+        ):
+            facets.add("construction")
+    return facets
+
+
+def cropped_identity_item(item: Any, declared_tags: Iterable[str]) -> dict[str, Any]:
+    """Restrict a cropped official page to explicitly declared visible facets."""
+    tags = list(dict.fromkeys(str(tag) for tag in declared_tags))
+    if not tags:
+        raise ValueError("cropped identity reference requires identity_facets")
+    for tag in tags:
+        parsed = parse_identity_facet_tag(tag)
+        if parsed is None:
+            raise ValueError(f"invalid cropped identity facet: {tag}")
+        subject, form, facet = parsed
+        if facet not in item_identity_facets(item, subject, form):
+            raise ValueError(
+                "cropped identity facet is not provided by the source page: "
+                f"{subject}={form}:{facet}"
+            )
+    restricted = dict(item)
+    restricted["shot_types"] = []
+    restricted["tags"] = tags
+    return restricted
+
+
+def official_facet_coverage(
+    items: Iterable[Any], subject: str, form: str, required: Iterable[str]
+) -> dict[str, Any]:
+    required_facets = list(dict.fromkeys(required))
+    unknown = sorted(set(required_facets) - set(OFFICIAL_IDENTITY_FACETS))
+    if unknown:
+        raise ValueError(f"unsupported official identity facets: {unknown}")
+    exact_items = []
+    providers = {facet: [] for facet in required_facets}
+    for item in items:
+        roles = set(_json_record_value(item, "eligible_roles", ["identity"]))
+        subject_forms = _json_record_value(item, "subject_forms", {})
+        if "identity" not in roles or form not in subject_forms.get(subject, []):
+            continue
+        item_id = str(item["item_id"])
+        exact_items.append(item_id)
+        for facet in item_identity_facets(item, subject, form):
+            if facet in providers:
+                providers[facet].append(item_id)
+    missing = [facet for facet in required_facets if not providers[facet]]
+    status = "MISS" if not exact_items else "INSUFFICIENT" if missing else "HIT"
+    return {
+        "subject": subject,
+        "form": form,
+        "status": status,
+        "required_facets": required_facets,
+        "missing_facets": missing,
+        "providers": providers,
+        "eligible_item_ids": exact_items,
+    }
+
+
+def required_official_facets(
+    identity_forms: dict[str, str],
+    prop_forms: dict[str, str],
+    shot: str | None,
+) -> list[dict[str, Any]]:
+    requirements = []
+    needs_hands = shot not in {None, "face", "close-up", "profile"}
+    needs_feet = shot in {"full-body", "wide-shot", "action"}
+    for subject, form in identity_forms.items():
+        facets = ["face", "hair-ear"]
+        if subject not in NON_HUMANOID_SUBJECTS:
+            facets.append("costume")
+            if needs_hands:
+                facets.append("hands")
+        if needs_feet:
+            facets.append("feet")
+        requirements.append({"subject": subject, "form": form, "required": facets})
+    for subject, form in prop_forms.items():
+        requirements.append(
+            {
+                "subject": subject,
+                "form": form,
+                "required": ["construction", "prop-attachment"],
+            }
+        )
+    return requirements
 
 
 def eligible_character_style_candidate(
@@ -255,7 +455,18 @@ def expand_config_path(value: str | Path) -> Path:
 
 
 def load_config(path: Path = CONFIG_PATH) -> dict[str, Any]:
-    config = load_json(path)
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(
+                    f"Duplicate JSON key in source-library config: {key}"
+                )
+            result[key] = value
+        return result
+
+    with path.open("r", encoding="utf-8") as handle:
+        config = json.load(handle, object_pairs_hook=reject_duplicate_keys)
     if config.get("schema_version") != 1:
         raise ValueError(f"Unsupported source-library schema in {path}")
     if config.get("workflow_root"):
@@ -608,6 +819,15 @@ def infer_subject_forms(
         else:
             assignments[subject_sequence[0]] = {form_tokens[0]}
 
+    # The filename form slot describes the character.  A Tessaiga state in the
+    # content slot describes the weapon itself and must win over that form.
+    filename_terms = set(filename_parts[2:])
+    if "铁碎牙" in subjects:
+        if "未变化铁碎牙" in filename_terms:
+            assignments["铁碎牙"] = {"untransformed-form"}
+        elif "变化铁碎牙" in filename_terms:
+            assignments["铁碎牙"] = {"transformed-form"}
+
     folder_defaults = source.get("folder_form_defaults", {})
     subject_defaults = source.get("subject_form_defaults", {})
     for subject in sorted(subjects, key=str.casefold):
@@ -692,19 +912,21 @@ CANONICAL_SCENE_RULES = (
 
 NEGATED_ALIAS_PREFIX = re.compile(
     r"(?:不要|不能|不得|不可|不允许|不希望|不想要|不需要|不出现|不在|不画|"
-    r"别画|别|无需|没有|不是|排除|去掉|禁止|严禁|避免|无)"
+    r"别画|别|无需|没有|不是|排除|去掉|禁止|严禁|避免|无|不|未|没)"
     r"(?:(?:[\s，,:：、]*"
     r"(?:让|希望|在|画面|场景|构图|背景|前景|中景|远景|中|内|里|远处|再|"
-    r"有|画出?|出现|任何|一个|一处|该|这个|的)"
+    r"有|画出?|出现|手持|持有|持|拿着?|拿|带着?|带|携带|佩戴|使用|握住|"
+    r"任何|一个|一处|该|这个|的)"
     r"[\s，,:：、]*)*)$"
 )
 
 
 def has_nonnegated_alias(normalized: str, aliases: Iterable[str]) -> bool:
+    alias_terms = tuple(alias.casefold() for alias in aliases)
     spans = {
         (match.start(), match.end())
-        for alias in aliases
-        for match in re.finditer(re.escape(alias.casefold()), normalized)
+        for alias in alias_terms
+        for match in re.finditer(re.escape(alias), normalized)
     }
     widest_end = -1
     for start, end in sorted(spans, key=lambda span: (span[0], -span[1])):
@@ -712,7 +934,12 @@ def has_nonnegated_alias(normalized: str, aliases: Iterable[str]) -> bool:
             continue
         widest_end = end
         prefix = normalized[max(0, start - 16) : start]
-        if not NEGATED_ALIAS_PREFIX.search(prefix):
+        cleaned_prefix = prefix
+        for alias in alias_terms:
+            cleaned_prefix = cleaned_prefix.replace(alias, "")
+        if not prefix.endswith(("不", "未", "没")) and not NEGATED_ALIAS_PREFIX.search(
+            cleaned_prefix
+        ):
             return True
     return False
 
@@ -753,7 +980,14 @@ INTENT_TRAIT_RULES = (
     ),
     ("action:face-off", ("正面对峙", "迎面对峙")),
     ("action:draw-weapon", ("拔刀", "拔剑", "出鞘")),
+    ("action:sheath-weapon", ("收刀", "收剑", "入鞘", "纳刀")),
     ("action:swing-weapon", ("挥刀", "挥剑", "挥动铁碎牙", "挥出铁碎牙")),
+    ("action:activate-wind-tunnel", ("发动风穴", "开启风穴", "张开风穴")),
+    ("action:ride", ("骑乘", "骑马", "骑着")),
+    ("action:fly", ("飞行", "飞翔")),
+    ("action:transform", ("变身", "变化过程", "由小变大")),
+    ("action:conjure", ("施放狐火", "召出狐火", "召唤狐火")),
+    ("action:fall", ("跌倒", "摔倒", "倒地")),
     ("action:jump", ("跳起", "跃起", "腾空")),
     ("action:run", ("奔跑", "跑向", "冲向")),
     ("action:sit", ("坐姿", "坐在", "并排坐", "相对而坐")),
@@ -793,6 +1027,8 @@ INTENT_TRAIT_RULES = (
     ("interaction:caregiving", ("照顾", "抚摸", "梳头", "整理衣领", "扶抱", "承托")),
     ("interaction:teaching", ("教他", "亲身示范", "礼仪教学", "示范给")),
     ("interaction:ear-touch", ("把玩犬耳", "揉弄犬耳", "捏犬耳", "摸犬耳")),
+    ("interaction:rider-mount", ("骑乘关系", "骑在", "坐骑")),
+    ("interaction:scale-reference", ("身高对比", "体型对比", "比例对比")),
     ("expression:alert-sad", ("清醒而忧伤", "清醒且悲伤", "睁眼忧伤", "倔强悲伤")),
     ("expression:shy", ("害羞", "羞涩")),
     ("expression:surprised", ("惊讶", "吃惊", "惊呼", "愕然")),
@@ -816,6 +1052,30 @@ INTENT_TRAIT_RULES = (
     ("content-object:hair-ribbon", ("发绳", "束发结")),
     ("content-object:robe-sleeve", ("宽袖", "袖口", "衣袖", "袖中")),
     ("content-object:shrine", ("神社", "鸟居")),
+    ("content-object:beads-of-subjugation", ("言灵念珠", "言靈念珠")),
+    ("content-object:staff", ("锡杖", "錫杖")),
+    ("content-object:prayer-beads", ("风穴念珠", "封印念珠")),
+    ("content-object:wind-tunnel-seal", ("风穴封印", "封印缠布")),
+    ("content-object:hiraikotsu", ("飞来骨", "飛来骨")),
+    ("content-object:arrow", ("箭矢", "箭支")),
+    ("content-object:quiver", ("箭筒", "箭袋")),
+    ("content-object:backpack", ("双肩包", "背包", "书包")),
+    ("content-object:medical-kit", ("医药箱", "急救箱")),
+    ("content-object:sword", ("佩剑", "佩刀", "腰间刀")),
+    ("content-object:staff-of-two-heads", ("人头杖",)),
+    ("content-object:hammer", ("锤子", "铁锤")),
+    ("content-object:harness", ("鞍具", "缰具", "缰绳")),
+    ("content-object:fan", ("折扇", "扇子")),
+    ("content-object:feather", ("羽毛",)),
+    ("content-object:horse", ("马匹", "骑马")),
+    ("content-object:mask", ("面具", "战斗面具")),
+    ("content-object:travel-pack", ("背箱", "行囊")),
+    ("content-object:walking-stick", ("手杖", "拐杖")),
+    ("content-object:spear", ("长枪", "长矛")),
+    ("effect-type:wind-tunnel", ("风穴吸引", "风穴效果")),
+    ("effect-type:fox-fire", ("狐火",)),
+    ("effect-type:transformation", ("变身效果", "变化效果")),
+    ("costume-state:without-fire-rat-robe", ("未穿火鼠裘", "脱下火鼠裘")),
     ("scene-energy:quiet", ("安静", "幽静", "寂静", "沉默")),
     ("scene-energy:dialogue", ("交谈", "对话", "说话")),
     ("scene-energy:action", ("追逐", "奔跑", "战斗", "攻击")),
@@ -924,7 +1184,12 @@ def infer_retrieval_traits(text: str) -> list[str]:
         return []
     inferred: list[str] = []
     for trait, aliases in INTENT_TRAIT_RULES:
-        if trait in normalized or has_nonnegated_alias(normalized, aliases):
+        searchable = (
+            normalized.replace("战斗服", "")
+            if trait == "scene-energy:action"
+            else normalized
+        )
+        if trait in searchable or has_nonnegated_alias(searchable, aliases):
             inferred.append(trait)
     inferred_set = set(inferred)
     for specific, superseded in INTENT_TRAIT_SUPERSEDES.items():
@@ -1191,9 +1456,17 @@ def infer_structured_metadata(path: Path, source: dict[str, Any]) -> dict[str, A
     _, _, folder_tags = folder_metadata(path)
     searchable = " ".join([*folder_tags, path.stem])
     subjects = infer_subjects(searchable)
+    relative = path.as_posix()
+    subject_form_override = source.get("path_subject_form_overrides", {}).get(
+        relative
+    )
+    if subject_form_override is not None:
+        # Exact-path overrides are complete replacements.  This lets a visually
+        # inspected sheet add an unmentioned co-subject/prop or remove a subject
+        # that appears only in a misleading filename.
+        subjects = set(subject_form_override)
 
     forms = {value for token, value in FORM_TOKEN_MAP.items() if token in searchable}
-    relative = path.as_posix()
     overrides = source.get("path_form_overrides", {})
     if relative in overrides:
         forms = set(overrides[relative])
@@ -1206,7 +1479,9 @@ def infer_structured_metadata(path: Path, source: dict[str, Any]) -> dict[str, A
     paired_forms = {
         form for compatible_forms in subject_forms.values() for form in compatible_forms
     }
-    if paired_forms:
+    if subject_form_override is not None:
+        forms = paired_forms
+    elif paired_forms:
         forms = paired_forms
 
     shot_types = {
@@ -1217,6 +1492,9 @@ def infer_structured_metadata(path: Path, source: dict[str, Any]) -> dict[str, A
         shot_types.add("two-shot")
     elif character_count > 2:
         shot_types.add("group-shot")
+    shot_override = source.get("path_shot_overrides", {}).get(relative)
+    if shot_override is not None:
+        shot_types = set(shot_override)
 
     filename_terms = [
         part.strip() for part in re.split(r"__+", path.stem) if part.strip()
@@ -1280,6 +1558,9 @@ def infer_tags(path: Path, source: dict[str, Any]) -> list[str]:
                 tags.update(forms)
             continue
         tags.update(values)
+    tags.difference_update(
+        source.get("path_tag_suppressions", {}).get(path.as_posix(), [])
+    )
     return sorted(tags)
 
 

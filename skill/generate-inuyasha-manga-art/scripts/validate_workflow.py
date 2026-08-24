@@ -14,10 +14,15 @@ from visual_ab_eval import load_dataset as load_visual_eval_dataset
 from workflow_common import (
     CONFIG_PATH,
     FORM_VALUES,
+    KNOWN_SUBJECTS,
+    SHOT_VALUES,
     SKILL_DIR,
     VIEW_ANGLE_VALUES,
     candidate_series_index,
+    eligible_reference_roles,
+    infer_tags,
     library_signature,
+    load_annotations,
     load_config,
     workflow_paths,
     workflow_root,
@@ -60,6 +65,21 @@ REQUIRED_FILES = (
     "scripts/run-python.ps1",
 )
 EXPECTED_CATALOG_SCHEMA = str(SCHEMA_VERSION)
+EVIDENCE_ROLES = {
+    "identity",
+    "rendering",
+    "composition",
+    "content",
+    "continuity",
+    "target",
+    "palette",
+}
+PATH_OVERRIDE_FIELDS = (
+    "path_subject_form_overrides",
+    "path_shot_overrides",
+    "path_tag_suppressions",
+    "path_evidence_role_overrides",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -90,6 +110,235 @@ def _string_list_failures(value: object, label: str) -> list[str]:
     ):
         return [f"{label} must be a list of non-empty strings"]
     return []
+
+
+def source_override_failures(source: dict, connection: sqlite3.Connection) -> list[str]:
+    """Validate path-scoped metadata before silent fallback can widen authority."""
+    failures = []
+    source_id = source["id"]
+    source_root = Path(source["path"])
+    override_maps = {}
+    for field in PATH_OVERRIDE_FIELDS:
+        overrides = source.get(field, {})
+        if not isinstance(overrides, dict):
+            failures.append(f"{source_id} {field} must be an object")
+            override_maps[field] = {}
+            continue
+        override_maps[field] = {}
+        for relative_path, value in overrides.items():
+            if not isinstance(relative_path, str):
+                failures.append(
+                    f"{source_id} {field} path must be a string: {relative_path!r}"
+                )
+                continue
+            override_maps[field][relative_path] = value
+            relative = Path(relative_path)
+            if (
+                relative.is_absolute()
+                or ".." in relative.parts
+                or not (source_root / relative).is_file()
+            ):
+                failures.append(
+                    f"{source_id} {field} path is missing or unsafe: {relative_path}"
+                )
+                continue
+            if connection.execute(
+                "SELECT 1 FROM item_locations WHERE source_id = ? "
+                "AND relative_path = ?",
+                (source_id, relative_path),
+            ).fetchone() is None:
+                failures.append(
+                    f"{source_id} {field} path is absent from catalog: {relative_path}"
+                )
+
+    for relative_path, mapping in override_maps[
+        "path_subject_form_overrides"
+    ].items():
+        if not isinstance(mapping, dict):
+            failures.append(
+                f"{source_id} subject-form override must be an object: {relative_path}"
+            )
+            continue
+        invalid_subjects = {
+            str(subject) for subject in mapping if subject not in KNOWN_SUBJECTS
+        }
+        invalid_forms = {
+            str(form)
+            for forms in mapping.values()
+            if isinstance(forms, list)
+            for form in forms
+            if not isinstance(form, str) or form not in FORM_VALUES
+        }
+        valid_form_lists = all(
+            isinstance(forms, list)
+            and all(isinstance(form, str) and form in FORM_VALUES for form in forms)
+            for forms in mapping.values()
+        )
+        if invalid_subjects:
+            failures.append(
+                f"{source_id} subject-form override has invalid subjects: "
+                f"{relative_path} {sorted(invalid_subjects)}"
+            )
+        if invalid_forms or not valid_form_lists:
+            failures.append(
+                f"{source_id} subject-form override has invalid forms: "
+                f"{relative_path} {sorted(invalid_forms)}"
+            )
+        row = connection.execute(
+            "SELECT subjects, forms, subject_forms FROM item_locations "
+            "WHERE source_id = ? AND relative_path = ?",
+            (source_id, relative_path),
+        ).fetchone()
+        if row is not None and not invalid_subjects and valid_form_lists:
+            expected = {
+                subject: sorted(set(forms), key=str.casefold)
+                for subject, forms in sorted(
+                    mapping.items(), key=lambda item: item[0].casefold()
+                )
+            }
+            if (
+                set(json.loads(row[0])) != set(expected)
+                or set(json.loads(row[1]))
+                != {form for forms in expected.values() for form in forms}
+                or json.loads(row[2]) != expected
+            ):
+                failures.append(
+                    f"{source_id} subject-form override mismatch: {relative_path}"
+                )
+
+    for relative_path, shots in override_maps["path_shot_overrides"].items():
+        valid_shots = isinstance(shots, list) and all(
+            isinstance(shot, str) and shot in SHOT_VALUES for shot in shots
+        )
+        invalid_shots = (
+            {
+                str(shot)
+                for shot in shots
+                if not isinstance(shot, str) or shot not in SHOT_VALUES
+            }
+            if isinstance(shots, list)
+            else set()
+        )
+        if not valid_shots:
+            failures.append(
+                f"{source_id} shot override has invalid shots: "
+                f"{relative_path} {sorted(invalid_shots)}"
+            )
+        row = connection.execute(
+            "SELECT shot_types FROM item_locations WHERE source_id = ? "
+            "AND relative_path = ?",
+            (source_id, relative_path),
+        ).fetchone()
+        if row is not None and valid_shots:
+            if set(json.loads(row[0])) != set(shots):
+                failures.append(f"{source_id} shot override mismatch: {relative_path}")
+
+    for relative_path, suppressed_tags in override_maps[
+        "path_tag_suppressions"
+    ].items():
+        if not isinstance(suppressed_tags, list) or not all(
+            isinstance(tag, str) and tag for tag in suppressed_tags
+        ):
+            failures.append(
+                f"{source_id} tag suppression must be a string list: {relative_path}"
+            )
+            continue
+        if source_id == "official":
+            inferred_tags = set(
+                infer_tags(
+                    Path(relative_path),
+                    {**source, "path_tag_suppressions": {}},
+                )
+            )
+            ineffective_tags = set(suppressed_tags) - inferred_tags
+            if ineffective_tags:
+                failures.append(
+                    f"{source_id} tag suppression does not match inferred tags: "
+                    f"{relative_path} {sorted(ineffective_tags)}"
+                )
+        row = connection.execute(
+            "SELECT items.tags FROM item_locations JOIN items USING (item_id) "
+            "WHERE item_locations.source_id = ? AND item_locations.relative_path = ?",
+            (source_id, relative_path),
+        ).fetchone()
+        if row is not None:
+            leaked = set(suppressed_tags).intersection(json.loads(row[0]))
+            if leaked:
+                failures.append(
+                    f"{source_id} suppressed tags remain indexed: "
+                    f"{relative_path} {sorted(leaked)}"
+                )
+
+    source_roles = set(source.get("evidence_roles", []))
+    for relative_path, roles in override_maps[
+        "path_evidence_role_overrides"
+    ].items():
+        valid_roles = isinstance(roles, list) and all(
+            isinstance(role, str) and role in EVIDENCE_ROLES for role in roles
+        )
+        invalid_roles = (
+            {
+                str(role)
+                for role in roles
+                if not isinstance(role, str) or role not in EVIDENCE_ROLES
+            }
+            if isinstance(roles, list)
+            else set()
+        )
+        widened_roles = (
+            {role for role in roles if isinstance(role, str)} - source_roles
+            if isinstance(roles, list)
+            else set()
+        )
+        if not valid_roles:
+            failures.append(
+                f"{source_id} evidence-role override has invalid roles: "
+                f"{relative_path} {sorted(invalid_roles)}"
+            )
+            continue
+        if widened_roles:
+            failures.append(
+                f"{source_id} evidence-role override widens source authority: "
+                f"{relative_path} {sorted(widened_roles)}"
+            )
+        row = connection.execute(
+            "SELECT items.eligible_roles, items.tags FROM item_locations "
+            "JOIN items USING (item_id) WHERE item_locations.source_id = ? "
+            "AND item_locations.relative_path = ?",
+            (source_id, relative_path),
+        ).fetchone()
+        if row is None:
+            continue
+        expected_roles = eligible_reference_roles(roles, json.loads(row[1]))
+        if json.loads(row[0]) != expected_roles:
+            failures.append(
+                f"{source_id} evidence-role override mismatch: {relative_path}"
+            )
+    return failures
+
+
+def annotation_reference_failures(
+    connection: sqlite3.Connection, annotations_path: Path
+) -> list[str]:
+    """Reject annotation history that cannot resolve to a catalog item or alias."""
+    try:
+        item_ids = load_annotations(annotations_path)
+    except ValueError as exc:
+        return [str(exc)]
+    failures = []
+    for item_id in item_ids:
+        resolved = connection.execute(
+            """
+            SELECT 1 FROM items WHERE item_id = ?
+            UNION ALL
+            SELECT 1 FROM item_aliases WHERE alias_id = ?
+            LIMIT 1
+            """,
+            (item_id, item_id),
+        ).fetchone()
+        if not resolved:
+            failures.append(f"annotation item does not resolve: {item_id}")
+    return failures
 
 
 def identity_ledger_failures(ledger: dict) -> list[str]:
@@ -420,6 +669,8 @@ def main() -> int:
                     f"catalog missing folder-aware columns: {sorted(missing_columns)}"
                 )
             else:
+                for source in config["sources"]:
+                    failures.extend(source_override_failures(source, connection))
                 form_rows = {
                     row[0]: (
                         json.loads(row[1]),
@@ -609,6 +860,9 @@ def main() -> int:
                 alias_count = connection.execute(
                     "SELECT COUNT(*) FROM item_aliases"
                 ).fetchone()[0]
+                failures.extend(
+                    annotation_reference_failures(connection, paths["annotations"])
+                )
             else:
                 failures.append("catalog missing item_aliases table")
             counts = dict(

@@ -17,9 +17,12 @@ from typing import Any
 from image_sheet import build_contact_sheet
 from task_workflow import is_split_domain_task
 from workflow_common import (
+    OFFICIAL_IDENTITY_FACETS,
     atomic_write_json,
     atomic_write_text,
+    cropped_identity_item,
     find_executable,
+    identity_facet_tag,
     load_config,
     open_database,
     resolve_recorded_path,
@@ -178,6 +181,21 @@ def parse_focus(value: str) -> tuple[str, str]:
     return item_id, focus.strip()
 
 
+def parse_crop_facet(value: str) -> tuple[str, str]:
+    item_id, separator, specification = value.partition("=")
+    parts = specification.split(":")
+    if not separator or not item_id or len(parts) != 3:
+        raise argparse.ArgumentTypeError(
+            "crop facet must look like ITEM_ID=SUBJECT:FORM:FACET"
+        )
+    subject, form, facet = (part.strip() for part in parts)
+    if not subject or not form or facet not in OFFICIAL_IDENTITY_FACETS:
+        raise argparse.ArgumentTypeError(
+            "crop facet must use a subject, form, and controlled identity facet"
+        )
+    return item_id, identity_facet_tag(subject, form, facet)
+
+
 def parse_scene_style_coverage(value: str) -> tuple[str, str]:
     item_id, separator, status = value.partition("=")
     status = status.strip().upper()
@@ -219,6 +237,14 @@ def parse_args() -> argparse.Namespace:
         default=[],
         metavar="ITEM_ID=VISIBLE_DETAIL",
         help="State the exact visible construction a selected reference may control.",
+    )
+    parser.add_argument(
+        "--crop-facet",
+        type=parse_crop_facet,
+        action="append",
+        default=[],
+        metavar="ITEM_ID=SUBJECT:FORM:FACET",
+        help="Declare one source-supported identity facet visible inside a crop.",
     )
     parser.add_argument(
         "--scene-style-coverage",
@@ -399,6 +425,26 @@ def source_crop_pixel_hash(source: Path, crop_box: tuple[int, int, int, int]) ->
         digest.update(f"{cropped.width}x{cropped.height}".encode("ascii"))
         digest.update(cropped.tobytes())
         return digest.hexdigest()
+
+
+def manifest_identity_coverage_item(
+    row: Any,
+    crop_box: Any,
+    declared_facets: Any,
+    *,
+    require_facets: bool = False,
+) -> Any | None:
+    """Return manifest identity evidence, excluding unscoped legacy crops."""
+    facets = declared_facets or []
+    if crop_box is not None:
+        if facets or require_facets:
+            return cropped_identity_item(row, facets)
+        return None
+    if facets:
+        raise ValueError(
+            "identity_facets is valid only for a cropped official identity reference"
+        )
+    return row
 
 
 def render_external_transport(
@@ -586,9 +632,28 @@ def json_values(row, field: str) -> set[str]:
 
 
 def json_object(row, field: str) -> dict[str, list[str]]:
-    if hasattr(row, "keys") and field not in row:
+    if hasattr(row, "keys") and field not in row.keys():
         return {}
     return json.loads(row[field] or "{}")
+
+
+def exact_form_authority_subjects(
+    row, required_forms: dict[str, str]
+) -> set[str]:
+    """Return requested subjects for which this row has exact form authority."""
+    subjects = json_values(row, "subjects") & set(required_forms)
+    flat_forms = json_values(row, "forms")
+    subject_forms = json_object(row, "subject_forms")
+    return {
+        subject
+        for subject in subjects
+        if required_forms[subject]
+        in (
+            set(subject_forms[subject])
+            if subject in subject_forms
+            else flat_forms
+        )
+    }
 
 
 def validate_reference(
@@ -665,14 +730,28 @@ def validate_reference(
     forms = json_values(row, "forms")
     subject_forms = json_object(row, "subject_forms")
     matching_subjects = subjects & set(identity_forms)
-    if role in {"identity", "form"} and not matching_subjects:
+
+    def compatible_forms_for(subject: str) -> set[str]:
+        if subject in subject_forms:
+            return set(subject_forms[subject])
+        return forms
+
+    authoritative_matching_subjects = {
+        subject
+        for subject in matching_subjects
+        if compatible_forms_for(subject)
+    }
+    if role in {"identity", "form"} and not authoritative_matching_subjects:
         raise SystemExit(
-            f"{role.title()} reference does not name any requested character: "
+            f"{role.title()} reference does not provide form authority for any "
+            "requested character: "
             f"{item_id}; indexed subjects={sorted(subjects) or ['unclassified']}"
         )
     for subject in sorted(matching_subjects):
         required_form = identity_forms[subject]
-        compatible_forms = set(subject_forms.get(subject, [])) or forms
+        compatible_forms = compatible_forms_for(subject)
+        if not compatible_forms:
+            continue
         if required_form not in compatible_forms:
             if role == "content" and crop_box is not None and focus.strip():
                 continue
@@ -801,8 +880,23 @@ def main() -> int:
             assignments[canonical_id] = value
         return assignments
 
+    def canonical_grouped_assignments(
+        values: list[tuple[str, Any]], label: str
+    ) -> dict[str, list[Any]]:
+        assignments: dict[str, list[Any]] = {}
+        for requested_id, value in values:
+            row = resolve_item(requested_id)
+            if row is None:
+                connection.close()
+                raise SystemExit(f"Unknown catalog item in --{label}: {requested_id}")
+            assignments.setdefault(row["item_id"], []).append(value)
+        return assignments
+
     crop_requests = canonical_assignments(args.crop, "crop")
     focus_requests = canonical_assignments(args.focus, "focus")
+    crop_facet_requests = canonical_grouped_assignments(
+        args.crop_facet, "crop-facet"
+    )
     scene_style_coverage_requests = canonical_assignments(
         args.scene_style_coverage, "scene-style-coverage"
     )
@@ -810,6 +904,10 @@ def main() -> int:
         connection.close()
         missing = sorted(set(crop_requests) - set(focus_requests))
         raise SystemExit(f"Every --crop requires a matching --focus: {missing}")
+    if set(crop_facet_requests) - set(crop_requests):
+        connection.close()
+        missing = sorted(set(crop_facet_requests) - set(crop_requests))
+        raise SystemExit(f"Every --crop-facet requires a matching --crop: {missing}")
 
     existing_canonical: dict[str, tuple[str, str]] = {}
     existing_card_characters: set[str] = set()
@@ -862,6 +960,25 @@ def main() -> int:
             crop_box=tuple(entry["crop_box"]) if entry.get("crop_box") else None,
             focus=entry.get("focus", ""),
         )
+        declared_facets = entry.get("identity_facets") or []
+        crop_box = entry.get("crop_box")
+        if role == "identity" and existing_row["source_id"] == "official":
+            try:
+                manifest_identity_coverage_item(
+                    existing_row,
+                    crop_box,
+                    declared_facets,
+                    require_facets="official_facet_requirements" in brief,
+                )
+            except ValueError as exc:
+                connection.close()
+                raise SystemExit(f"Invalid identity crop {item_id}: {exc}") from exc
+        elif declared_facets:
+            connection.close()
+            raise SystemExit(
+                "identity_facets is valid only for a cropped official identity "
+                f"reference: {item_id}"
+            )
         if role == "content":
             focus = entry.get("focus", "").strip()
             if not focus:
@@ -985,6 +1102,7 @@ def main() -> int:
             continue
         focus = focus_requests.get(canonical_id, "")
         crop_box = crop_requests.get(canonical_id)
+        crop_facets = crop_facet_requests.get(canonical_id, [])
         scene_style_coverage = scene_style_coverage_requests.get(canonical_id, "")
         validate_reference(
             row,
@@ -995,6 +1113,17 @@ def main() -> int:
             crop_box=crop_box,
             focus=focus,
         )
+        if role == "identity" and row["source_id"] == "official" and crop_box:
+            try:
+                cropped_identity_item(row, crop_facets)
+            except ValueError as exc:
+                connection.close()
+                raise SystemExit(f"Invalid identity crop {item_id}: {exc}") from exc
+        elif crop_facets:
+            connection.close()
+            raise SystemExit(
+                "--crop-facet is valid only for a cropped official identity reference"
+            )
         if role == "content":
             if not focus:
                 connection.close()
@@ -1041,6 +1170,7 @@ def main() -> int:
                 crop_box,
                 focus,
                 scene_style_coverage,
+                crop_facets,
             )
         )
         selected_canonical_ids.add(canonical_id)
@@ -1048,13 +1178,13 @@ def main() -> int:
         all_references.append((role, canonical_id))
 
     unused_detail_requests = (
-        set(crop_requests) | set(focus_requests)
+        set(crop_requests) | set(focus_requests) | set(crop_facet_requests)
         | set(scene_style_coverage_requests)
     ) - selected_canonical_ids
     if unused_detail_requests:
         connection.close()
         raise SystemExit(
-            "--crop, --focus, and --scene-style-coverage must name references "
+            "--crop, --focus, --crop-facet, and --scene-style-coverage must name references "
             "newly added with --select: "
             f"{sorted(unused_detail_requests)}"
         )
@@ -1069,7 +1199,7 @@ def main() -> int:
     card_rows = []
     selected_identity_subjects = {
         subject
-        for role, _, row, _, _, _ in selected_rows
+        for role, _, row, _, _, _, _ in selected_rows
         if role == "identity"
         for subject in json.loads(row["subjects"] or "[]")
     }
@@ -1115,7 +1245,7 @@ def main() -> int:
         if role == "style"
     }
     requested_style_ids = current_style_ids | {
-        item_id for role, item_id, _, _, _, _ in selected_rows if role == "style"
+        item_id for role, item_id, _, _, _, _, _ in selected_rows if role == "style"
     }
     max_style_references = 3 if split_domain_task else 2
     if len(requested_style_ids) > max_style_references:
@@ -1130,7 +1260,7 @@ def main() -> int:
         ]
         selected_style_domains = [
             row["reference_domain"]
-            for role, _, row, _, _, _ in selected_rows
+            for role, _, row, _, _, _, _ in selected_rows
             if role == "style"
         ]
         style_domains = existing_style_domains + selected_style_domains
@@ -1260,7 +1390,15 @@ def main() -> int:
             }
         )
 
-    for role, item_id, row, crop_box, focus, scene_style_coverage in selected_rows:
+    for (
+        role,
+        item_id,
+        row,
+        crop_box,
+        focus,
+        scene_style_coverage,
+        crop_facets,
+    ) in selected_rows:
         target = render_item(row, role, output, args.dpi, crop_box)
         entry = {
             "order": len(manifest.get("references", [])) + len(added) + 1,
@@ -1295,6 +1433,8 @@ def main() -> int:
             "crop_box": list(crop_box) if crop_box is not None else None,
             "focus": focus,
         }
+        if crop_facets:
+            entry["identity_facets"] = crop_facets
         if crop_box is not None:
             entry["rendered_content_hash"] = file_hash(target)
             entry["crop_source_hash"] = source_crop_pixel_hash(
