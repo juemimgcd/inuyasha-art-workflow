@@ -521,11 +521,14 @@ def main() -> int:
                 )
 
     attempts_root = task_dir / "attempts"
-    attempts_root.mkdir(exist_ok=True)
-    existing = sorted(
-        int(path.name)
-        for path in attempts_root.iterdir()
-        if path.is_dir() and path.name.isdigit()
+    existing = (
+        sorted(
+            int(path.name)
+            for path in attempts_root.iterdir()
+            if path.is_dir() and path.name.isdigit()
+        )
+        if attempts_root.is_dir()
+        else []
     )
     number = (existing[-1] + 1) if existing else 1
     attempt_dir = attempts_root / f"{number:03d}"
@@ -551,6 +554,14 @@ def main() -> int:
         decision_from_attempt if args.status == "rejected" else None
     )
     counts_as_generation = decision_from_attempt is None
+    decision_source_attempt = next(
+        (
+            row
+            for row in existing_attempt_rows
+            if row.get("attempt") == decision_from_attempt
+        ),
+        None,
+    )
 
     references = manifest.get("references", [])
     reference_item_ids = [entry.get("item_id") for entry in references]
@@ -569,17 +580,46 @@ def main() -> int:
         read_json(response_window_path) if response_window_path.is_file() else {}
     )
     submission_path = task_dir / "generation-submission.json"
-    submission = read_json(submission_path) if submission_path.is_file() else None
-    if (
-        int(brief.get("schema_version") or 0) >= 5
-        and response_window.get("phase") == "generation"
-        and (submission is None or submission.get("state") != "submitted")
-    ):
-        raise SystemExit(
-            "a schema-5 generation attempt requires a submitted "
-            "generation-submission.json snapshot"
+    current_submission = (
+        read_json(submission_path) if submission_path.is_file() else None
+    )
+    submission = current_submission
+    submission_snapshot_path = submission_path if submission is not None else None
+    if decision_source_attempt is not None:
+        source_submission_path = (
+            attempts_root
+            / f"{int(decision_source_attempt['attempt']):03d}"
+            / "generation-submission.json"
         )
-    if submission is not None:
+        submission = (
+            read_json(source_submission_path)
+            if source_submission_path.is_file()
+            else None
+        )
+        submission_snapshot_path = (
+            source_submission_path if submission is not None else None
+        )
+
+    current_schema = int(brief.get("schema_version") or 0)
+    if counts_as_generation and current_schema >= 5:
+        if response_window.get("phase") != "generation":
+            raise SystemExit(
+                "a schema-5 generation attempt requires a response window in "
+                "generation phase"
+            )
+        if submission is None or submission.get("state") != "submitted":
+            raise SystemExit(
+                "a schema-5 generation attempt requires a submitted "
+                "generation-submission.json snapshot"
+            )
+        from prepare_generation_submission import validate_generation_submission
+
+        submission_failures = validate_generation_submission(
+            task_dir, submission, require_prepared=False
+        )
+        if submission_failures:
+            raise SystemExit("; ".join(submission_failures))
+    if counts_as_generation and submission is not None:
         if submission.get("prompt_sha256") != file_hash(submitted_prompt):
             raise SystemExit(
                 "recorded submitted prompt differs from generation-submission.json"
@@ -648,7 +688,7 @@ def main() -> int:
         if output != persisted_output:
             shutil.copy2(output, persisted_output)
             output = persisted_output
-    attempt_dir.mkdir()
+    attempt_dir.mkdir(parents=True)
     attempt = {
         "schema_version": ATTEMPT_SCHEMA_VERSION,
         "attempt": number,
@@ -706,7 +746,9 @@ def main() -> int:
         "user_feedback": args.feedback,
         "preference_tags": sorted(set(args.preference_tag)),
         "generation_submission_sha256": (
-            file_hash(submission_path) if submission is not None else None
+            file_hash(submission_snapshot_path)
+            if submission_snapshot_path is not None
+            else None
         ),
         "generation_endpoint": (
             submission.get("endpoint") if submission is not None else None
@@ -734,9 +776,12 @@ def main() -> int:
         if source.is_file():
             shutil.copy2(source, attempt_dir / name)
     shutil.copy2(submitted_prompt, attempt_dir / "submitted-prompt.md")
-    if submission is not None:
-        shutil.copy2(submission_path, attempt_dir / "generation-submission.json")
-        submission.update(
+    if submission_snapshot_path is not None:
+        shutil.copy2(
+            submission_snapshot_path, attempt_dir / "generation-submission.json"
+        )
+    if counts_as_generation and current_submission is not None:
+        current_submission.update(
             {
                 "state": "recorded",
                 "recorded_at": recorded_at,
@@ -744,7 +789,7 @@ def main() -> int:
                 "status": args.status,
             }
         )
-        atomic_write_json(submission_path, submission)
+        atomic_write_json(submission_path, current_submission)
     if comparison_payload is not None and comparison_sheet_path is not None:
         shutil.copy2(comparison_sheet_path, attempt_dir / "manga-style-comparison.png")
         shutil.copy2(
@@ -784,25 +829,44 @@ def main() -> int:
         generation_attempts = sum(
             row.get("counts_as_generation") is not False for row in attempt_rows
         )
+        accepted_generation = decision_source_attempt or attempt
         result = {
             "schema_version": RESULT_SCHEMA_VERSION,
             "status": "accepted",
             "generated_at": now_iso(),
-            "generator": args.generator,
+            "generator": accepted_generation.get("generator", args.generator),
             "accepted_attempt": number,
             "revision_required": generation_attempts > 1,
-            "output": str(output),
+            "output": accepted_generation.get("output") or str(output),
             "medium": brief.get("medium"),
             "intent": brief.get("intent"),
-            "response_seconds": response_seconds,
-            "generation_seconds": generation_seconds,
-            "pre_generation_seconds": pre_generation_seconds,
-            "pre_generation_target_seconds": pre_target,
-            "pre_generation_target_met": attempt["pre_generation_target_met"],
-            "post_generation_seconds": post_generation_seconds,
-            "post_generation_target_seconds": post_target,
-            "post_generation_target_met": attempt["post_generation_target_met"],
-            "workflow_overhead_seconds": workflow_overhead_seconds,
+            "response_seconds": accepted_generation.get(
+                "response_seconds", response_seconds
+            ),
+            "generation_seconds": accepted_generation.get(
+                "generation_seconds", generation_seconds
+            ),
+            "pre_generation_seconds": accepted_generation.get(
+                "pre_generation_seconds", pre_generation_seconds
+            ),
+            "pre_generation_target_seconds": accepted_generation.get(
+                "pre_generation_target_seconds", pre_target
+            ),
+            "pre_generation_target_met": accepted_generation.get(
+                "pre_generation_target_met", attempt["pre_generation_target_met"]
+            ),
+            "post_generation_seconds": accepted_generation.get(
+                "post_generation_seconds", post_generation_seconds
+            ),
+            "post_generation_target_seconds": accepted_generation.get(
+                "post_generation_target_seconds", post_target
+            ),
+            "post_generation_target_met": accepted_generation.get(
+                "post_generation_target_met", attempt["post_generation_target_met"]
+            ),
+            "workflow_overhead_seconds": accepted_generation.get(
+                "workflow_overhead_seconds", workflow_overhead_seconds
+            ),
             "revisions": [
                 {
                     "attempt": row.get("attempt"),
