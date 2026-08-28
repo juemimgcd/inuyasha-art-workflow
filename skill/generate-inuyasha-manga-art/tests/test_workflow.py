@@ -49,6 +49,7 @@ from prepare_generation_submission import (
     image_record,
     validate_generation_submission,
 )
+from prepare_generation_submission import main as prepare_generation_submission_main
 from prepare_reference_set import (
     exact_form_authority_subjects,
     file_hash,
@@ -1723,6 +1724,35 @@ class ReferenceValidationTests(unittest.TestCase):
             self.assertEqual(consecutive_technical_errors(task, old_window), 1)
             self.assertEqual(consecutive_technical_errors(task, new_window), 0)
 
+    def test_start_window_refuses_to_replace_submitted_generation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory)
+            (task / "brief.json").write_text(
+                json.dumps({"intent": "edit"}), encoding="utf-8"
+            )
+            window_path = task / "response-window.json"
+            window_path.write_text(
+                json.dumps({"phase": "generation", "started_at": "existing"}),
+                encoding="utf-8",
+            )
+            (task / "generation-submission.json").write_text(
+                json.dumps({"state": "submitted"}), encoding="utf-8"
+            )
+            original_window = window_path.read_text(encoding="utf-8")
+            with (
+                patch(
+                    "sys.argv",
+                    ["start_response_window.py", "--task-dir", str(task)],
+                ),
+                self.assertRaisesRegex(
+                    SystemExit, "must record the submitted generation"
+                ),
+            ):
+                start_response_window_main()
+            self.assertEqual(
+                window_path.read_text(encoding="utf-8"), original_window
+            )
+
     def test_long_network_error_exhausts_outer_retry(self) -> None:
         attempt = {
             "status": "error",
@@ -1838,6 +1868,36 @@ class ReferenceValidationTests(unittest.TestCase):
             failures = validate_generation_submission(task, submission)
             self.assertTrue(any("child edit task" in failure for failure in failures))
 
+    def test_schema_five_attempt_requires_generation_window(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory)
+            (task / "brief.json").write_text(
+                json.dumps({"schema_version": 5, "intent": "new"}),
+                encoding="utf-8",
+            )
+            (task / "reference-manifest.json").write_text(
+                json.dumps({"references": []}), encoding="utf-8"
+            )
+            (task / "prompt.md").write_text("compiled prompt", encoding="utf-8")
+            output = task / "rejected.png"
+            output.write_bytes(b"rejected image")
+            arguments = [
+                "record_attempt.py",
+                "--task-dir",
+                str(task),
+                "--status",
+                "rejected",
+                "--output",
+                str(output),
+                "--failure",
+                "medium=visual mismatch",
+            ]
+            with patch.object(sys, "argv", arguments), self.assertRaisesRegex(
+                SystemExit, "requires a response window in generation phase"
+            ):
+                record_attempt_main()
+            self.assertFalse((task / "attempts").exists())
+
     def test_submission_snapshot_is_bound_to_persisted_candidate(self) -> None:
         from PIL import Image
 
@@ -1913,31 +1973,40 @@ class ReferenceValidationTests(unittest.TestCase):
                 redirect_stdout(io.StringIO()),
             ):
                 self.assertEqual(start_response_window_main(), 0)
+            arguments = [
+                "record_attempt.py",
+                "--task-dir",
+                str(task),
+                "--status",
+                "candidate",
+                "--output",
+                str(generated),
+                "--duration-seconds",
+                "10",
+                "--persist-output",
+                "--preview-check",
+                "identity=pass:face and requested form match official evidence",
+                "--preview-check",
+                "request=pass:requested edit scope is visible",
+                "--preview-check",
+                "medium=pass:line and tone density match selected medium",
+                "--preview-check",
+                "technical=pass:image is complete and artifact free",
+                "--json",
+            ]
+            original_brief = (task / "brief.json").read_text(encoding="utf-8")
+            (task / "brief.json").write_text(
+                json.dumps({"schema_version": 5, "intent": "new"}),
+                encoding="utf-8",
+            )
+            with patch("sys.argv", arguments), self.assertRaisesRegex(
+                SystemExit, "generation submission brief hash is stale"
+            ):
+                record_attempt_main()
+            self.assertFalse((task / "attempts").exists())
+            (task / "brief.json").write_text(original_brief, encoding="utf-8")
             with (
-                patch(
-                    "sys.argv",
-                    [
-                        "record_attempt.py",
-                        "--task-dir",
-                        str(task),
-                        "--status",
-                        "candidate",
-                        "--output",
-                        str(generated),
-                        "--duration-seconds",
-                        "10",
-                        "--persist-output",
-                        "--preview-check",
-                        "identity=pass:face and requested form match official evidence",
-                        "--preview-check",
-                        "request=pass:requested edit scope is visible",
-                        "--preview-check",
-                        "medium=pass:line and tone density match selected medium",
-                        "--preview-check",
-                        "technical=pass:image is complete and artifact free",
-                        "--json",
-                    ],
-                ),
+                patch("sys.argv", arguments),
                 patch(
                     "record_attempt.now_iso",
                     return_value="2026-08-15T21:00:20+08:00",
@@ -3936,8 +4005,10 @@ class IntentWorkflowTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             task = Path(directory)
+            target = task / "target.png"
             style = task / "style.png"
             candidate = task / "candidate.png"
+            Image.new("RGB", (32, 32), "gray").save(target)
             Image.new("RGB", (32, 32), "white").save(style)
             Image.new("RGB", (32, 32), "black").save(candidate)
             (task / "brief.json").write_text(
@@ -3957,6 +4028,12 @@ class IntentWorkflowTests(unittest.TestCase):
                         "references": [
                             {
                                 "order": 1,
+                                "role": "target",
+                                "rendered_path": str(target),
+                                "content_hash": file_hash(target),
+                            },
+                            {
+                                "order": 2,
                                 "role": "style",
                                 "style_scope": "character",
                                 "item_id": "manga-curated:file:test",
@@ -3970,6 +4047,25 @@ class IntentWorkflowTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (task / "prompt.md").write_text("compiled prompt", encoding="utf-8")
+            for command in (
+                ["start_response_window.py", "--task-dir", str(task)],
+                ["prepare_generation_submission.py", "--task-dir", str(task)],
+                [
+                    "start_response_window.py",
+                    "--task-dir",
+                    str(task),
+                    "--mark-generation-started",
+                ],
+            ):
+                main = (
+                    prepare_generation_submission_main
+                    if command[0] == "prepare_generation_submission.py"
+                    else start_response_window_main
+                )
+                with patch.object(sys, "argv", command), redirect_stdout(
+                    io.StringIO()
+                ):
+                    self.assertEqual(main(), 0)
             _, sidecar = build_style_comparison_sheet(task, candidate)
             arguments = [
                 "record_attempt.py",
@@ -4048,6 +4144,8 @@ class IntentWorkflowTests(unittest.TestCase):
                 str(generated),
                 "--duration-seconds",
                 "10",
+                "--generator",
+                "candidate-generator",
             ]
             for check in preview_checks:
                 candidate_args.extend(("--preview-check", check))
@@ -4061,6 +4159,8 @@ class IntentWorkflowTests(unittest.TestCase):
                 "accepted",
                 "--output",
                 str(generated),
+                "--generator",
+                "decision-marker",
             ]
             with patch("sys.argv", accepted_args), redirect_stdout(io.StringIO()):
                 self.assertEqual(record_attempt_main(), 0)
@@ -4071,6 +4171,8 @@ class IntentWorkflowTests(unittest.TestCase):
             self.assertEqual(accepted["accepted_from_attempt"], 1)
             self.assertFalse(accepted["counts_as_generation"])
             self.assertFalse(result["revision_required"])
+            self.assertEqual(result["generator"], "candidate-generator")
+            self.assertEqual(result["generation_seconds"], 10.0)
             report_output = io.StringIO()
             with (
                 patch(

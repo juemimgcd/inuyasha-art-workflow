@@ -97,6 +97,15 @@ def main() -> int:
         print(path)
         return 0
 
+    submission_path = task_dir / "generation-submission.json"
+    if submission_path.is_file():
+        submission = read_json(submission_path)
+        if submission.get("state") == "submitted":
+            raise SystemExit(
+                "record_attempt.py must record the submitted generation before "
+                "starting a new response window"
+            )
+
     if args.authorization_note and not args.authorize_network_retry:
         raise SystemExit("--authorization-note requires --authorize-network-retry")
     unresolved = unresolved_exhausted_network_failure(task_dir)
