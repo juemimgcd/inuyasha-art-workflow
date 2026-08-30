@@ -10,7 +10,12 @@ from typing import Any
 
 from PIL import Image
 from record_attempt import file_hash
-from task_workflow import read_json, task_intent
+from task_workflow import (
+    prompt_compile_report_failures,
+    prompt_compile_report_required,
+    read_json,
+    task_intent,
+)
 from workflow_common import atomic_write_json, now_iso
 
 DEFAULT_ENDPOINT = "https://chatgpt.com/backend-api/codex/images/edits"
@@ -65,6 +70,8 @@ def validate_generation_submission(
     window = read_json(window_path) if window_path.is_file() else {}
     expected_inputs = manifest_inputs(manifest)
     actual_inputs = submission.get("images") or []
+    report_path = task_dir / "prompt-compile.json"
+    report_record = submission.get("prompt_compile")
 
     if submission.get("schema_version") != SUBMISSION_SCHEMA_VERSION:
         failures.append("generation submission schema is not supported")
@@ -84,6 +91,37 @@ def validate_generation_submission(
         failures.append("generation submission prompt is missing")
     elif submission.get("prompt_sha256") != file_hash(prompt_path):
         failures.append("generation submission prompt hash is stale")
+    if prompt_compile_report_required(brief) and not isinstance(report_record, dict):
+        failures.append("generation submission is missing prompt-compile.json binding")
+    if report_record is not None:
+        if not isinstance(report_record, dict):
+            failures.append("generation submission prompt_compile must be an object")
+        else:
+            recorded_path = Path(
+                str(report_record.get("path", ""))
+            ).expanduser().resolve()
+            if recorded_path != report_path.resolve():
+                failures.append("generation submission prompt compile path is untracked")
+            elif not report_path.is_file():
+                failures.append("generation submission prompt compile report is missing")
+            elif report_record.get("sha256") != file_hash(report_path):
+                failures.append("generation submission prompt compile hash is stale")
+            elif report_record.get("bytes") != report_path.stat().st_size:
+                failures.append("generation submission prompt compile byte count is stale")
+            else:
+                report = read_json(report_path)
+                compiled_prompt_path = task_dir / "prompt.md"
+                if not compiled_prompt_path.is_file():
+                    failures.append("compiled prompt for prompt-compile.json is missing")
+                else:
+                    failures.extend(
+                        prompt_compile_report_failures(
+                            brief,
+                            manifest,
+                            compiled_prompt_path.read_text(encoding="utf-8"),
+                            report,
+                        )
+                    )
     if len(actual_inputs) != len(expected_inputs):
         failures.append("generation submission input count differs from manifest")
     else:
@@ -166,6 +204,11 @@ def main() -> int:
         image_record(index, role, path)
         for index, (role, path) in enumerate(inputs, start=1)
     ]
+    report_path = task_dir / "prompt-compile.json"
+    if prompt_compile_report_required(brief) and not report_path.is_file():
+        raise SystemExit(
+            "prompt-compile.json is missing; run compile_prompt.py before submission"
+        )
     submission = {
         "schema_version": SUBMISSION_SCHEMA_VERSION,
         "state": "prepared",
@@ -181,6 +224,15 @@ def main() -> int:
         "brief_sha256": file_hash(task_dir / "brief.json"),
         "reference_manifest_sha256": file_hash(
             task_dir / "reference-manifest.json"
+        ),
+        "prompt_compile": (
+            {
+                "path": str(report_path),
+                "sha256": file_hash(report_path),
+                "bytes": report_path.stat().st_size,
+            }
+            if report_path.is_file()
+            else None
         ),
         "images": images,
         "input_bytes": sum(int(image["bytes"]) for image in images),

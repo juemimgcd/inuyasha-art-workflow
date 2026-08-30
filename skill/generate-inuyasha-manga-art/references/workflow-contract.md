@@ -545,9 +545,40 @@ Every form-sensitive task must declare an identity form. Reject a reference depi
 
 Generate prompts from the current brief and manifest with `compile_prompt.py`.
 
-- New prompts may describe the complete new scene but must remain under 7,000 characters.
-- Edit prompts must remain under 3,500 characters.
-- Microfix prompts must remain under 1,800 characters and state one change category.
+The compiler normalizes the deterministic prompt sections into plain-dictionary
+semantic units with stable `id`, `text`, `authority`, `scope`, `priority`,
+`required`, and `source` fields. Merge only identical IDs or the documented
+finish aliases in the compiler; fuzzy similarity is not a merge rule. Resolve
+conflicts within one concept and scope using the request and hard invariants,
+then the domain-valid target/official/style/content authority, structured
+ledger/rendering-map data, workflow defaults, and preferences. Any unresolved
+critical conflict fails before `prompt.md` is written.
+
+Marked `new` manga tasks render through the unit pipeline. It projects the
+spatial block for a face-led shot, compacts normal units only at complete unit
+boundaries, and prunes only optional non-required units when needed. Critical
+and high units are never budget-pruned, and final strings are never truncated.
+`edit` and `microfix` remain on their existing renderer until a later activation
+stage, while `prompt-compile.json` still explains their current plan.
+
+Every normal compile replaces `prompt.md` and schema-1 `prompt-compile.json`
+through atomic per-file writes. New manga briefs created after activation carry
+`prompt_compile_schema_version: 1`; that marker activates the unit renderer and
+makes the report mandatory while legacy briefs remain readable. The report
+records included, merged, compacted, omitted, and conflicting units;
+required-coverage results; rendered character count; and the exact prompt hash.
+`compile_prompt.py --explain --json` must produce the same plan without modifying
+either artifact. A marked `new` manga generation requires this report:
+`generation-submission.json` binds its path, hash, and byte count, and every
+immutable attempt copies the exact report and records its hash. Validation
+recompiles from the bound brief and manifest and rejects any prompt or report
+whose semantic-unit plan differs, even when its self-reported hashes agree.
+Learned preference traits participate only when explicitly snapshotted in the
+brief; compilation never reads the mutable workflow-level preference profile.
+
+- New prompts may describe the complete new scene but must remain under 8,000 characters.
+- Edit prompts must remain under 4,000 characters.
+- Microfix prompts must remain under 2,000 characters and state one change category.
 - Always state each input's limited authority.
 - For cross-medium content, repeat the exact focus and explicitly discard the
   source medium's palette, contours, shading, textures, background grammar,

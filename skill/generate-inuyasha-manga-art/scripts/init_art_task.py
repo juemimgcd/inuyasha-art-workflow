@@ -18,6 +18,7 @@ from task_workflow import (
     DEFAULT_POST_GENERATION_TARGET_SECONDS,
     INTENT_VALUES,
     LATENCY_SCHEMA_VERSION,
+    PROMPT_COMPILE_SCHEMA_VERSION,
     QA_DIMENSIONS,
     QA_SCHEMA_VERSION,
     SCOPED_STYLE_CHANGE_CATEGORIES,
@@ -472,6 +473,11 @@ def main() -> int:
         "change_scope": args.change_scope,
         "change_request": args.change_request or "",
         "medium": args.medium,
+        "prompt_compile_schema_version": (
+            PROMPT_COMPILE_SCHEMA_VERSION
+            if intent == "new" and args.medium == "manga"
+            else None
+        ),
         "deliverable": args.deliverable,
         "period_mode": period_mode,
         "style_strategy": f"two-layer-{args.medium}-fast",

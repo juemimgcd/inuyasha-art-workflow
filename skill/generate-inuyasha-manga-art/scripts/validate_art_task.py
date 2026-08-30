@@ -30,12 +30,15 @@ from task_workflow import (
     DEFAULT_MAX_TECHNICAL_RETRIES,
     DEFAULT_POST_GENERATION_TARGET_SECONDS,
     INTENT_VALUES,
+    PROMPT_COMPILE_SCHEMA_VERSION,
     RESULT_SCHEMA_VERSION,
     character_style_coverage_failures,
     elapsed_seconds,
     is_split_domain_task,
     latency_budget,
     parse_timestamp,
+    prompt_compile_report_failures,
+    prompt_compile_report_required,
     prompt_limit,
     qa_acceptance_failures,
     reference_strategy_failures,
@@ -687,6 +690,9 @@ def main() -> int:
     brief = load_json(task_dir / "brief.json", failures)
     manifest = load_json(task_dir / "reference-manifest.json", failures)
     qa = load_json(task_dir / "qa.json", failures)
+    prompt_compile_path = task_dir / "prompt-compile.json"
+    if prompt_compile_report_required(brief) and not prompt_compile_path.is_file():
+        failures.append("missing task file: prompt-compile.json")
     split_domain_task = is_split_domain_task(brief, qa)
     failures.extend(reference_strategy_failures(brief))
     failures.extend(rendering_map_failures(brief))
@@ -701,6 +707,16 @@ def main() -> int:
         if not fresh:
             failures.append(f"catalog is stale: {reason}")
     brief_schema = brief.get("schema_version", 0)
+    prompt_compile_schema = brief.get("prompt_compile_schema_version")
+    if prompt_compile_schema is not None and (
+        isinstance(prompt_compile_schema, bool)
+        or not isinstance(prompt_compile_schema, int)
+        or prompt_compile_schema != PROMPT_COMPILE_SCHEMA_VERSION
+    ):
+        failures.append(
+            "brief.prompt_compile_schema_version must be the JSON integer "
+            f"{PROMPT_COMPILE_SCHEMA_VERSION}"
+        )
     if brief_schema < 4:
         failures.append("brief schema is legacy; migrate or archive this task")
     raw_intent = brief.get("intent")
@@ -766,6 +782,11 @@ def main() -> int:
     if re.search(r"^- [^:\n]+:\s*$", evidence, flags=re.MULTILINE):
         failures.append("evidence-log.md still contains blank template fields")
     prompt = (task_dir / "prompt.md").read_text(encoding="utf-8")
+    if prompt_compile_path.is_file():
+        prompt_compile = load_json(prompt_compile_path, failures)
+        failures.extend(
+            prompt_compile_report_failures(brief, manifest, prompt, prompt_compile)
+        )
     if (
         "canonical name | form/age" in prompt
         or "Fill from `reference-manifest.json`" in prompt
@@ -1591,6 +1612,18 @@ def main() -> int:
                 attempt = load_json(attempt_path, failures)
                 if attempt.get("status") != "accepted":
                     failures.append("result.accepted_attempt is not accepted")
+                if prompt_compile_report_required(brief):
+                    attempt_report = attempt_path.parent / "prompt-compile.json"
+                    if not attempt_report.is_file():
+                        failures.append(
+                            "accepted attempt is missing prompt-compile.json snapshot"
+                        )
+                    elif attempt.get("prompt_compile_sha256") != file_hash(
+                        attempt_report
+                    ):
+                        failures.append(
+                            "accepted attempt prompt-compile.json hash is stale"
+                        )
         if result.get("status") != "accepted":
             failures.append("result.status must be accepted")
         output = output_path(result)
