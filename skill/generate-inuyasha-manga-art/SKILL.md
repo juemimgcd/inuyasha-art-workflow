@@ -319,6 +319,29 @@ does not prove generated-image quality.
 
 Default ambiguous medium requests to `manga`. Use `tv` only when explicitly asked.
 
+## Compile prompts through semantic units
+
+`compile_prompt.py` writes both `prompt.md` and `prompt-compile.json`. The report
+records stable semantic units, authority and scope, exact merges, projection or
+budget compaction, complete-unit omissions, conflicts, and required coverage.
+Marked `new` manga tasks render through this unit pipeline; `edit` and
+`microfix` keep their existing prompt path while the report remains explainable.
+Newly initialized manga tasks carry `prompt_compile_schema_version: 1`; the same
+marker activates the unit renderer and makes its report a blocking submission
+artifact without rewriting legacy tasks.
+
+Inspect the plan without changing either artifact:
+
+```bash
+scripts/run-python scripts/compile_prompt.py \
+  --task-dir <task-directory> --explain --json
+```
+
+Never resolve prompt conflicts by truncating strings or silently dropping a
+critical/high unit. Fix the structured brief, manifest, ledger, or rendering map
+that produced the conflict. `prepare_generation_submission.py` hash-binds the
+report, and `record_attempt.py` copies it into the immutable attempt snapshot.
+
 For manga, use the corpus-derived density band in `references/style-guide.md`:
 direct late-1990s serialized-page drawing whose information density follows the
 shot and narrative focus. Reject both polished prestige line art and generic,

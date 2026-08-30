@@ -18,6 +18,8 @@ from task_workflow import (
     is_split_domain_task,
     latency_budget,
     parse_timestamp,
+    prompt_compile_report_failures,
+    prompt_compile_report_required,
     qa_acceptance_failures,
     read_json,
     reference_strategy_failures,
@@ -585,11 +587,13 @@ def main() -> int:
     )
     submission = current_submission
     submission_snapshot_path = submission_path if submission is not None else None
+    compile_report_snapshot_path = task_dir / "prompt-compile.json"
+    compile_report_prompt_path = compiled_prompt
+    compile_report_brief = brief
     if decision_source_attempt is not None:
+        source_attempt_dir = attempts_root / f"{int(decision_source_attempt['attempt']):03d}"
         source_submission_path = (
-            attempts_root
-            / f"{int(decision_source_attempt['attempt']):03d}"
-            / "generation-submission.json"
+            source_attempt_dir / "generation-submission.json"
         )
         submission = (
             read_json(source_submission_path)
@@ -599,6 +603,27 @@ def main() -> int:
         submission_snapshot_path = (
             source_submission_path if submission is not None else None
         )
+        compile_report_snapshot_path = source_attempt_dir / "prompt-compile.json"
+        compile_report_prompt_path = source_attempt_dir / "prompt.md"
+        compile_report_brief = read_json(source_attempt_dir / "brief.json")
+
+    if (
+        prompt_compile_report_required(compile_report_brief)
+        and not compile_report_snapshot_path.is_file()
+    ):
+        raise SystemExit("prompt-compile.json is required before recording this attempt")
+    if compile_report_snapshot_path.is_file():
+        compile_report_failures = prompt_compile_report_failures(
+            compile_report_brief,
+            read_json(
+                (source_attempt_dir if decision_source_attempt is not None else task_dir)
+                / "reference-manifest.json"
+            ),
+            compile_report_prompt_path.read_text(encoding="utf-8"),
+            read_json(compile_report_snapshot_path),
+        )
+        if compile_report_failures:
+            raise SystemExit("; ".join(compile_report_failures))
 
     current_schema = int(brief.get("schema_version") or 0)
     if counts_as_generation and current_schema >= 5:
@@ -731,6 +756,11 @@ def main() -> int:
             task_dir / "reference-manifest.json"
         ),
         "compiled_prompt_sha256": file_hash(compiled_prompt),
+        "prompt_compile_sha256": (
+            file_hash(compile_report_snapshot_path)
+            if compile_report_snapshot_path.is_file()
+            else None
+        ),
         "submitted_prompt_sha256": file_hash(submitted_prompt),
         "submitted_prompt_source": (
             "explicit" if args.submitted_prompt else "compiled-verbatim"
@@ -775,6 +805,8 @@ def main() -> int:
         source = task_dir / name
         if source.is_file():
             shutil.copy2(source, attempt_dir / name)
+    if compile_report_snapshot_path.is_file():
+        shutil.copy2(compile_report_snapshot_path, attempt_dir / "prompt-compile.json")
     shutil.copy2(submitted_prompt, attempt_dir / "submitted-prompt.md")
     if submission_snapshot_path is not None:
         shutil.copy2(

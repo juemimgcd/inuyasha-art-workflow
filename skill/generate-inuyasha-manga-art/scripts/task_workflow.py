@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import copy
+import hashlib
 import json
 from collections import Counter
 from datetime import datetime
@@ -10,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from workflow_common import (
+    atomic_write_json,
     atomic_write_text,
     eligible_character_style_candidate,
     resolve_recorded_path,
@@ -22,6 +25,7 @@ LATENCY_SCHEMA_VERSION = 2
 QA_SCHEMA_VERSION = 2
 REFERENCE_STRATEGY_SCHEMA_VERSION = 1
 RENDERING_MAP_SCHEMA_VERSION = 1
+PROMPT_COMPILE_SCHEMA_VERSION = 1
 SPLIT_DOMAIN_REFERENCE_STRATEGY = {
     "schema_version": REFERENCE_STRATEGY_SCHEMA_VERSION,
     "mode": "split-domain",
@@ -507,7 +511,7 @@ def scoped_style_failures(
 
 
 def prompt_limit(intent: str) -> int:
-    return {"new": 7000, "edit": 3500, "microfix": 1800}[intent]
+    return {"new": 8000, "edit": 4000, "microfix": 2000}[intent]
 
 
 def _reference_lines(manifest: dict[str, Any]) -> list[str]:
@@ -977,6 +981,145 @@ def _prop_lines(brief: dict[str, Any]) -> list[str]:
     return lines or ["- No named canonical prop."]
 
 
+def _is_weapon_prop(name: str, form: str, brief: dict[str, Any]) -> bool:
+    text = " ".join(
+        (
+            str(name),
+            str(form),
+            *identity_requirements(
+                name, form, brief.get("retrieval_traits") or []
+            ),
+        )
+    ).casefold()
+    return any(
+        term in text for term in ("铁碎牙", "武器", "刀", "剑", "weapon", "sword")
+    )
+
+
+def _projected_identity_lines(
+    brief: dict[str, Any],
+) -> tuple[list[str], list[dict[str, str]]]:
+    """Keep canonical details that can be visible at the requested camera distance."""
+    forms = brief.get("identity_forms") or {}
+    retrieval_traits = brief.get("retrieval_traits") or []
+    shot, _, _ = _resolved_new_manga_camera(brief)
+    request = str(brief.get("request") or "").casefold()
+    close = shot in {"face", "close-up", "profile"}
+    upper = close or shot == "upper-body"
+    excludes_feet = any(
+        term in request
+        for term in (
+            "不显示脚",
+            "不出现脚",
+            "脚不入画",
+            "不要脚",
+            "without feet",
+            "no feet",
+            "feet out of frame",
+        )
+    )
+    requires_feet = not excludes_feet and any(
+        term in request
+        for term in (
+            "双脚",
+            "赤足",
+            "脚部",
+            "脚入画",
+            "脚可见",
+            "露出脚",
+            "踩",
+            "踏",
+            "feet",
+            "foot",
+        )
+    )
+    excludes_weapon = any(
+        term in request
+        for term in ("不要武器", "不出现武器", "不显示刀", "without a weapon", "no weapon")
+    )
+    requires_weapon = not excludes_weapon and any(
+        term in request for term in ("铁碎牙", "刀", "剑", "weapon", "sword")
+    )
+    lines: list[str] = []
+    omitted: list[dict[str, str]] = []
+    for name, form in forms.items():
+        kept = []
+        for index, detail in enumerate(
+            identity_requirements(name, form, retrieval_traits), start=1
+        ):
+            text = str(detail)
+            lower_body = any(
+                term in text.casefold()
+                for term in ("赤足", "宽松袴", "脚", "feet", "foot")
+            )
+            weapon = any(
+                term in text.casefold()
+                for term in ("铁碎牙", "武器", "weapon", "sword")
+            )
+            if (upper and lower_body and not requires_feet) or (
+                close and weapon and not requires_weapon
+            ):
+                omitted.append(
+                    {
+                        "id": f"identity.forms.{name}.detail.{index}",
+                        "reason": (
+                            "not-visible-in-close-up"
+                            if close
+                            else "not-visible-in-upper-body"
+                        ),
+                    }
+                )
+            else:
+                kept.append(text)
+        suffix = "；".join(kept) if kept else f"required form `{form}`"
+        lines.append(f"- {name} ({form}): {suffix}")
+    default_costumes = {f"{name}: {form}" for name, form in forms.items()}
+    lines.extend(
+        f"- {value}"
+        for value in brief.get("forms_and_costumes") or []
+        if value and value not in default_costumes
+    )
+    return lines or ["- No named focal character."], omitted
+
+
+def _projected_prop_lines(
+    brief: dict[str, Any],
+) -> tuple[list[str], list[dict[str, str]]]:
+    forms = brief.get("prop_forms") or {}
+    request = str(brief.get("request") or "").casefold()
+    shot, _, _ = _resolved_new_manga_camera(brief)
+    if shot not in {"face", "close-up", "profile", "upper-body"}:
+        return _prop_lines(brief), []
+    visible, omitted = [], []
+    excludes_weapon = any(
+        term in request
+        for term in ("不要武器", "不出现武器", "不显示刀", "without a weapon", "no weapon")
+    )
+    for index, (name, form) in enumerate(forms.items(), start=1):
+        if not (excludes_weapon and _is_weapon_prop(name, form, brief)) and (
+            str(name).casefold() in request or str(form).casefold() in request
+        ):
+            details = identity_requirements(
+                name, form, brief.get("retrieval_traits") or []
+            )
+            visible.append(
+                f"- {name} ({form}): "
+                + ("；".join(details) if details else f"required form `{form}`")
+            )
+        else:
+            omitted.append(
+                {
+                    "id": f"prop.forms.{name}.{index}",
+                    "reason": (
+                        "not-visible-in-close-up"
+                        if shot != "upper-body"
+                        else "not-visible-in-upper-body"
+                    ),
+                }
+            )
+    return visible or ["- Declared props outside this crop must not be pulled into frame."], omitted
+
+
 def _dominant_material_clause(brief: dict[str, Any]) -> str:
     materials = [
         str(value).strip()
@@ -1074,7 +1217,7 @@ def _rendering_map_clause(brief: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def compile_prompt(brief: dict[str, Any], manifest: dict[str, Any]) -> str:
+def _render_current_prompt(brief: dict[str, Any], manifest: dict[str, Any]) -> str:
     """Compile a bounded prompt whose detail level follows the task intent."""
     intent = task_intent(brief)
     medium = brief.get("medium", "manga")
@@ -1279,20 +1422,953 @@ No unrequested lettering, speech balloons, panel borders, signature, logo, or wa
     return text
 
 
-def write_compiled_prompt(task_dir: Path) -> Path:
+_PROMPT_BLOCKS = (
+    ("# Microfix specification", "workflow.header", "workflow", "global", "normal", True, "workflow-default"),
+    ("# Edit specification", "workflow.header", "workflow", "global", "normal", True, "workflow-default"),
+    ("# Generation specification", "workflow.header", "workflow", "global", "normal", True, "workflow-default"),
+    ("Edit the target image.", "request.change", "request", "composition", "critical", True, "brief"),
+    ("Requested edit:", "request.change", "request", "composition", "critical", True, "brief"),
+    ("Goal:", "request.scene", "request", "composition", "critical", True, "brief"),
+    ("Scene and exact moment:", "request.scene", "request", "composition", "critical", True, "brief"),
+    ("Identity requirements:", "identity.forms", "official", "character", "critical", True, "identity-ledger"),
+    ("Canonical prop requirements:", "prop.forms", "official", "prop", "critical", True, "identity-ledger"),
+    ("Reference authority:", "authority.inputs", "workflow", "global", "high", True, "reference-manifest"),
+    ("Per-character rendering map:", "authority.character-map", "character-style", "character", "high", True, "reference-manifest"),
+    ("Priority order:", "authority.priority", "workflow", "global", "high", True, "workflow-default"),
+    ("Composition:", "composition.focal-hierarchy", "request", "composition", "high", True, "brief"),
+    ("Spatial construction:", "composition.spatial-construction", "workflow", "composition", "high", True, "workflow-default"),
+    ("Named contact topology:", "request.contact-topology", "request", "character", "critical", True, "brief"),
+    ("Medium construction:", "medium.construction", "workflow", "global", "high", True, "workflow-default"),
+    ("Scene-aware rendering map:", "rendering-map.scene-aware", "workflow", "global", "high", True, "rendering-map"),
+    ("Rendering map:", "rendering-map.scoped", "workflow", "global", "high", True, "rendering-map"),
+    ("Scene-material scope:", "scene.material-scope", "scene-style", "scene", "normal", False, "brief"),
+    ("Scene economy:", "scene.economy", "scene-style", "scene", "high", True, "workflow-default"),
+    ("Scene-density ceiling:", "scene.economy", "scene-style", "scene", "high", True, "workflow-default"),
+    ("Manga finish calibration:", "medium.finish", "workflow", "global", "high", True, "workflow-default"),
+    ("Required invariants:", "request.invariants", "request", "global", "critical", True, "brief"),
+    ("Preserve exactly:", "target.preservation", "target", "global", "critical", True, "brief"),
+    ("Preserve:", "target.preservation", "target", "global", "critical", True, "brief"),
+    ("No unrequested lettering", "workflow.no-lettering", "workflow", "global", "optional", False, "workflow-default"),
+)
+
+
+def _prompt_unit(block: str, order: int) -> dict[str, Any]:
+    first_line = block.splitlines()[0].strip()
+    for prefix, unit_id, authority, scope, priority, required, source in _PROMPT_BLOCKS:
+        if first_line.startswith(prefix):
+            break
+    else:
+        digest = hashlib.sha256(first_line.encode("utf-8")).hexdigest()[:12]
+        unit_id = f"workflow.section.{digest}"
+        authority, scope, priority, required, source = (
+            "workflow",
+            "global",
+            "normal",
+            False,
+            "workflow-default",
+        )
+    unit = {
+        "id": unit_id,
+        "text": block,
+        "authority": authority,
+        "scope": scope,
+        "priority": priority,
+        "required": required,
+        "source": source,
+        "order": order,
+    }
+    if unit_id == "composition.spatial-construction":
+        unit["compact_text"] = (
+            "Spatial construction: keep visible body direction, overlap, and prop "
+            "attachment mechanically continuous."
+        )
+    elif unit_id == "scene.material-scope":
+        material_names = block.split(".", 1)[0]
+        unit["compact_text"] = (
+            material_names
+            + ". Transfer one scene anchor's grouped marks, values, and depth "
+            "falloff across these materials; do not add detail or inputs per material."
+        )
+    return unit
+
+
+def normalize_prompt_units(text: str) -> list[dict[str, Any]]:
+    """Turn the current deterministic prompt sections into semantic units."""
+    return [
+        _prompt_unit(block.strip(), order)
+        for order, block in enumerate(text.strip().split("\n\n"), 1)
+        if block.strip()
+    ]
+
+
+def _deduplicate_invariants(brief: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, str]]]:
+    normalized = copy.deepcopy(brief)
+    field = "prompt_invariants" if brief.get("prompt_invariants") else "invariants"
+    values = normalized.get(field) or []
+    seen: dict[str, int] = {}
+    kept = []
+    merged = []
+    for index, value in enumerate(values):
+        text = str(value).strip()
+        key = " ".join(text.split()).casefold()
+        if key in seen:
+            merged.append(
+                {
+                    "id": f"request.invariant.{seen[key]}",
+                    "reason": f"duplicate-of:request.invariant.{seen[key]}",
+                    "source": f"{field}[{index}]",
+                }
+            )
+            continue
+        seen[key] = index
+        kept.append(value)
+    normalized[field] = kept
+    return normalized, merged
+
+
+def _structured_prompt_conflicts(brief: dict[str, Any]) -> list[dict[str, str]]:
+    """Detect only explicit structured contradictions; never guess semantically."""
+    conflicts = []
+    constraint_text = "\n".join(
+        str(value)
+        for value in (
+            brief.get("request"),
+            brief.get("scene"),
+            *(brief.get("prompt_invariants") or brief.get("invariants") or []),
+        )
+        if value
+    ).casefold()
+    identity_forms = brief.get("identity_forms") or {}
+    if "human-form" in identity_forms.values() and any(
+        phrase in constraint_text
+        for phrase in ("保留犬耳", "露出犬耳", "with dog ears", "keep dog ears")
+    ):
+        conflicts.append(
+            {
+                "id": "identity.form-versus-ears",
+                "scope": "character",
+                "result": "unresolved",
+                "note": "human-form conflicts with an explicit half-demon ear requirement",
+            }
+        )
+    has_weapon_prop = any(
+        _is_weapon_prop(name, form, brief)
+        for name, form in (brief.get("prop_forms") or {}).items()
+    )
+    if has_weapon_prop and any(
+        phrase in constraint_text
+        for phrase in ("不要武器", "不出现武器", "without a weapon", "no weapon")
+    ):
+        conflicts.append(
+            {
+                "id": "prop.presence",
+                "scope": "prop",
+                "result": "unresolved",
+                "note": "declared canonical props conflict with an explicit no-weapon constraint",
+            }
+        )
+    forbids_crowd = any(
+        phrase in constraint_text
+        for phrase in ("不要人群", "没有人群", "无人群", "no crowd", "without a crowd")
+    )
+    one_person = any(
+        phrase in constraint_text
+        for phrase in ("只有一人", "仅一人", "exactly one person", "one person only")
+    )
+    has_crowd = any(
+        phrase in constraint_text
+        for phrase in ("人群", "crowd", "multiple bystanders")
+    )
+    if one_person and has_crowd and not forbids_crowd:
+        conflicts.append(
+            {
+                "id": "composition.person-count",
+                "scope": "composition",
+                "result": "unresolved",
+                "note": "one-person and crowd constraints are both explicit",
+            }
+        )
+    direction_phrases = {
+        "composition.body-direction": {
+            "left": ("body faces left", "body facing left", "身体朝左", "身体面向左"),
+            "right": ("body faces right", "body facing right", "身体朝右", "身体面向右"),
+        },
+        "composition.face-direction": {
+            "left": ("face faces left", "face looks left", "脸朝左", "面部朝左"),
+            "right": ("face faces right", "face looks right", "脸朝右", "面部朝右"),
+        },
+    }
+    for conflict_id, values in direction_phrases.items():
+        found = {
+            direction
+            for direction, phrases in values.items()
+            if any(phrase in constraint_text for phrase in phrases)
+        }
+        if len(found) > 1:
+            conflicts.append(
+                {
+                    "id": conflict_id,
+                    "scope": "composition",
+                    "result": "unresolved",
+                    "note": (
+                        f"opposite {conflict_id.split('.')[1].replace('-', ' ')} "
+                        "constraints are both explicit"
+                    ),
+                }
+            )
+    controlled_angles = {
+        token.split(":", 1)[1]
+        for token in constraint_text.replace("`", "").split()
+        if token.startswith("view-angle:") and ":" in token
+    }
+    view_angle = brief.get("view_angle")
+    if view_angle and controlled_angles and controlled_angles != {view_angle}:
+        conflicts.append(
+            {
+                "id": "composition.view-angle",
+                "scope": "composition",
+                "result": "unresolved",
+                "note": f"brief.view_angle={view_angle} conflicts with {sorted(controlled_angles)}",
+            }
+        )
+    rendering_map = brief.get("rendering_map") or {}
+    character_map = rendering_map.get("character") or {}
+    if (
+        brief.get("change_scope") == "scene"
+        and character_map.get("authority") == "character-style"
+    ):
+        conflicts.append(
+            {
+                "id": "authority.scene-scope-character-redraw",
+                "scope": "character",
+                "result": "unresolved",
+                "note": "scene-scoped change cannot grant character-style redraw authority",
+            }
+        )
+    return conflicts
+
+
+def _merge_prompt_units(
+    units: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, str]], list[dict[str, str]]]:
+    included: dict[str, dict[str, Any]] = {}
+    merged = []
+    conflicts = []
+    for unit in units:
+        prior = included.get(unit["id"])
+        if prior is None:
+            included[unit["id"]] = unit
+        elif prior["text"] == unit["text"]:
+            merged.append(
+                {
+                    "id": unit["id"],
+                    "reason": f"duplicate-of:{unit['id']}",
+                    "source": unit["source"],
+                }
+            )
+        else:
+            conflicts.append(
+                {
+                    "id": unit["id"],
+                    "scope": unit["scope"],
+                    "result": "unresolved",
+                    "note": "the same semantic ID rendered different instructions",
+                }
+            )
+    return sorted(included.values(), key=lambda row: row["order"]), merged, conflicts
+
+
+def _semantic_unit(
+    unit_id: str,
+    text: str,
+    authority: str,
+    scope: str,
+    priority: str,
+    required: bool,
+    source: str,
+    order: int,
+    *,
+    compact_text: str | None = None,
+) -> dict[str, Any]:
+    unit = {
+        "id": unit_id,
+        "text": text.strip(),
+        "authority": authority,
+        "scope": scope,
+        "priority": priority,
+        "required": required,
+        "source": source,
+        "order": order,
+    }
+    if compact_text:
+        unit["compact_text"] = compact_text.strip()
+    return unit
+
+
+def _compact_reference_lines(manifest: dict[str, Any]) -> list[str]:
+    grouped: dict[tuple[str, str, str, str], list[int]] = {}
+    for index, entry in enumerate(manifest.get("references") or [], 1):
+        role = entry.get("role", "unknown")
+        scope = entry.get("style_scope")
+        focus = str(entry.get("focus") or "").strip()
+        if role == "style" and scope == "character":
+            authority = (
+                "character contours, face/hair marks, fabric/folds, and garment "
+                "values only; not identity, costume construction, pose, action, or composition"
+            )
+        elif role == "style" and scope == "scene":
+            authority = (
+                "scene material grouping, negative space, black-white/tone mass, and "
+                "depth falloff only; not characters, action, or staging"
+            )
+        elif role == "identity":
+            authority = (
+                "canonical identity, form, anatomy, costume, attachment, and scale "
+                "only; not rendering, action, or composition"
+            )
+        elif role == "form":
+            authority = (
+                "the declared visible form state only; not general identity, style, "
+                "pose, or composition"
+            )
+        elif role == "content":
+            authority = (
+                "only the exact focused action, object, effect phase, or spatial fact; "
+                "not identity, style, framing, or story staging"
+            )
+        elif role == "continuity":
+            authority = "accepted continuity only; not new identity or style authority"
+        elif role == "composition":
+            authority = "composition only; not identity, form, or rendering"
+        elif role == "target":
+            authority = "the unchanged target instance and composition"
+        else:
+            authority = "only its declared manifest role"
+        original = str(entry.get("instructions") or "").strip()
+        if original and len(original) <= 240:
+            authority = original.rstrip(".")
+        grouped.setdefault((str(role), str(scope or ""), focus, authority), []).append(
+            index
+        )
+    lines = []
+    for (role, _, focus, authority), indexes in grouped.items():
+        label = (
+            f"Input {indexes[0]}"
+            if len(indexes) == 1
+            else f"Inputs {', '.join(map(str, indexes))}"
+        )
+        suffix = f" Focus: {focus}." if focus else ""
+        lines.append(f"- {label} ({role}): {authority}.{suffix}")
+    return lines or ["- No image inputs are prepared yet."]
+
+
+def _resolved_new_manga_camera(brief: dict[str, Any]) -> tuple[str, str, str]:
+    shot = str(brief.get("shot") or "unspecified")
+    view = str(brief.get("view_angle") or "unspecified")
+    request = str(brief.get("request") or "").casefold()
+    if shot in {"profile", "front", "back-view"}:
+        if view == "unspecified":
+            view = shot
+        for tokens, request_shot, label in (
+            (("中景", "medium shot", "medium-shot"), "medium-shot", "medium shot / 中景"),
+            (("上身", "upper body", "upper-body"), "upper-body", "upper body / 上身"),
+            (("特写", "close-up", "close up"), "close-up", "close-up / 特写"),
+            (("全身", "full body", "full-body"), "full-body", "full body / 全身"),
+            (("远景", "wide shot", "wide-shot"), "wide-shot", "wide shot / 远景"),
+        ):
+            if any(token in request for token in tokens):
+                return request_shot, view, label
+    return shot, view, ""
+
+
+def _projected_new_manga_rendering_map(brief: dict[str, Any]) -> str:
+    rendering_map = brief.get("rendering_map")
+    if not isinstance(rendering_map, dict):
+        return ""
+    shot, _, _ = _resolved_new_manga_camera(brief)
+    character = rendering_map.get("character") or {}
+    values = rendering_map.get("value_hierarchy") or {}
+    if shot == "wide-shot":
+        return (
+            "Scene-aware rendering map:\n- Character: preserve the exact identity/form "
+            "silhouette and only the readable face, hair, costume, hand, and contact "
+            "anchors at this scale; group secondary strands and folds.\n- Depth: "
+            "resolve major axes, route, overlap, scale, and ground contact; reserve "
+            "contiguous paper white, group repeated forms, and reduce internal marks "
+            "at every successive depth layer.\n- Values: paper white for "
+            + str(values.get("paper_white") or "authored negative space")
+            + "; flat black for "
+            + str(values.get("flat_black") or "supported major masses")
+            + "; middle tone as "
+            + str(values.get("middle_tone") or "one restrained separator")
+            + "."
+        )
+    if shot not in {"face", "close-up", "profile", "upper-body", "medium-shot"}:
+        return _rendering_map_clause(brief).strip()
+    return (
+        "Scene-aware rendering map:\n"
+        "- Character: resolve "
+        + str(character.get("resolve") or "identity-bearing face, hair, hands, and costume overlaps")
+        + "; group "
+        + str(character.get("group") or "hair and fabric into readable masses")
+        + "; "
+        + str(character.get("quiet") or "let secondary strands and folds fall away")
+        + ".\n- Depth: fully resolve the focal face, hands, named contact, and visible "
+        "costume overlap; state only setting cues required by the request; group the "
+        "remaining scene into quiet shapes and let distant forms lose internal marks."
+        + "\n- Values: paper white for "
+        + str(values.get("paper_white") or "skin, highlights, and authored negative space")
+        + "; flat black for "
+        + str(values.get("flat_black") or "supported major dark masses")
+        + "; middle tone as "
+        + str(values.get("middle_tone") or "one restrained separator")
+        + "."
+    )
+
+
+def _new_manga_prompt_units(
+    brief: dict[str, Any], manifest: dict[str, Any]
+) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    """Normalize a new manga task directly from structured authority sources."""
+    units = []
+
+    def add(
+        unit_id: str,
+        text: str,
+        authority: str,
+        scope: str,
+        priority: str,
+        required: bool,
+        source: str,
+        *,
+        compact_text: str | None = None,
+    ) -> None:
+        if text.strip():
+            units.append(
+                _semantic_unit(
+                    unit_id,
+                    text,
+                    authority,
+                    scope,
+                    priority,
+                    required,
+                    source,
+                    len(units) + 1,
+                    compact_text=compact_text,
+                )
+            )
+
+    request = str(brief.get("request") or "").strip()
+    add(
+        "request.scene",
+        "# User request (verbatim; highest priority)\n\n" + request,
+        "request",
+        "composition",
+        "critical",
+        True,
+        "brief",
+    )
+    invariants = [
+        f"- {value}"
+        for value in brief.get("prompt_invariants") or brief.get("invariants") or []
+        if str(value).strip()
+    ]
+    hard_lines = [
+        "Treat every explicit count, presence or absence, direction, visibility, "
+        "contact, object state, and temporal qualifier in the verbatim request "
+        "literally. Do not add undeclared characters, objects, weather, or scenery.",
+        *invariants,
+    ]
+    add(
+        "request.invariants",
+        "## Hard constraints\n\n" + "\n".join(hard_lines),
+        "request",
+        "global",
+        "critical",
+        True,
+        "brief",
+    )
+    scene = str(brief.get("scene") or "").strip()
+    camera_shot, camera_view, explicit_camera = _resolved_new_manga_camera(brief)
+    view_label = (
+        "camera elevation"
+        if camera_view in {"high-angle", "low-angle"}
+        else "character view angle"
+    )
+    shot_label = (
+        "Camera distance"
+        if camera_shot
+        in {
+            "full-body",
+            "upper-body",
+            "face",
+            "close-up",
+            "medium-shot",
+            "wide-shot",
+        }
+        else "Shot/framing"
+    )
+    scene_line = f"- Scene: {scene}.\n" if scene and scene != request else ""
+    framing_line = (
+        f"- Explicit framing constraint: {explicit_camera}. Frame at {camera_shot} "
+        "scale; do not widen to a full-body composition.\n"
+        if explicit_camera and camera_shot != "full-body"
+        else ""
+    )
+    add(
+        "composition.format",
+        "## Format and staging\n\n"
+        + scene_line
+        + f"- Format: {brief.get('aspect_ratio') or 'portrait'}; single borderless "
+        "serialized-manga panel, not a standalone illustration.\n"
+        + f"- {shot_label}: {camera_shot}; {view_label}: {camera_view}.\n"
+        + framing_line
+        + "- "
+        + _new_composition_direction("manga", brief.get("shot"))
+        + " Use one coherent depth system.",
+        "request",
+        "composition",
+        "high",
+        True,
+        "brief",
+    )
+    identity_lines, projected_omissions = _projected_identity_lines(brief)
+    add(
+        "identity.forms",
+        "## Canonical identity\n\n" + "\n".join(identity_lines),
+        "official",
+        "character",
+        "critical",
+        True,
+        "identity-ledger",
+    )
+    prop_lines, prop_omissions = _projected_prop_lines(brief)
+    projected_omissions.extend(prop_omissions)
+    add(
+        "prop.forms",
+        "## Canonical prop requirements\n\n" + "\n".join(prop_lines),
+        "official",
+        "prop",
+        "critical",
+        True,
+        "identity-ledger",
+    )
+    add(
+        "authority.inputs",
+        "## Image-input authority\n\n"
+        + "\n".join(_compact_reference_lines(manifest))
+        + "\nPriority order: requested scene and focal hierarchy first, official "
+        "identity anchors second, selected-medium rendering third, and exact-focus "
+        "content evidence fourth.",
+        "workflow",
+        "global",
+        "high",
+        True,
+        "reference-manifest",
+    )
+    assignments = character_style_assignments(brief, manifest)
+    if assignments:
+        assignment_lines = []
+        for target, assignment in assignments.items():
+            labels = ", ".join(
+                f"Input {index}" for index in assignment.get("inputs") or []
+            ) or "MISSING"
+            tier = (
+                "exact"
+                if assignment.get("tier") == "exact-character-form"
+                else str(assignment.get("tier") or "missing")
+            )
+            assignment_lines.append(f"- {target}: {labels} ({tier})")
+        add(
+            "authority.character-map",
+            "## Per-character rendering map\n\n"
+            + "\n".join(assignment_lines)
+            + "\nOfficial evidence remains the sole identity, form, costume, and "
+            "anatomy authority.",
+            "character-style",
+            "character",
+            "high",
+            True,
+            "reference-manifest",
+        )
+    rendering_map = _projected_new_manga_rendering_map(brief)
+    if rendering_map:
+        add(
+            "rendering-map.scene-aware",
+            "## Rendering map\n\n" + rendering_map,
+            "workflow",
+            "global",
+            "high",
+            True,
+            "rendering-map",
+        )
+    materials = [
+        str(value).strip()
+        for value in brief.get("dominant_scene_materials") or []
+        if str(value).strip()
+    ]
+    if materials:
+        material_text = ", ".join(materials)
+        add(
+            "scene.material-scope",
+            "## Scene-material scope\n\n"
+            + material_text
+            + ". Transfer one scene anchor's grouped marks, values, and depth "
+            "falloff across these materials. They are not separate detailing targets; "
+            "do not add inputs or independent detail targets per material.",
+            "scene-style",
+            "scene",
+            "normal",
+            False,
+            "brief",
+            compact_text=(
+                "## Scene-material scope\n\n"
+                + material_text
+                + ". Apply one anchor's grouped values and depth falloff across them."
+            ),
+        )
+    cross_medium = _cross_medium_clause(manifest, "manga").strip()
+    if cross_medium:
+        add(
+            "content.cross-medium",
+            "## Cross-medium conversion\n\n" + cross_medium,
+            "content",
+            "global",
+            "high",
+            True,
+            "reference-manifest",
+        )
+    contact = _contact_topology_clause(brief).strip()
+    if contact:
+        add(
+            "request.contact-topology",
+            "## Contact topology\n\n" + contact,
+            "request",
+            "character",
+            "critical",
+            True,
+            "brief",
+        )
+    shot = brief.get("shot")
+    scene_economy = _scene_economy_clause(brief).strip()
+    if scene_economy:
+        add(
+            "scene.economy",
+            "## Scene-density ceiling\n\n" + scene_economy,
+            "scene-style",
+            "scene",
+            "high",
+            True,
+            "workflow-default",
+        )
+    if shot == "wide-shot":
+        add(
+            "medium.wide-shot",
+            "## Wide-shot manga construction\n\n" + _medium_construction("manga", shot),
+            "workflow",
+            "scene",
+            "high",
+            True,
+            "workflow-default",
+        )
+    economy_sentence = (
+        ""
+        if shot == "wide-shot"
+        else "Economy means selecting the right marks, not merely minimizing them. "
+    )
+    finish_calibration = (
+        "## Manga finish calibration\n\nManga finish calibration: selected character "
+        "and scene references control their scoped contour rhythm, information "
+        "density, material abstraction, negative space, and black-white/tone "
+        "hierarchy. Preserve requested scene phenomena with selective marks. Make "
+        "the result read as late-1990s serialized black-and-white manga, not a "
+        "polished monochrome illustration or an under-rendered coloring-book outline. "
+        "Preserve identity-bearing eye shapes, bangs, jaw, hair silhouette, costume "
+        "layers, hands, contact, and required setting cues. "
+        + economy_sentence
+        + "Monochrome output or screen "
+        "tone alone is insufficient."
+    )
+    add(
+        "medium.finish",
+        finish_calibration,
+        "workflow",
+        "global",
+        "high",
+        True,
+        "workflow-default",
+    )
+    shot_finish = (
+        "For a wide shot, reserve contiguous paper-white fields before secondary "
+        "marks, group repeated scene forms into a few value masses, and make every "
+        "successive depth layer lose internal marks visibly. "
+        if shot == "wide-shot"
+        else "Concentrate marks at the narrative focus and let nonfocal detail fall away. "
+    )
+    add(
+        "medium.output-contract",
+        "## Output contract\n\nProduce one text-free late-1990s serialized "
+        "black-and-white manga panel. Preserve every canonical garment component and overlap, "
+        "and prop topology while redrawing them with the assigned character-style "
+        "contours, face/hair marks, fabric/folds, and paper-white, flat-black, and "
+        "restrained-tone garment values. Never copy the style source's costume design. "
+        + shot_finish
+        + "Use connected paper white, decisive flat black, selective hand-inked "
+        "contours at shot-appropriate density, restrained halftone, and coherent "
+        "black-white/tone hierarchy. Do not drift into glossy gradients, cinematic "
+        "gray haze, uniform microtexture, polished digital illustration, or generic "
+        "under-rendered outlines. No lettering, balloons, borders, signature, logo, "
+        "watermark, or undeclared content.",
+        "workflow",
+        "global",
+        "high",
+        True,
+        "workflow-default",
+    )
+    preferences = [str(value) for value in brief.get("preference_traits") or []]
+    if preferences:
+        add(
+            "preference.approved-traits",
+            "## Learned approved traits\n\n" + ", ".join(preferences) + ".",
+            "preference",
+            "global",
+            "optional",
+            False,
+            "preference-profile",
+        )
+    return units, projected_omissions
+
+
+def _render_units(
+    units: list[dict[str, Any]], brief: dict[str, Any], limit: int
+) -> tuple[str, list[dict[str, str]], list[dict[str, str]], dict[str, str]]:
+    rendered = [(unit, unit["text"]) for unit in units]
+    compacted = []
+    omitted = []
+    if brief.get("shot") in {"face", "close-up"}:
+        rendered = [
+            (
+                unit,
+                unit.get("compact_text", text)
+                if unit["id"] == "composition.spatial-construction"
+                else text,
+            )
+            for unit, text in rendered
+        ]
+        if any(
+            unit["id"] == "composition.spatial-construction"
+            and text != unit["text"]
+            for unit, text in rendered
+        ):
+            compacted.append(
+                {
+                    "id": "composition.spatial-construction",
+                    "reason": "projected-for-close-up",
+                }
+            )
+
+    def assemble(rows: list[tuple[dict[str, Any], str]]) -> str:
+        return "\n\n".join(text.strip() for _, text in rows if text.strip()).strip() + "\n"
+
+    text = assemble(rendered)
+    if len(text) > limit:
+        compacted_ids = {row["id"] for row in compacted}
+        for index, (unit, unit_text) in enumerate(rendered):
+            compact_text = unit.get("compact_text")
+            if (
+                len(text) <= limit
+                or unit["priority"] != "normal"
+                or not compact_text
+                or unit["id"] in compacted_ids
+            ):
+                continue
+            rendered[index] = (unit, compact_text)
+            compacted.append({"id": unit["id"], "reason": "normal-budget-compact"})
+            compacted_ids.add(unit["id"])
+            text = assemble(rendered)
+    if len(text) > limit:
+        for index in range(len(rendered) - 1, -1, -1):
+            unit, _ = rendered[index]
+            if len(text) <= limit or unit["priority"] != "optional" or unit["required"]:
+                continue
+            omitted.append({"id": unit["id"], "reason": "optional-budget-prune"})
+            rendered.pop(index)
+            text = assemble(rendered)
+    if len(text) > limit:
+        raise ValueError(
+            f"Compiled {task_intent(brief)} prompt is {len(text)} characters; "
+            f"limit is {limit}; critical/high units cannot be omitted"
+        )
+    return text, compacted, omitted, {
+        unit["id"]: unit_text for unit, unit_text in rendered
+    }
+
+
+def compile_prompt_artifacts(
+    brief: dict[str, Any], manifest: dict[str, Any]
+) -> tuple[str, dict[str, Any]]:
+    """Compile prompt text and its deterministic omission/conflict report."""
+    normalized_brief, invariant_merges = _deduplicate_invariants(brief)
+    raw_text = _render_current_prompt(normalized_brief, manifest)
+    intent = task_intent(normalized_brief)
+    active = prompt_compile_report_required(normalized_brief)
+    normalized_units, projected_omissions = (
+        _new_manga_prompt_units(normalized_brief, manifest)
+        if active
+        else (normalize_prompt_units(raw_text), [])
+    )
+    units, unit_merges, conflicts = _merge_prompt_units(normalized_units)
+    conflicts.extend(_structured_prompt_conflicts(normalized_brief))
+    unresolved = [row for row in conflicts if row.get("result") == "unresolved"]
+    if unresolved:
+        raise ValueError(
+            "Prompt compilation conflicts: "
+            + "; ".join(str(row.get("note")) for row in unresolved)
+        )
+    limit = prompt_limit(intent)
+    if active:
+        text, compacted, omitted, rendered_units = _render_units(
+            units, normalized_brief, limit
+        )
+    else:
+        text, compacted, omitted = raw_text, [], []
+        rendered_units = {unit["id"]: unit["text"] for unit in units}
+        if len(text) > limit:
+            raise ValueError(
+                f"Compiled {intent} prompt is {len(text)} characters; limit is {limit}"
+            )
+    included_ids = {unit["id"] for unit in units} - {row["id"] for row in omitted}
+    characters = normalized_brief.get("characters") or []
+    props = normalized_brief.get("props") or []
+    coverage = {
+        "request": "request.scene" in included_ids or "request.change" in included_ids,
+        "focal_hierarchy": "composition.format" in included_ids
+        or "composition.focal-hierarchy" in included_ids
+        or intent != "new",
+        "identity": not characters or "identity.forms" in included_ids,
+        "form": not characters or "identity.forms" in included_ids,
+        "prop_topology": not props or "prop.forms" in included_ids,
+        "negative_constraints": "request.invariants" in included_ids
+        or "target.preservation" in included_ids,
+        "edit_boundary": intent == "new" or "target.preservation" in included_ids,
+        "authority_boundaries": "authority.inputs" in included_ids,
+        "manga_medium": not active
+        or normalized_brief.get("medium") != "manga"
+        or "medium.output-contract" in included_ids,
+    }
+    if not all(coverage.values()):
+        missing = [key for key, value in coverage.items() if not value]
+        raise ValueError("Prompt compilation lost required coverage: " + ", ".join(missing))
+    report = {
+        "schema_version": PROMPT_COMPILE_SCHEMA_VERSION,
+        "activation": "new-manga" if active else "explain-only",
+        "intent": intent,
+        "limit": limit,
+        "rendered_characters": len(text),
+        "prompt_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        "included": [
+            {
+                **{
+                    key: unit[key]
+                    for key in (
+                        "id",
+                        "authority",
+                        "scope",
+                        "priority",
+                        "required",
+                        "source",
+                    )
+                },
+                "text": rendered_units[unit["id"]],
+            }
+            for unit in units
+            if unit["id"] in included_ids
+        ],
+        "merged": [*invariant_merges, *unit_merges],
+        "compacted": compacted,
+        "omitted": [*projected_omissions, *omitted],
+        "conflicts": conflicts,
+        "required_coverage": coverage,
+    }
+    return text, report
+
+
+def prompt_compile_report_failures(
+    brief: dict[str, Any], manifest: dict[str, Any], prompt: str, report: Any
+) -> list[str]:
+    if not isinstance(report, dict):
+        return ["prompt-compile.json must be an object"]
+    failures = []
+    if (
+        type(report.get("schema_version")) is not int
+        or report.get("schema_version") != PROMPT_COMPILE_SCHEMA_VERSION
+    ):
+        failures.append("prompt-compile.json schema is not supported")
+    if report.get("intent") != task_intent(brief):
+        failures.append("prompt-compile.json intent does not match brief")
+    expected_activation = (
+        "new-manga" if prompt_compile_report_required(brief) else "explain-only"
+    )
+    if report.get("activation") != expected_activation:
+        failures.append("prompt-compile.json activation does not match brief")
+    if report.get("limit") != prompt_limit(task_intent(brief)):
+        failures.append("prompt-compile.json limit does not match intent")
+    if report.get("rendered_characters") != len(prompt):
+        failures.append("prompt-compile.json rendered character count is stale")
+    if report.get("prompt_sha256") != hashlib.sha256(prompt.encode("utf-8")).hexdigest():
+        failures.append("prompt-compile.json prompt hash is stale")
+    if any(
+        row.get("result") == "unresolved" for row in report.get("conflicts") or []
+        if isinstance(row, dict)
+    ):
+        failures.append("prompt-compile.json contains an unresolved conflict")
+    coverage = report.get("required_coverage")
+    if not isinstance(coverage, dict) or not coverage or not all(coverage.values()):
+        failures.append("prompt-compile.json required coverage is incomplete")
+    try:
+        expected_prompt, expected_report = compile_prompt_artifacts(brief, manifest)
+    except ValueError as exc:
+        failures.append(f"prompt compilation is invalid: {exc}")
+    else:
+        if prompt != expected_prompt:
+            failures.append("prompt.md does not match the current brief and manifest")
+        if json.dumps(
+            report, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ) != json.dumps(
+            expected_report, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ):
+            failures.append(
+                "prompt-compile.json does not match the current brief and manifest"
+            )
+    return failures
+
+
+def prompt_compile_report_required(brief: dict[str, Any]) -> bool:
+    return (
+        type(brief.get("prompt_compile_schema_version")) is int
+        and brief.get("prompt_compile_schema_version") == PROMPT_COMPILE_SCHEMA_VERSION
+        and task_intent(brief) == "new"
+        and brief.get("medium") == "manga"
+    )
+
+
+def compile_prompt(brief: dict[str, Any], manifest: dict[str, Any]) -> str:
+    """Compile a bounded prompt through the semantic unit pipeline."""
+    return compile_prompt_artifacts(brief, manifest)[0]
+
+
+def read_prompt_compile_inputs(task_dir: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     brief = read_json(task_dir / "brief.json")
     manifest = read_json(task_dir / "reference-manifest.json")
-    profile_path = task_dir.parent.parent / "preference-profile.json"
-    if profile_path.is_file():
-        profile = read_json(profile_path)
-        traits = profile.get(brief.get("medium", "manga"), {}).get("traits", [])
-        brief["preference_traits"] = [
-            row["tag"]
-            for row in traits
-            if row.get("count", 0) >= profile.get("minimum_support", 2)
-        ][:5]
+    return brief, manifest
+
+
+def write_compiled_prompt(task_dir: Path) -> Path:
+    brief, manifest = read_prompt_compile_inputs(task_dir)
     output = task_dir / "prompt.md"
-    atomic_write_text(output, compile_prompt(brief, manifest))
+    prompt, report = compile_prompt_artifacts(brief, manifest)
+    atomic_write_text(output, prompt)
+    atomic_write_json(task_dir / "prompt-compile.json", report)
     return output
 
 
