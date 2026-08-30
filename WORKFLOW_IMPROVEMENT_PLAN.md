@@ -1,9 +1,8 @@
 # Inuyasha art workflow improvement plan
 
-Status: Parts 1 and 2 are complete in the live installed skill as of 2026-08-30.
-Part 1 is active in the portable package, and Part 2 is implemented on this
-portable-package branch. Part 3 remains a separate proposal; no test files were
-changed.
+Status: Parts 1, 2, and 3 are complete in the live installed skill as of
+2026-08-30. All three parts are implemented on this portable-package branch; no
+test files were changed.
 
 Part 1 activation evidence:
 
@@ -43,6 +42,34 @@ Part 2 activation evidence:
   lifecycle error in
   `test_scoped_manga_edit_requires_component_checks`; Part 2 did not change tests
   or attempt lifecycle code.
+
+Part 3 activation evidence:
+
+- `build_workflow_gallery.py` now emits `attempts.json` and `summary.json` beside
+  the existing References artifacts. It normalizes 784 attempt rows into 725
+  generation cases: 59 non-generation decision attempts are linked to their
+  source generation instead of inflating generation, preview, or latency counts.
+- The Attempts view separates 102 no-output error cases, excludes archived cases
+  by default, exposes every planned filter, and discloses snapshot,
+  `legacy-fallback`, and `incomplete-provenance` states without manufacturing
+  missing evidence. Case cards expose prompt hashes and reports, reference IDs,
+  preview and medium checks, and transport state. Case detail shows full outputs,
+  ordered inputs, prompts, compilation reports, checks, QA, failures, feedback,
+  decisions, and repair relationships when present.
+- Hash-valid outputs outside the workflow root are copied into a content-hash
+  derived cache for full-size display without modifying the source image. Repair
+  relationships are attempt-specific only when `candidate_source` records the
+  source attempt; task-level child relationships remain separate instead of
+  guessing legacy provenance.
+- The Summary view renders the existing `reference_feedback_report.py` metrics
+  descriptively. Repeated live builds were byte-identical; task-file metadata,
+  catalog bytes, and annotation bytes were unchanged.
+- Chromium desktop/tablet/mobile checks passed at three, two, and one columns
+  without horizontal overflow. Safari loaded References, Attempts, and Summary
+  with native controls and accessible view navigation.
+- Explicit staged synchronization of only
+  `scripts/build_workflow_gallery.py` passed compileall, the existing unit suite,
+  and structural workflow validation before the portable package was changed.
 
 This plan adapts three useful ideas from
 [`awesome-gpt-image-2`](https://github.com/freestylefly/awesome-gpt-image-2)

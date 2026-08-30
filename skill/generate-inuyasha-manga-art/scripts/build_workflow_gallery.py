@@ -4,10 +4,15 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shlex
+import shutil
+import subprocess
+import sys
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import quote
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
@@ -181,6 +186,350 @@ def make_thumbnail(source: Path, destination: Path) -> None:
         temporary.replace(destination)
 
 
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def artifact_json(
+    attempt_dir: Path,
+    task_dir: Path,
+    name: str,
+    errors: list[dict],
+) -> tuple[dict | list | None, str]:
+    snapshot = attempt_dir / name
+    fallback = task_dir / name
+    selected = snapshot if snapshot.is_file() else fallback if fallback.is_file() else None
+    if selected is None:
+        return None, "incomplete-provenance"
+    try:
+        value = json.loads(selected.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        errors.append({"path": str(selected), "error": str(exc)})
+        return None, "incomplete-provenance"
+    return value, "snapshot" if selected == snapshot else "legacy-fallback"
+
+
+def artifact_text(
+    attempt_dir: Path,
+    task_dir: Path,
+    name: str,
+    errors: list[dict],
+) -> tuple[str | None, str]:
+    snapshot = attempt_dir / name
+    fallback = task_dir / name
+    selected = snapshot if snapshot.is_file() else fallback if fallback.is_file() else None
+    if selected is None:
+        return None, "incomplete-provenance"
+    try:
+        value = selected.read_text(encoding="utf-8")
+    except OSError as exc:
+        errors.append({"path": str(selected), "error": str(exc)})
+        return None, "incomplete-provenance"
+    return value, "snapshot" if selected == snapshot else "legacy-fallback"
+
+
+def relative_gallery_url(path: Path, root: Path) -> str | None:
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return None
+    return "../" + quote(relative.as_posix(), safe="/")
+
+
+def attempt_number(path: Path) -> int:
+    try:
+        return int(path.parent.name)
+    except ValueError:
+        return -1
+
+
+def normalized_check_rows(value) -> list[dict]:
+    return value if isinstance(value, list) else []
+
+
+def read_attempts(config: dict, root: Path, gallery: Path) -> dict:
+    tasks_root = workflow_paths(root)["tasks"]
+    errors: list[dict] = []
+    task_records = {}
+    child_tasks: dict[str, list[str]] = {}
+    exact_repairs: dict[tuple[str, int], list[str]] = {}
+
+    for task_dir in sorted(tasks_root.iterdir(), key=lambda path: path.name.casefold()):
+        if not task_dir.is_dir():
+            continue
+        try:
+            brief = json.loads((task_dir / "brief.json").read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            brief = {}
+        archived = (task_dir / "archived.json").is_file()
+        task_records[task_dir.name] = {"brief": brief, "archived": archived}
+        parent = brief.get("parent_task_id")
+        if isinstance(parent, str) and parent:
+            child_tasks.setdefault(parent, []).append(task_dir.name)
+        candidate_source = brief.get("candidate_source")
+        if isinstance(candidate_source, dict):
+            source_task = candidate_source.get("task_id") or candidate_source.get("source_task_id")
+            source_attempt = candidate_source.get("attempt") or candidate_source.get("attempt_number")
+            if isinstance(source_task, str) and isinstance(source_attempt, int):
+                exact_repairs.setdefault((source_task, source_attempt), []).append(task_dir.name)
+
+    cases = []
+    for task_id, task_record in sorted(task_records.items()):
+        task_dir = tasks_root / task_id
+        attempt_paths = sorted(
+            task_dir.glob("attempts/*/attempt.json"), key=attempt_number
+        )
+        attempts = []
+        for path in attempt_paths:
+            try:
+                attempt = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                errors.append({"path": str(path), "error": str(exc)})
+                continue
+            attempt["_path"] = path
+            recorded_number = attempt.get("attempt")
+            attempt["_number"] = (
+                recorded_number if isinstance(recorded_number, int) else attempt_number(path)
+            )
+            attempts.append(attempt)
+
+        decisions: dict[int, list[dict]] = {}
+        generations = []
+        for attempt in attempts:
+            decision_from = attempt.get("decision_from_attempt")
+            if not isinstance(decision_from, int):
+                decision_from = attempt.get("accepted_from_attempt") or attempt.get("rejected_from_attempt")
+            if attempt.get("counts_as_generation") is False or isinstance(decision_from, int):
+                if isinstance(decision_from, int):
+                    decisions.setdefault(decision_from, []).append(attempt)
+                else:
+                    errors.append({
+                        "path": str(attempt["_path"]),
+                        "error": "decision attempt has no generation attempt link",
+                    })
+                continue
+            generations.append(attempt)
+
+        for attempt in generations:
+            number = attempt["_number"]
+            attempt_dir = attempt["_path"].parent
+            brief, brief_source = artifact_json(attempt_dir, task_dir, "brief.json", errors)
+            manifest, manifest_source = artifact_json(
+                attempt_dir, task_dir, "reference-manifest.json", errors
+            )
+            qa, qa_source = artifact_json(attempt_dir, task_dir, "qa.json", errors)
+            compile_report, compile_source = artifact_json(
+                attempt_dir, task_dir, "prompt-compile.json", errors
+            )
+            compiled_prompt, compiled_source = artifact_text(
+                attempt_dir, task_dir, "prompt.md", errors
+            )
+            submitted_prompt, submitted_source = artifact_text(
+                attempt_dir, task_dir, "submitted-prompt.md", errors
+            )
+            if submitted_prompt is None and attempt.get("submitted_prompt_source") == "compiled-verbatim":
+                expected = attempt.get("submitted_prompt_sha256")
+                if compiled_prompt is not None and expected == hashlib.sha256(
+                    compiled_prompt.encode("utf-8")
+                ).hexdigest():
+                    submitted_prompt = compiled_prompt
+                    submitted_source = compiled_source
+
+            brief = brief if isinstance(brief, dict) else {}
+            manifest = manifest if isinstance(manifest, dict) else {}
+            qa = qa if isinstance(qa, dict) else {}
+            linked = sorted(decisions.get(number, []), key=lambda row: row["_number"])
+            effective_status = attempt.get("status", "unknown")
+            for decision in linked:
+                if decision.get("status") in {"accepted", "rejected"}:
+                    effective_status = decision["status"]
+
+            output_path = None
+            output_error = None
+            output_url = None
+            thumbnail_url = None
+            recorded_output = attempt.get("output")
+            if isinstance(recorded_output, str) and recorded_output:
+                output_path = resolve_recorded_path(recorded_output, config)
+                output_url = relative_gallery_url(output_path, root)
+                expected_hash = attempt.get("output_sha256")
+                if not output_path.is_file():
+                    output_error = f"output image is missing: {output_path}"
+                else:
+                    try:
+                        actual_hash = sha256_file(output_path)
+                        if isinstance(expected_hash, str) and actual_hash != expected_hash:
+                            output_error = f"output hash mismatch: {output_path}"
+                        else:
+                            thumbnail = gallery / "attempt-thumbnails" / f"{actual_hash}.jpg"
+                            make_thumbnail(output_path, thumbnail)
+                            thumbnail_url = f"attempt-thumbnails/{thumbnail.name}"
+                            if output_url is None:
+                                cached_output = gallery / "attempt-outputs" / (
+                                    f"{actual_hash}{output_path.suffix.lower()}"
+                                )
+                                if not cached_output.is_file() or sha256_file(cached_output) != actual_hash:
+                                    cached_output.parent.mkdir(parents=True, exist_ok=True)
+                                    temporary = cached_output.with_name(f".{cached_output.name}.tmp")
+                                    shutil.copyfile(output_path, temporary)
+                                    temporary.replace(cached_output)
+                                output_url = f"attempt-outputs/{cached_output.name}"
+                    except (OSError, UnidentifiedImageError) as exc:
+                        output_error = str(exc)
+
+            actual_inputs = attempt.get("actual_input_images")
+            actual_inputs = actual_inputs if isinstance(actual_inputs, list) else []
+            input_rows = []
+            for item in actual_inputs:
+                if not isinstance(item, dict):
+                    continue
+                row = dict(item)
+                path_value = row.get("path")
+                if isinstance(path_value, str) and path_value:
+                    resolved = resolve_recorded_path(path_value, config)
+                    row["source_path"] = str(resolved)
+                    row["image_url"] = relative_gallery_url(resolved, root)
+                input_rows.append(row)
+
+            reference_rows = manifest.get("references")
+            reference_rows = reference_rows if isinstance(reference_rows, list) else []
+            reference_ids = attempt.get("reference_item_ids")
+            if not isinstance(reference_ids, list):
+                reference_ids = [
+                    row.get("item_id") for row in reference_rows
+                    if isinstance(row, dict) and isinstance(row.get("item_id"), str)
+                ]
+            identity_forms = brief.get("identity_forms")
+            identity_forms = identity_forms if isinstance(identity_forms, dict) else {}
+            characters = brief.get("characters")
+            characters = characters if isinstance(characters, list) else list(identity_forms)
+            provenance = {
+                "brief": brief_source,
+                "manifest": manifest_source,
+                "qa": qa_source,
+                "compiled_prompt": compiled_source,
+                "submitted_prompt": submitted_source,
+                "prompt_compile": compile_source,
+            }
+            relationship_children = sorted(set(child_tasks.get(task_id, [])))
+            repairs = sorted(set(exact_repairs.get((task_id, number), [])))
+            decision_chain = [
+                {
+                    "attempt": row["_number"],
+                    "status": row.get("status"),
+                    "recorded_at": row.get("recorded_at"),
+                    "user_feedback": row.get("user_feedback"),
+                    "failures": normalized_check_rows(row.get("failures")),
+                }
+                for row in linked
+            ]
+            all_failures = [
+                *normalized_check_rows(attempt.get("failures")),
+                *(failure for row in linked for failure in normalized_check_rows(row.get("failures"))),
+            ]
+            feedback = [
+                value for value in [attempt.get("user_feedback"), *(
+                    row.get("user_feedback") for row in linked
+                )] if isinstance(value, str) and value
+            ]
+            cases.append({
+                "case_id": f"{task_id}:{number:03d}",
+                "task_id": task_id,
+                "generation_attempt": number,
+                "decision_attempt": linked[-1]["_number"] if linked else None,
+                "decision_chain": decision_chain,
+                "generated_status": attempt.get("status", "unknown"),
+                "effective_status": effective_status,
+                "archived": task_record["archived"],
+                "recorded_at": attempt.get("recorded_at"),
+                "request": brief.get("request") or brief.get("change_request") or "",
+                "intent": brief.get("intent") or "legacy",
+                "medium": brief.get("medium") or "unknown",
+                "characters": characters,
+                "identity_forms": identity_forms,
+                "forms": sorted(set(identity_forms.values())),
+                "shot": brief.get("shot"),
+                "view_angle": brief.get("view_angle"),
+                "change_category": brief.get("change_category"),
+                "change_scope": brief.get("change_scope"),
+                "parent_task_id": brief.get("parent_task_id"),
+                "candidate_source": brief.get("candidate_source"),
+                "child_tasks": relationship_children,
+                "later_bounded_repairs": repairs,
+                "has_later_bounded_repair": bool(repairs),
+                "output_path": str(output_path) if output_path else None,
+                "output_url": output_url,
+                "thumbnail": thumbnail_url,
+                "output_error": output_error,
+                "reference_item_ids": reference_ids,
+                "reference_count": len(reference_ids),
+                "reference_manifest": reference_rows,
+                "actual_input_images": input_rows,
+                "compiled_prompt": compiled_prompt,
+                "submitted_prompt": submitted_prompt,
+                "compiled_prompt_sha256": attempt.get("compiled_prompt_sha256"),
+                "submitted_prompt_sha256": attempt.get("submitted_prompt_sha256"),
+                "submitted_prompt_differs_from_compiled": attempt.get("submitted_prompt_differs_from_compiled"),
+                "prompt_length": len(compiled_prompt) if compiled_prompt is not None else None,
+                "prompt_compile": compile_report if isinstance(compile_report, dict) else None,
+                "preview_checks": normalized_check_rows(attempt.get("preview_checks")),
+                "medium_component_checks": normalized_check_rows(attempt.get("medium_component_checks")),
+                "qa": qa,
+                "failures": normalized_check_rows(attempt.get("failures")),
+                "failure_categories": sorted({
+                    row.get("category", "unknown") for row in all_failures
+                    if isinstance(row, dict)
+                }),
+                "user_feedback": feedback,
+                "generator": attempt.get("generator"),
+                "duration_seconds": attempt.get("duration_seconds"),
+                "generation_seconds": attempt.get("generation_seconds"),
+                "pre_generation_seconds": attempt.get("pre_generation_seconds"),
+                "post_generation_seconds": attempt.get("post_generation_seconds"),
+                "workflow_overhead_seconds": attempt.get("workflow_overhead_seconds"),
+                "network_failure": attempt.get("network_failure"),
+                "transport_retry_exhausted": attempt.get("transport_retry_exhausted"),
+                "submission_tracked": bool(attempt.get("generation_submission_sha256")),
+                "generation_transport": attempt.get("generation_transport"),
+                "provenance": provenance,
+                "legacy_fallback": "legacy-fallback" in provenance.values(),
+                "incomplete_provenance": "incomplete-provenance" in provenance.values(),
+            })
+
+    cases.sort(key=lambda row: (row["recorded_at"] or "", row["case_id"]), reverse=True)
+    return {
+        "schema_version": 1,
+        "tasks_path": str(tasks_root),
+        "count": len(cases),
+        "generation_count": sum(case["generated_status"] != "error" for case in cases),
+        "error_count": sum(case["generated_status"] == "error" for case in cases),
+        "archived_count": sum(case["archived"] for case in cases),
+        "errors": errors,
+        "cases": cases,
+    }
+
+
+def read_summary(root: Path) -> dict:
+    command = [
+        sys.executable,
+        str(Path(__file__).with_name("reference_feedback_report.py")),
+        "--workflow-root",
+        str(root),
+        "--json",
+    ]
+    process = subprocess.run(command, check=False, capture_output=True, text=True)
+    if process.returncode != 0:
+        raise RuntimeError(process.stderr.strip() or "reference feedback report failed")
+    value = json.loads(process.stdout)
+    if not isinstance(value, dict):
+        raise ValueError("reference feedback report must be a JSON object")
+    return value
+
+
 def read_references(config: dict, root: Path, gallery: Path, query_path: Path | None) -> dict:
     paths = workflow_paths(root)
     database = paths["database"]
@@ -283,7 +632,7 @@ HTML = r'''<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Inuyasha Workflow References</title>
+  <title>Inuyasha Workflow Gallery</title>
   <style>
     :root { color-scheme: light; --ink:#191714; --paper:#f7f3e9; --panel:#fffdf7; --line:#c9c0ae; --muted:#6d665a; --accent:#8b201e; --focus:#2458a6; }
     * { box-sizing:border-box; }
@@ -298,6 +647,8 @@ HTML = r'''<!doctype html>
     header { padding:1.25rem clamp(1rem,3vw,2.5rem); border-bottom:1px solid var(--line); background:var(--panel); }
     h1 { margin:0; font:700 clamp(1.55rem,3vw,2.25rem)/1.1 ui-serif,Georgia,serif; }
     header p { max-width:68rem; margin:.55rem 0 0; color:var(--muted); }
+    .tabs { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1rem; }
+    .tabs button[aria-selected="true"] { border-color:var(--accent); color:#fff; background:var(--accent); }
     main { padding:1rem clamp(1rem,3vw,2.5rem) 3rem; }
     .filters { display:grid; grid-template-columns:minmax(14rem,2fr) repeat(3,minmax(9rem,1fr)); gap:.75rem; padding:1rem; border:1px solid var(--line); border-radius:10px; background:var(--panel); }
     .field { display:grid; align-content:start; gap:.3rem; min-width:0; }
@@ -322,6 +673,8 @@ HTML = r'''<!doctype html>
     .chips { display:flex; flex-wrap:wrap; gap:.35rem; }
     .chip { max-width:100%; padding:.18rem .42rem; border:1px solid var(--line); border-radius:999px; overflow-wrap:anywhere; background:#fff; font-size:.75rem; }
     .outcome { display:flex; gap:.8rem; color:var(--muted); font-size:.82rem; }
+    .card-facts { grid-template-columns:minmax(6.5rem,8rem) 1fr; gap:.3rem .55rem; font-size:.78rem; }
+    .card-facts dd { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
     .card button { justify-self:start; }
     dialog { width:min(54rem,calc(100% - 2rem)); max-height:calc(100dvh - 2rem); padding:0; border:1px solid var(--line); border-radius:12px; color:var(--ink); background:var(--panel); box-shadow:0 18px 50px #0003; }
     dialog::backdrop { background:#17130f99; }
@@ -334,16 +687,32 @@ HTML = r'''<!doctype html>
     dd { margin:0; min-width:0; overflow-wrap:anywhere; }
     pre { overflow:auto; margin:0; padding:.8rem; border:1px solid var(--line); border-radius:6px; background:#f1ece1; white-space:pre-wrap; word-break:break-word; }
     .copy-actions { display:flex; flex-wrap:wrap; gap:.5rem; }
-    @media (max-width:1050px) { .filters { grid-template-columns:repeat(3,minmax(0,1fr)); } .field.search { grid-column:1/-1; } .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-    @media (max-width:700px) { .filters { grid-template-columns:1fr; } .field.search { grid-column:auto; } .grid { grid-template-columns:1fr; } dl { grid-template-columns:1fr; gap:.15rem; } dd { margin-bottom:.55rem; } }
+    .summary-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
+    .summary-card { padding:1rem; border:1px solid var(--line); border-radius:10px; background:var(--panel); }
+    .summary-card h2 { margin:0 0 .65rem; font-size:1rem; }
+    .summary-card strong { display:block; font:700 1.75rem/1 ui-serif,Georgia,serif; }
+    .summary-card p { margin:.45rem 0 0; color:var(--muted); }
+    .detail-section { display:grid; gap:.5rem; }
+    .detail-section h3 { margin:.25rem 0 0; font-size:1rem; }
+    .input-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
+    .input-item { min-width:0; padding:.7rem; border:1px solid var(--line); border-radius:8px; }
+    .input-item img { width:100%; max-height:18rem; object-fit:contain; background:#eee8da; }
+    @media (max-width:1050px) { .filters { grid-template-columns:repeat(3,minmax(0,1fr)); } .field.search { grid-column:1/-1; } .grid,.summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width:700px) { .filters { grid-template-columns:1fr; } .field.search { grid-column:auto; } .grid,.summary-grid,.input-list { grid-template-columns:1fr; } dl { grid-template-columns:1fr; gap:.15rem; } dd { margin-bottom:.55rem; } }
   </style>
 </head>
 <body>
   <header>
-    <h1>References</h1>
-    <p>catalog.sqlite3 的只读派生视图。浏览不改变参考图、标注、manifest、attempt 或偏好数据。</p>
+    <h1>Inuyasha Workflow Gallery</h1>
+    <p>参考目录、生成 casebook 与反馈指标的只读派生视图。浏览不会改变参考图、manifest、attempt、result 或偏好数据。</p>
+    <nav class="tabs" aria-label="Gallery views">
+      <button type="button" data-tab="references" aria-selected="true">References</button>
+      <button type="button" data-tab="attempts" aria-selected="false">Attempts</button>
+      <button type="button" data-tab="summary" aria-selected="false">Summary</button>
+    </nav>
   </header>
   <main>
+    <section id="referencesView">
     <section class="filters" aria-label="参考图筛选">
       <div class="field search"><label for="search">搜索路径、ID、标签或内容</label><input id="search" type="search" disabled autocomplete="off"></div>
       <div class="field"><label for="medium">媒介</label><select id="medium" disabled><option value="">全部</option><option value="manga">Manga</option><option value="tv">TV</option></select></div>
@@ -372,14 +741,54 @@ HTML = r'''<!doctype html>
     <section id="empty" class="state" hidden>没有符合当前筛选条件的参考图。</section>
     <section id="error" class="state error" hidden></section>
     <section id="grid" class="grid" aria-label="参考图结果"></section>
+    </section>
+
+    <section id="attemptsView" hidden>
+      <section class="filters" aria-label="生成案例筛选">
+        <div class="field search"><label for="attemptSearch">搜索 task、请求、反馈、失败或 reference ID</label><input id="attemptSearch" type="search" disabled autocomplete="off"></div>
+        <div class="field"><label for="caseType">案例视图</label><select id="caseType" disabled><option value="generation">Generations</option><option value="error">Errors</option></select></div>
+        <div class="field"><label for="effectiveStatus">Effective status</label><select id="effectiveStatus" disabled><option value="">全部</option><option>accepted</option><option>candidate</option><option>rejected</option></select></div>
+        <div class="field"><label for="attemptCharacter">角色</label><select id="attemptCharacter" disabled><option value="">全部</option></select></div>
+        <div class="field"><label for="attemptForm">精确 form</label><select id="attemptForm" disabled><option value="">全部</option></select></div>
+        <div class="field"><label for="attemptIntent">Intent</label><select id="attemptIntent" disabled><option value="">全部</option><option>new</option><option>edit</option><option>microfix</option><option>legacy</option></select></div>
+        <div class="field"><label for="attemptShot">Shot</label><select id="attemptShot" disabled><option value="">全部</option></select></div>
+        <div class="field"><label for="attemptView">View angle</label><select id="attemptView" disabled><option value="">全部</option></select></div>
+        <div class="field"><label for="attemptFailure">Failure category</label><select id="attemptFailure" disabled><option value="">全部</option></select></div>
+        <div class="field"><label for="attemptGenerator">Generator</label><select id="attemptGenerator" disabled><option value="">全部</option></select></div>
+        <div class="field"><label for="promptDiff">Compiled / submitted</label><select id="promptDiff" disabled><option value="">全部</option><option value="different">Different</option><option value="same">Same</option><option value="unknown">Unknown</option></select></div>
+        <div class="field"><label for="submissionState">Submission tracking</label><select id="submissionState" disabled><option value="">全部</option><option value="tracked">Tracked</option><option value="untracked">Untracked</option></select></div>
+        <div class="field"><label for="attemptReference">Reference item ID</label><select id="attemptReference" disabled><option value="">全部</option></select></div>
+        <div class="field"><label for="attemptProvenance">Provenance</label><select id="attemptProvenance" disabled><option value="">全部</option><option value="complete">Snapshot complete</option><option value="legacy">Legacy fallback</option><option value="incomplete">Incomplete</option></select></div>
+        <div class="field"><label>布尔筛选</label><label class="check"><input id="retryExhausted" type="checkbox" disabled> Transport retry exhausted</label><label class="check"><input id="boundedRepair" type="checkbox" disabled> Later bounded repair</label><label class="check"><input id="includeArchived" type="checkbox" disabled> Include archived</label></div>
+        <div class="filter-actions"><button id="clearAttempts" type="button" disabled>清除筛选</button></div>
+      </section>
+      <div class="meta"><span id="attemptStatus" role="status" aria-live="polite">正在读取 attempts.json…</span></div>
+      <section id="attemptLoading" class="state">正在加载生成案例…</section>
+      <section id="attemptEmpty" class="state" hidden>没有符合当前筛选条件的生成案例。</section>
+      <section id="attemptError" class="state error" hidden></section>
+      <section id="attemptGrid" class="grid" aria-label="生成案例结果"></section>
+    </section>
+
+    <section id="summaryView" hidden>
+      <div class="meta"><span id="summaryStatus" role="status" aria-live="polite">正在读取 summary.json…</span></div>
+      <section id="summaryLoading" class="state">正在加载反馈摘要…</section>
+      <section id="summaryError" class="state error" hidden></section>
+      <section id="summaryGrid" class="summary-grid"></section>
+    </section>
   </main>
   <dialog id="detail"><div class="dialog-head"><h2 id="detailTitle"></h2><button id="closeDetail" type="button">关闭</button></div><div id="detailBody" class="dialog-body"></div></dialog>
+  <dialog id="attemptDetail"><div class="dialog-head"><h2 id="attemptDetailTitle"></h2><button id="closeAttemptDetail" type="button">关闭</button></div><div id="attemptDetailBody" class="dialog-body"></div></dialog>
   <script>
     const ids = ["search","medium","domain","subject","form","shot","view","sceneId","sceneEconomy","blackMass","tone","falloff","role","outcome","certified","negativeSpace","queryOnly"];
     const controls = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
     const state = { items: [], byId: new Map(), queryContext: null, current: null };
+    const attemptIds = ["attemptSearch","caseType","effectiveStatus","attemptCharacter","attemptForm","attemptIntent","attemptShot","attemptView","attemptFailure","attemptGenerator","promptDiff","submissionState","attemptReference","attemptProvenance","retryExhausted","boundedRepair","includeArchived"];
+    const attemptControls = Object.fromEntries(attemptIds.map(id => [id, document.getElementById(id)]));
+    const attemptState = { cases: [], byId: new Map(), current: null };
+    let currentTab = new URLSearchParams(location.search).get("tab") || "references";
     const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
     const chips = values => `<div class="chips">${values.map(value => `<span class="chip">${esc(value)}</span>`).join("")}</div>`;
+    const checkSummary = rows => (rows||[]).map(row=>`${row.category||row.component||"check"}=${row.result||"unknown"}`).join(" · ") || "—";
     const unique = (items, key) => [...new Set(items.flatMap(item => item.invalid ? [] : item[key] || []))].sort((a,b) => a.localeCompare(b));
     function populate(id, values) { controls[id].insertAdjacentHTML("beforeend", values.map(value => `<option value="${esc(value)}">${esc(value)}</option>`).join("")); }
     function searchable(item) { return [item.item_id,item.relative_path,item.content_label,item.source_label,...(item.tags||[]),...(item.subjects||[]),...(item.forms||[])].join(" ").toLocaleLowerCase(); }
@@ -424,7 +833,7 @@ HTML = r'''<!doctype html>
       document.getElementById("status").textContent = `显示 ${visible.length} / ${state.items.length} 项`;
       const params = new URLSearchParams();
       for (const [id, control] of Object.entries(controls)) { const value = control.type === "checkbox" ? (control.checked ? "1" : "") : control.value; if (value) params.set(id,value); }
-      history.replaceState(null,"",`${location.pathname}${params.size ? `?${params}` : ""}`);
+      if (currentTab === "references") history.replaceState(null,"",`${location.pathname}${params.size ? `?${params}` : ""}`);
     }
     function showDetail(item) {
       state.current = item;
@@ -451,6 +860,111 @@ HTML = r'''<!doctype html>
     document.getElementById("detail").addEventListener("click", event => { if (event.target === event.currentTarget) event.currentTarget.close(); });
     for (const control of Object.values(controls)) control.addEventListener(control.type === "search" ? "input" : "change", render);
     document.getElementById("clear").addEventListener("click", () => { for (const control of Object.values(controls)) { if (control.type === "checkbox") control.checked=false; else control.value=""; } render(); controls.search.focus(); });
+
+    function showTab(tab, updateUrl=true) {
+      currentTab = ["references","attempts","summary"].includes(tab) ? tab : "references";
+      for (const name of ["references","attempts","summary"]) {
+        document.getElementById(`${name}View`).hidden = name !== currentTab;
+        document.querySelector(`[data-tab="${name}"]`).setAttribute("aria-selected", name === currentTab ? "true" : "false");
+      }
+      if (updateUrl) {
+        const params = new URLSearchParams();
+        if (currentTab !== "references") params.set("tab", currentTab);
+        history.replaceState(null,"",`${location.pathname}${params.size ? `?${params}` : ""}`);
+      }
+    }
+    document.querySelector(".tabs").addEventListener("click", event => { const button=event.target.closest("[data-tab]"); if (button) showTab(button.dataset.tab); });
+    showTab(currentTab, false);
+
+    const attemptUnique = (key, flatten=false) => [...new Set(attemptState.cases.flatMap(item => {
+      const value=item[key]; return flatten ? (Array.isArray(value) ? value : []) : value ? [value] : [];
+    }))].sort((a,b)=>String(a).localeCompare(String(b)));
+    function attemptSearchable(item) { return [item.case_id,item.task_id,item.request,item.generator,...(item.characters||[]),...(item.forms||[]),...(item.failure_categories||[]),...(item.reference_item_ids||[]),...(item.user_feedback||[]),JSON.stringify([item.qa,item.preview_checks,item.medium_component_checks,item.failures,item.decision_chain,item.candidate_source])].join(" ").toLocaleLowerCase(); }
+    function attemptMatches(item) {
+      const isError=item.generated_status === "error";
+      if ((attemptControls.caseType.value === "error") !== isError) return false;
+      if (!attemptControls.includeArchived.checked && item.archived) return false;
+      if (attemptControls.attemptSearch.value && !attemptSearchable(item).includes(attemptControls.attemptSearch.value.toLocaleLowerCase())) return false;
+      if (attemptControls.effectiveStatus.value && item.effective_status !== attemptControls.effectiveStatus.value) return false;
+      if (attemptControls.attemptCharacter.value && !(item.characters||[]).includes(attemptControls.attemptCharacter.value)) return false;
+      if (attemptControls.attemptForm.value && !(item.forms||[]).includes(attemptControls.attemptForm.value)) return false;
+      if (attemptControls.attemptIntent.value && item.intent !== attemptControls.attemptIntent.value) return false;
+      if (attemptControls.attemptShot.value && item.shot !== attemptControls.attemptShot.value) return false;
+      if (attemptControls.attemptView.value && item.view_angle !== attemptControls.attemptView.value) return false;
+      if (attemptControls.attemptFailure.value && !(item.failure_categories||[]).includes(attemptControls.attemptFailure.value)) return false;
+      if (attemptControls.attemptGenerator.value && item.generator !== attemptControls.attemptGenerator.value) return false;
+      if (attemptControls.promptDiff.value === "different" && item.submitted_prompt_differs_from_compiled !== true) return false;
+      if (attemptControls.promptDiff.value === "same" && item.submitted_prompt_differs_from_compiled !== false) return false;
+      if (attemptControls.promptDiff.value === "unknown" && item.submitted_prompt_differs_from_compiled != null) return false;
+      if (attemptControls.submissionState.value === "tracked" && !item.submission_tracked) return false;
+      if (attemptControls.submissionState.value === "untracked" && item.submission_tracked) return false;
+      if (attemptControls.attemptReference.value && !(item.reference_item_ids||[]).includes(attemptControls.attemptReference.value)) return false;
+      if (attemptControls.attemptProvenance.value === "complete" && (item.legacy_fallback || item.incomplete_provenance)) return false;
+      if (attemptControls.attemptProvenance.value === "legacy" && !item.legacy_fallback) return false;
+      if (attemptControls.attemptProvenance.value === "incomplete" && !item.incomplete_provenance) return false;
+      if (attemptControls.retryExhausted.checked && !item.transport_retry_exhausted) return false;
+      if (attemptControls.boundedRepair.checked && !item.has_later_bounded_repair) return false;
+      return true;
+    }
+    function renderAttempts() {
+      const visible=attemptState.cases.filter(attemptMatches);
+      document.getElementById("attemptGrid").innerHTML=visible.map(item=>`
+        <article class="card">
+          <div class="thumb">${item.thumbnail ? `<img src="${esc(item.thumbnail)}" alt="${esc(item.case_id)}" loading="lazy">` : `<div class="placeholder ${item.output_error ? "error" : ""}">${esc(item.output_error || (item.generated_status === "error" ? "Generation error · no output" : "No output recorded"))}</div>`}</div>
+          <div class="card-body"><div class="eyebrow">${esc(item.generated_status)} → ${esc(item.effective_status)}${item.archived ? " · archived" : ""}</div><h2 class="item-id">${esc(item.case_id)}</h2><p class="path">${esc(item.request || "No request snapshot")}</p>
+          ${chips([item.intent,item.medium,...(item.characters||[]),...(item.forms||[]),item.shot,item.view_angle].filter(Boolean).slice(0,10))}
+          <div class="outcome"><span>refs ${item.reference_count}</span><span>${esc(item.generator||"unknown generator")}</span><span>${item.duration_seconds == null ? "no timing" : `${esc(item.duration_seconds)}s`}</span></div>
+          <dl class="card-facts"><dt>Prompt hashes</dt><dd>compiled ${esc(item.compiled_prompt_sha256||"—")}<br>submitted ${esc(item.submitted_prompt_sha256||"—")}<br>different=${esc(item.submitted_prompt_differs_from_compiled ?? "—")}</dd><dt>Prompt report</dt><dd>${esc(item.prompt_length ?? "—")} chars · ${item.prompt_compile ? "available" : "unavailable"}</dd><dt>Reference IDs</dt><dd>${esc((item.reference_item_ids||[]).join(", ")||"—")}</dd><dt>Preview checks</dt><dd>${esc(checkSummary(item.preview_checks))}</dd><dt>Medium checks</dt><dd>${esc(checkSummary(item.medium_component_checks))}</dd><dt>Transport</dt><dd>network=${esc(item.network_failure ?? "—")} · exhausted=${esc(item.transport_retry_exhausted ?? "—")}</dd></dl>
+          ${item.failure_categories?.length ? `<p class="path error">${esc(item.failure_categories.join(" · "))}</p>` : ""}
+          ${item.user_feedback?.length ? `<p class="path">反馈：${esc(item.user_feedback.join("；"))}</p>` : ""}
+          <button type="button" data-attempt-detail="${esc(item.case_id)}">查看详情</button></div>
+        </article>`).join("");
+      document.getElementById("attemptEmpty").hidden=visible.length!==0;
+      document.getElementById("attemptStatus").textContent=`显示 ${visible.length} / ${attemptState.cases.length} 个生成 case；decision attempt 不另计生成`;
+    }
+    function jsonBlock(label, value) { return value == null ? "" : `<section class="detail-section"><h3>${esc(label)}</h3><pre>${esc(JSON.stringify(value,null,2))}</pre></section>`; }
+    function showAttemptDetail(item) {
+      attemptState.current=item;
+      document.getElementById("attemptDetailTitle").textContent=item.case_id;
+      const inputHtml=(item.actual_input_images||[]).map(input=>`<article class="input-item">${input.image_url ? `<img src="${esc(input.image_url)}" alt="input ${esc(input.order)} ${esc(input.role)}">` : ""}<strong>Input ${esc(input.order)} · ${esc(input.role)}</strong><p class="path">${esc(input.source_path||input.path||"")}</p><p class="path">${esc(input.sha256||"")}</p></article>`).join("");
+      document.getElementById("attemptDetailBody").innerHTML=`
+        ${item.output_url && !item.output_error ? `<img class="detail-image" src="${esc(item.output_url)}" alt="${esc(item.case_id)} full output">` : `<div class="state ${item.output_error ? "error" : ""}">${esc(item.output_error || "No visual output")}</div>`}
+        <dl><dt>Task / generation</dt><dd>${esc(item.task_id)} / ${esc(item.generation_attempt)}</dd><dt>Generated / effective</dt><dd>${esc(item.generated_status)} / ${esc(item.effective_status)}</dd><dt>Decision attempt</dt><dd>${esc(item.decision_attempt ?? "—")}</dd><dt>Intent / medium</dt><dd>${esc(item.intent)} / ${esc(item.medium)}</dd><dt>Character forms</dt><dd>${esc(JSON.stringify(item.identity_forms))}</dd><dt>Shot / view</dt><dd>${esc(item.shot||"—")} / ${esc(item.view_angle||"—")}</dd><dt>Generator / timing</dt><dd>${esc(item.generator||"—")} / ${esc(item.duration_seconds ?? "—")}s</dd><dt>Transport</dt><dd>${esc(item.generation_transport||"—")}; tracked=${esc(item.submission_tracked)}; network=${esc(item.network_failure)}; exhausted=${esc(item.transport_retry_exhausted)}</dd><dt>Prompt hashes</dt><dd>compiled ${esc(item.compiled_prompt_sha256||"—")}<br>submitted ${esc(item.submitted_prompt_sha256||"—")}<br>different=${esc(item.submitted_prompt_differs_from_compiled)}</dd><dt>Prompt length / report</dt><dd>${esc(item.prompt_length ?? "—")} / ${item.prompt_compile ? "available" : "unavailable"}</dd><dt>References</dt><dd>${esc((item.reference_item_ids||[]).join(", ")||"—")}</dd><dt>Parent / children</dt><dd>${esc(item.parent_task_id||"—")} / ${esc((item.child_tasks||[]).join(", ")||"—")}</dd><dt>Later bounded repair</dt><dd>${esc((item.later_bounded_repairs||[]).join(", ")||"—")}</dd><dt>Provenance</dt><dd>${esc(JSON.stringify(item.provenance))}</dd></dl>
+        <section class="detail-section"><h3>Request</h3><pre>${esc(item.request||"")}</pre></section>
+        ${inputHtml ? `<section class="detail-section"><h3>Ordered submitted inputs</h3><div class="input-list">${inputHtml}</div></section>` : ""}
+        ${jsonBlock("Preview checks",item.preview_checks)}${jsonBlock("Medium component checks",item.medium_component_checks)}${jsonBlock("Full QA",item.qa)}${jsonBlock("Structured failures",item.failures)}${jsonBlock("Decision chain",item.decision_chain)}${jsonBlock("User feedback",item.user_feedback)}${jsonBlock("Reference manifest",item.reference_manifest)}${jsonBlock("Prompt compilation report",item.prompt_compile)}
+        ${item.compiled_prompt != null ? `<section class="detail-section"><h3>Compiled prompt</h3><pre>${esc(item.compiled_prompt)}</pre></section>` : ""}
+        ${item.submitted_prompt != null ? `<section class="detail-section"><h3>Exact submitted prompt</h3><pre>${esc(item.submitted_prompt)}</pre></section>` : ""}`;
+      document.getElementById("attemptDetail").showModal();
+    }
+    document.getElementById("attemptGrid").addEventListener("click",event=>{const button=event.target.closest("[data-attempt-detail]"); if(button) showAttemptDetail(attemptState.byId.get(button.dataset.attemptDetail));});
+    document.getElementById("closeAttemptDetail").addEventListener("click",()=>document.getElementById("attemptDetail").close());
+    document.getElementById("attemptDetail").addEventListener("click",event=>{if(event.target===event.currentTarget) event.currentTarget.close();});
+    for (const control of Object.values(attemptControls)) control.addEventListener(control.type === "search" ? "input" : "change",renderAttempts);
+    document.getElementById("clearAttempts").addEventListener("click",()=>{for(const control of Object.values(attemptControls)){if(control.type==="checkbox") control.checked=false; else control.value=control.id==="caseType"?"generation":"";} renderAttempts(); attemptControls.attemptSearch.focus();});
+
+    fetch("attempts.json").then(response=>{if(!response.ok) throw new Error(`HTTP ${response.status}`); return response.json();}).then(data=>{
+      if(!Array.isArray(data.cases)) throw new Error("attempts.json 缺少 cases 数组");
+      attemptState.cases=data.cases; attemptState.byId=new Map(data.cases.map(item=>[item.case_id,item]));
+      const add=(id,values)=>document.getElementById(id).insertAdjacentHTML("beforeend",values.map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join(""));
+      add("attemptCharacter",attemptUnique("characters",true)); add("attemptForm",attemptUnique("forms",true)); add("attemptShot",attemptUnique("shot")); add("attemptView",attemptUnique("view_angle")); add("attemptFailure",attemptUnique("failure_categories",true)); add("attemptGenerator",attemptUnique("generator")); add("attemptReference",attemptUnique("reference_item_ids",true));
+      for(const control of Object.values(attemptControls)) control.disabled=false; document.getElementById("clearAttempts").disabled=false; document.getElementById("attemptLoading").hidden=true; renderAttempts();
+    }).catch(error=>{document.getElementById("attemptLoading").hidden=true; const box=document.getElementById("attemptError"); box.hidden=false; box.textContent=`无法读取 attempts.json：${error.message}。请重新运行 builder 并使用 --serve。`; document.getElementById("attemptStatus").textContent="加载失败";});
+
+    fetch("summary.json").then(response=>{if(!response.ok) throw new Error(`HTTP ${response.status}`); return response.json();}).then(data=>{
+      const duration=data.duration_coverage||{}, transport=data.generation_transport||{}, overhead=data.workflow_overhead||{};
+      const cards=[
+        ["Recorded attempts",data.total_attempts,`accepted ${data.accepted_attempts} · rejected ${data.rejected_attempts} · candidate ${data.candidate_attempts} · error ${data.error_attempts}`],
+        ["Accepted yield",data.accepted_yield,"Decided attempt rows; descriptive only"],
+        ["Generation timing",duration.median_seconds == null ? "n/a" : `${duration.median_seconds}s`,`recorded ${duration.recorded}/${duration.total} · p90 ${duration.p90_seconds ?? "n/a"}s`],
+        ["Tracked submissions",transport.tracked_submissions ?? 0,`untracked remote ${transport.untracked_remote_attempts ?? 0}`],
+        ["Retry exhausted",transport.transport_retry_exhausted_errors ?? 0,"Network transport exhaustion"],
+        ["Controllable overhead",overhead.combined?.median_seconds == null ? "n/a" : `${overhead.combined.median_seconds}s`,`pre median ${overhead.pre_generation?.median_seconds ?? "n/a"}s · post median ${overhead.post_generation?.median_seconds ?? "n/a"}s`]
+      ];
+      document.getElementById("summaryGrid").innerHTML=cards.map(([title,value,note])=>`<article class="summary-card"><h2>${esc(title)}</h2><strong>${esc(value)}</strong><p>${esc(note)}</p></article>`).join("")+jsonBlock("Failure categories",data.failure_categories)+jsonBlock("Generation transport by semantic intent",transport.by_semantic_intent)+jsonBlock("Repeated error tasks",data.repeated_error_tasks);
+      document.getElementById("summaryLoading").hidden=true; document.getElementById("summaryStatus").textContent="来源：reference_feedback_report.py；仅描述，不自动修改检索、prompt 或偏好。";
+    }).catch(error=>{document.getElementById("summaryLoading").hidden=true; const box=document.getElementById("summaryError"); box.hidden=false; box.textContent=`无法读取 summary.json：${error.message}`; document.getElementById("summaryStatus").textContent="加载失败";});
+
     fetch("references.json").then(response => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); }).then(data => {
       if (!Array.isArray(data.items)) throw new Error("references.json 缺少 items 数组");
       state.items=data.items; state.byId=new Map(data.items.map(item=>[item.item_id,item])); state.queryContext=data.query_context;
@@ -472,7 +986,11 @@ def build(config: dict, root: Path, query_results: Path | None) -> dict:
     ensure_safe_output(gallery, config)
     gallery.mkdir(parents=True, exist_ok=True)
     payload = read_references(config, root, gallery, query_results)
+    attempts = read_attempts(config, root, gallery)
+    summary = read_summary(root)
     atomic_write_json(gallery / "references.json", payload)
+    atomic_write_json(gallery / "attempts.json", attempts)
+    atomic_write_json(gallery / "summary.json", summary)
     atomic_write_text(gallery / "index.html", HTML)
     serve_command = [
         "scripts/run-python",
@@ -489,20 +1007,23 @@ def build(config: dict, root: Path, query_results: Path | None) -> dict:
     return {
         "gallery": str(gallery / "index.html"),
         "references": payload["count"],
+        "attempts": attempts["count"],
+        "attempt_errors": attempts["error_count"],
+        "attempt_data_errors": len(attempts["errors"]),
         "thumbnail_errors": len(payload["errors"]),
         "query_results": payload["query_result_count"],
         "serve_command": shlex.join(serve_command),
     }
 
 
-def serve(gallery: Path, port: int) -> None:
+def serve(root: Path, port: int) -> None:
     if not 1 <= port <= 65535:
         raise ValueError("port must be between 1 and 65535")
     handler = lambda *args, **kwargs: SimpleHTTPRequestHandler(
-        *args, directory=str(gallery), **kwargs
+        *args, directory=str(root), **kwargs
     )
     server = ThreadingHTTPServer(("127.0.0.1", port), handler)
-    print(f"Serving http://127.0.0.1:{port}/", flush=True)
+    print(f"Serving http://127.0.0.1:{port}/gallery/", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -523,7 +1044,7 @@ def main() -> int:
             else result["gallery"]
         )
         if args.serve:
-            serve(root / "gallery", args.port)
+            serve(root, args.port)
     except (OSError, RuntimeError, TypeError, ValueError) as exc:
         raise SystemExit(str(exc)) from None
     return 0
