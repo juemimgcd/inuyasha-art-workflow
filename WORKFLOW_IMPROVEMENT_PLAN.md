@@ -1,9 +1,9 @@
 # Inuyasha art workflow improvement plan
 
-Status: Part 1 is complete in the live installed skill and implemented on this
-portable-package branch as of 2026-08-30. Parts 2 and 3 remain proposals. The
-package branch was updated through the scoped sync tool after staged compile,
-unit, and workflow validation; no test files were changed.
+Status: Parts 1 and 2 are complete in the live installed skill as of 2026-08-30.
+Part 1 is active in the portable package, and Part 2 is implemented on this
+portable-package branch. Part 3 remains a separate proposal; no test files were
+changed.
 
 Part 1 activation evidence:
 
@@ -20,6 +20,29 @@ Part 1 activation evidence:
   `20260830-part1-semantic-compiler-final-gate` used matching ordered reference
   hashes in each pair and passed with three candidate wins, zero baseline wins,
   and zero candidate critical failures.
+
+Part 2 activation evidence:
+
+- `build_workflow_gallery.py` rejects a missing or stale catalog through the
+  shared freshness gate, then reads SQLite in read-only mode and generates
+  `gallery/index.html`, `references.json`, and content-hash cached thumbnails
+  under the selected live workflow root.
+- The References view exposes the planned authority, subject/form, shot/view,
+  scene, role, certification, and historical-outcome filters; optional retrieval
+  JSON and the returned serve command preserve its existing match reasons in the
+  same read-only detail view.
+- A live build covered 263 references with zero thumbnail errors. Repeated builds
+  were byte-identical, and source catalog/annotation hashes and timestamps were
+  unchanged. Missing-image, invalid-row, missing-JSON, and unsafe-output checks
+  passed.
+- Chromium desktop/tablet/mobile checks passed at three, two, and one columns
+  without horizontal overflow. Safari loaded all 263 references and exposed the
+  filters, thumbnails, and detail controls through native browser accessibility.
+- `validate_workflow.py` passed with `validation_scope: structural-only`. The
+  existing suite ran 261 tests with 258 passing, 2 skipped, and one unrelated
+  lifecycle error in
+  `test_scoped_manga_edit_requires_component_checks`; Part 2 did not change tests
+  or attempt lifecycle code.
 
 This plan adapts three useful ideas from
 [`awesome-gpt-image-2`](https://github.com/freestylefly/awesome-gpt-image-2)
@@ -408,7 +431,6 @@ Generate derived output under the selected workflow root:
 workflow/reference-workflow/gallery/
 ├── index.html
 ├── references.json
-├── attempts.json
 └── thumbnails/
 ```
 
@@ -554,6 +576,9 @@ The casebook should support questions such as:
 - Which local edits proved zero pixel change outside the edit box?
 - Which candidates still have no user decision?
 - Which references recur in explicitly accepted cases?
+
+Part 3 extends the same derived gallery with `gallery/attempts.json`; that file
+is not a Part 2 output or an empty placeholder.
 
 ### Read-only boundary
 
