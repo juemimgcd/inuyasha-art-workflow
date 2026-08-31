@@ -91,6 +91,7 @@ def main() -> int:
     tracked_submissions = 0
     untracked_remote_attempts = 0
     exhausted_network_errors = 0
+    generation_attempts = 0
     input_bytes: list[float] = []
     semantic_attempts = Counter()
     semantic_network_errors = Counter()
@@ -109,6 +110,7 @@ def main() -> int:
         # same image and submission as a second generation or preview.
         if attempt.get("counts_as_generation") is False:
             continue
+        generation_attempts += 1
         if status == "error":
             error_tasks[path.parents[2].name] += 1
         actual_inputs = attempt.get("actual_input_images") or []
@@ -184,7 +186,7 @@ def main() -> int:
         ),
         "duration_coverage": {
             **duration_summary(durations),
-            "total": total_attempts,
+            "total": generation_attempts,
             "by_intent": {
                 intent: duration_summary(values)
                 for intent, values in durations_by_intent.items()
@@ -286,7 +288,7 @@ def main() -> int:
     )
     print(
         "Measured generation duration: "
-        f"{len(durations)}/{total_attempts}; "
+        f"{len(durations)}/{generation_attempts}; "
         f"median={result['duration_coverage']['median_seconds']}s; "
         f"max={result['duration_coverage']['maximum_seconds']}s"
     )

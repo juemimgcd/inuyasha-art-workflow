@@ -412,8 +412,8 @@ def load_attempt(
     if attempt_dirs != ["001"]:
         raise ValueError("visual eval task must contain exactly one generation attempt")
     attempt = read_json(attempt_dir / "attempt.json", "generation attempt")
-    if attempt.get("schema_version") not in {1, 2} or attempt.get("attempt") != 1:
-        raise ValueError("visual eval requires attempt schema 1 or 2 and attempt number 1")
+    if attempt.get("schema_version") not in {1, 2, 3} or attempt.get("attempt") != 1:
+        raise ValueError("visual eval requires attempt schema 1, 2, or 3 and attempt number 1")
     status = attempt.get("status")
     if status not in {*VISUAL_ATTEMPT_STATUSES, "error"}:
         raise ValueError("visual eval attempt must be visual or a recorded error")
