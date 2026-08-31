@@ -9,7 +9,6 @@ import shutil
 from pathlib import Path
 
 from task_workflow import (
-    ATTEMPT_SCHEMA_VERSION,
     BRIEF_SCHEMA_VERSION,
     RESULT_SCHEMA_VERSION,
     read_json,
@@ -80,7 +79,8 @@ def migrate(task_dir: Path, apply: bool) -> list[str]:
     attempt_dir = task_dir / "attempts" / "001"
     attempt_dir.mkdir(parents=True, exist_ok=True)
     attempt = {
-        "schema_version": ATTEMPT_SCHEMA_VERSION,
+        # Legacy imports cannot claim the immutable bundle guaranteed by schema 3.
+        "schema_version": 2,
         "attempt": 1,
         "recorded_at": result.get("generated_at") or now_iso(),
         "status": "accepted",

@@ -381,6 +381,139 @@ def output_path(result: dict) -> Path | None:
     return None
 
 
+def accepted_attempt_snapshot_failures(
+    task_dir: Path,
+    result: dict,
+    attempt_path: Path | None,
+    attempt: dict,
+) -> list[str]:
+    """Verify the immutable bundle used for final acceptance."""
+    failures = []
+    if attempt_path is None or not attempt_path.is_file():
+        return ["result.accepted_attempt must resolve to attempt.json"]
+    if attempt.get("attempt") != result.get("accepted_attempt"):
+        failures.append(
+            "accepted attempt number does not match result.accepted_attempt"
+        )
+    if attempt.get("status") != "accepted":
+        failures.append("result.accepted_attempt is not accepted")
+
+    snapshot_dir = attempt_path.parent
+    strict_bundle = attempt.get("schema_version") == 3
+    snapshot_brief_path = snapshot_dir / "brief.json"
+    snapshot_brief = (
+        load_json(snapshot_brief_path, failures)
+        if snapshot_brief_path.is_file()
+        else {}
+    )
+    schema_5 = (
+        type(snapshot_brief.get("schema_version")) is int
+        and snapshot_brief["schema_version"] >= 5
+    )
+    bindings = []
+    for field, name in (
+        ("brief_sha256", "brief.json"),
+        ("reference_manifest_sha256", "reference-manifest.json"),
+        ("compiled_prompt_sha256", "prompt.md"),
+    ):
+        if strict_bundle or attempt.get(field) is not None:
+            bindings.append((field, name))
+    if strict_bundle or attempt.get("qa_sha256") is not None:
+        bindings.append(("qa_sha256", "qa.json"))
+    if strict_bundle or attempt.get("evidence_log_sha256") is not None:
+        bindings.append(("evidence_log_sha256", "evidence-log.md"))
+    if (
+        strict_bundle and prompt_compile_report_required(snapshot_brief)
+    ) or attempt.get("prompt_compile_sha256") is not None:
+        bindings.append(("prompt_compile_sha256", "prompt-compile.json"))
+    if strict_bundle or attempt.get("submitted_prompt_sha256") is not None:
+        bindings.append(("submitted_prompt_sha256", "submitted-prompt.md"))
+    if attempt.get("generation_submission_sha256") is not None or (
+        strict_bundle and schema_5 and attempt.get("decision_from_attempt") is None
+    ):
+        bindings.append(
+            ("generation_submission_sha256", "generation-submission.json")
+        )
+    for field, name in bindings:
+        path = snapshot_dir / name
+        if not path.is_file():
+            failures.append(f"accepted attempt is missing {name} snapshot")
+        elif attempt.get(field) != file_hash(path):
+            failures.append(f"accepted attempt {name} hash is stale")
+
+    accepted_output = output_path(result)
+    recorded_output = (
+        resolve_recorded_path(attempt.get("output", ""))
+        if attempt.get("output")
+        else None
+    )
+    if accepted_output != recorded_output:
+        failures.append("accepted result output does not match accepted attempt")
+    if (
+        attempt.get("output_sha256") is not None
+        and recorded_output is not None
+        and recorded_output.is_file()
+    ):
+        if attempt.get("output_sha256") != file_hash(recorded_output):
+            failures.append("accepted attempt output hash is stale")
+
+    decision_from_attempt = attempt.get("decision_from_attempt")
+    if strict_bundle and decision_from_attempt is None:
+        if attempt.get("accepted_from_attempt") is not None:
+            failures.append(
+                "direct accepted attempt must not set accepted_from_attempt"
+            )
+        if attempt.get("counts_as_generation") is not True:
+            failures.append("direct accepted attempt must count as a generation")
+    if strict_bundle and attempt.get("rejected_from_attempt") is not None:
+        failures.append("accepted attempt must not set rejected_from_attempt")
+    if decision_from_attempt is not None:
+        if type(decision_from_attempt) is not int or decision_from_attempt < 1:
+            failures.append(
+                "accepted attempt decision_from_attempt must be a positive integer"
+            )
+            return failures
+        if attempt.get("accepted_from_attempt") != decision_from_attempt:
+            failures.append(
+                "accepted attempt accepted_from_attempt does not match its decision source"
+            )
+        if attempt.get("counts_as_generation") is not False:
+            failures.append("accepted decision marker must not count as a generation")
+        source_path = (
+            task_dir / "attempts" / f"{decision_from_attempt:03d}" / "attempt.json"
+        )
+        if not source_path.is_file():
+            failures.append("accepted decision source attempt is missing")
+            return failures
+        source = load_json(source_path, failures)
+        if source.get("attempt") != decision_from_attempt:
+            failures.append(
+                "accepted decision source number does not match decision_from_attempt"
+            )
+        if source.get("status") != "candidate":
+            failures.append("accepted decision source attempt is not a candidate")
+        source_fields = [
+            "brief_sha256",
+            "reference_manifest_sha256",
+            "compiled_prompt_sha256",
+            "prompt_compile_sha256",
+            "submitted_prompt_sha256",
+            "evidence_log_sha256",
+            "output_sha256",
+        ]
+        if strict_bundle:
+            source_fields.append("generation_submission_sha256")
+        for field in source_fields:
+            if (
+                source.get(field) is not None
+                and attempt.get(field) != source.get(field)
+            ):
+                failures.append(
+                    f"accepted decision marker does not preserve source {field}"
+                )
+    return failures
+
+
 def candidate_source_failures(
     task_dir: Path, brief: dict, references: list[dict]
 ) -> list[str]:
@@ -687,10 +820,39 @@ def main() -> int:
         )
         return 2
 
-    brief = load_json(task_dir / "brief.json", failures)
-    manifest = load_json(task_dir / "reference-manifest.json", failures)
-    qa = load_json(task_dir / "qa.json", failures)
-    prompt_compile_path = task_dir / "prompt-compile.json"
+    final_result: dict = {}
+    accepted_attempt: dict = {}
+    accepted_attempt_path: Path | None = None
+    artifact_dir = task_dir
+    if args.stage == "final":
+        final_result = load_json(task_dir / "result.json", failures)
+        accepted_attempt_number = final_result.get("accepted_attempt")
+        if type(accepted_attempt_number) is int and accepted_attempt_number > 0:
+            accepted_attempt_path = (
+                task_dir
+                / "attempts"
+                / f"{accepted_attempt_number:03d}"
+                / "attempt.json"
+            )
+            if accepted_attempt_path.is_file():
+                accepted_attempt = load_json(accepted_attempt_path, failures)
+                snapshot_dir = accepted_attempt_path.parent
+                if accepted_attempt.get("status") == "accepted" and all(
+                    (snapshot_dir / name).is_file()
+                    for name in ("brief.json", "reference-manifest.json", "prompt.md")
+                ):
+                    artifact_dir = snapshot_dir
+
+    brief = load_json(artifact_dir / "brief.json", failures)
+    manifest = load_json(artifact_dir / "reference-manifest.json", failures)
+    qa_snapshot_path = artifact_dir / "qa.json"
+    qa_path = (
+        qa_snapshot_path
+        if accepted_attempt.get("qa_sha256") is not None
+        else task_dir / "qa.json"
+    )
+    qa = load_json(qa_path, failures)
+    prompt_compile_path = artifact_dir / "prompt-compile.json"
     if prompt_compile_report_required(brief) and not prompt_compile_path.is_file():
         failures.append("missing task file: prompt-compile.json")
     split_domain_task = is_split_domain_task(brief, qa)
@@ -778,10 +940,17 @@ def main() -> int:
         failures.append("brief cannot declare one subject as both character and prop")
     required_forms = {**identity_forms, **prop_forms}
 
-    evidence = (task_dir / "evidence-log.md").read_text(encoding="utf-8")
+    snapshot_evidence_path = artifact_dir / "evidence-log.md"
+    evidence_path = (
+        snapshot_evidence_path
+        if accepted_attempt.get("evidence_log_sha256") is not None
+        and snapshot_evidence_path.is_file()
+        else task_dir / "evidence-log.md"
+    )
+    evidence = evidence_path.read_text(encoding="utf-8")
     if re.search(r"^- [^:\n]+:\s*$", evidence, flags=re.MULTILINE):
         failures.append("evidence-log.md still contains blank template fields")
-    prompt = (task_dir / "prompt.md").read_text(encoding="utf-8")
+    prompt = (artifact_dir / "prompt.md").read_text(encoding="utf-8")
     if prompt_compile_path.is_file():
         prompt_compile = load_json(prompt_compile_path, failures)
         failures.extend(
@@ -1589,7 +1758,7 @@ def main() -> int:
                     f"QA {status} has no note: "
                     f"{check.get('check', '[unnamed check]')}"
                 )
-        result = load_json(task_dir / "result.json", failures)
+        result = final_result
         if brief_schema >= BRIEF_SCHEMA_VERSION:
             if result.get("schema_version") != RESULT_SCHEMA_VERSION:
                 failures.append(
@@ -1600,30 +1769,32 @@ def main() -> int:
                 not isinstance(revision, dict) for revision in revisions
             ):
                 failures.append("result.revisions must be a list of objects")
-            accepted_attempt = result.get("accepted_attempt")
-            attempt_path = (
-                task_dir / "attempts" / f"{accepted_attempt:03d}" / "attempt.json"
-                if isinstance(accepted_attempt, int)
-                else None
+        has_bundle_hashes = any(
+            accepted_attempt.get(field) is not None
+            for field in (
+                "brief_sha256",
+                "reference_manifest_sha256",
+                "compiled_prompt_sha256",
+                "prompt_compile_sha256",
+                "submitted_prompt_sha256",
+                "generation_submission_sha256",
+                "qa_sha256",
+                "evidence_log_sha256",
             )
-            if attempt_path is None or not attempt_path.is_file():
-                failures.append("result.accepted_attempt must resolve to attempt.json")
-            else:
-                attempt = load_json(attempt_path, failures)
-                if attempt.get("status") != "accepted":
-                    failures.append("result.accepted_attempt is not accepted")
-                if prompt_compile_report_required(brief):
-                    attempt_report = attempt_path.parent / "prompt-compile.json"
-                    if not attempt_report.is_file():
-                        failures.append(
-                            "accepted attempt is missing prompt-compile.json snapshot"
-                        )
-                    elif attempt.get("prompt_compile_sha256") != file_hash(
-                        attempt_report
-                    ):
-                        failures.append(
-                            "accepted attempt prompt-compile.json hash is stale"
-                        )
+        )
+        if (
+            accepted_attempt.get("schema_version") == 3
+            or has_bundle_hashes
+            or accepted_attempt.get("output_sha256") is not None
+        ):
+            failures.extend(
+                accepted_attempt_snapshot_failures(
+                    task_dir,
+                    result,
+                    accepted_attempt_path,
+                    accepted_attempt,
+                )
+            )
         if result.get("status") != "accepted":
             failures.append("result.status must be accepted")
         output = output_path(result)

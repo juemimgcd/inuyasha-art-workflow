@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -20,7 +21,7 @@ from workflow_common import (
 
 BRIEF_SCHEMA_VERSION = 5
 RESULT_SCHEMA_VERSION = 3
-ATTEMPT_SCHEMA_VERSION = 2
+ATTEMPT_SCHEMA_VERSION = 3
 LATENCY_SCHEMA_VERSION = 2
 QA_SCHEMA_VERSION = 2
 REFERENCE_STRATEGY_SCHEMA_VERSION = 1
@@ -1526,6 +1527,31 @@ def _deduplicate_invariants(brief: dict[str, Any]) -> tuple[dict[str, Any], list
     return normalized, merged
 
 
+def _has_affirmed_phrase(text: str, phrases: tuple[str, ...]) -> bool:
+    """Ignore a phrase only when its local wording explicitly negates it."""
+    padding = r"[\s`'\"“”‘’()\[\]{}]*"
+    prefix_gap = rf"{padding}[:：]?{padding}"
+    clause_end = rf"(?={padding}(?:$|[,.;!?，。；！？\n]))"
+    prefix = (
+        r"(?:不要让?|别让?|不能让?|不得让?|不可让?|不许让?|禁止|避免|"
+        r"do not(?: let)?|don't(?: let)?|cannot(?: let)?|can't(?: let)?|"
+        r"must not(?: let)?|should not(?: let)?|may not|never|avoid|not)"
+    )
+    suffix = (
+        r"(?:不得出现|不应出现|不要出现|禁止出现|must not happen|"
+        r"should not happen|is forbidden|is not allowed)"
+    )
+    for phrase in phrases:
+        escaped = re.escape(phrase)
+        negated = (
+            rf"(?:{prefix}{prefix_gap}{escaped}|"
+            rf"{escaped}{padding}{suffix}{clause_end})"
+        )
+        if phrase in re.sub(negated, "", text):
+            return True
+    return False
+
+
 def _structured_prompt_conflicts(brief: dict[str, Any]) -> list[dict[str, str]]:
     """Detect only explicit structured contradictions; never guess semantically."""
     conflicts = []
@@ -1539,9 +1565,9 @@ def _structured_prompt_conflicts(brief: dict[str, Any]) -> list[dict[str, str]]:
         if value
     ).casefold()
     identity_forms = brief.get("identity_forms") or {}
-    if "human-form" in identity_forms.values() and any(
-        phrase in constraint_text
-        for phrase in ("保留犬耳", "露出犬耳", "with dog ears", "keep dog ears")
+    if "human-form" in identity_forms.values() and _has_affirmed_phrase(
+        constraint_text,
+        ("保留犬耳", "露出犬耳", "with dog ears", "keep dog ears"),
     ):
         conflicts.append(
             {
@@ -1602,7 +1628,7 @@ def _structured_prompt_conflicts(brief: dict[str, Any]) -> list[dict[str, str]]:
         found = {
             direction
             for direction, phrases in values.items()
-            if any(phrase in constraint_text for phrase in phrases)
+            if _has_affirmed_phrase(constraint_text, phrases)
         }
         if len(found) > 1:
             conflicts.append(

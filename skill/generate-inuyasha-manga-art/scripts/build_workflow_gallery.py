@@ -247,6 +247,40 @@ def attempt_number(path: Path) -> int:
         return -1
 
 
+def decision_generation_attempt(attempt: dict) -> int | None:
+    for field in (
+        "decision_from_attempt",
+        "accepted_from_attempt",
+        "rejected_from_attempt",
+    ):
+        value = attempt.get(field)
+        if type(value) is int and value > 0:
+            return value
+    return None
+
+
+def candidate_generation_attempt(
+    tasks_root: Path,
+    task_id: str,
+    source_attempt: int,
+) -> int:
+    """Map a decision marker back to the generation attempt it decided."""
+    path = (
+        tasks_root
+        / task_id
+        / "attempts"
+        / f"{source_attempt:03d}"
+        / "attempt.json"
+    )
+    try:
+        attempt = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return source_attempt
+    if not isinstance(attempt, dict):
+        return source_attempt
+    return decision_generation_attempt(attempt) or source_attempt
+
+
 def normalized_check_rows(value) -> list[dict]:
     return value if isinstance(value, list) else []
 
@@ -274,7 +308,14 @@ def read_attempts(config: dict, root: Path, gallery: Path) -> dict:
         if isinstance(candidate_source, dict):
             source_task = candidate_source.get("task_id") or candidate_source.get("source_task_id")
             source_attempt = candidate_source.get("attempt") or candidate_source.get("attempt_number")
-            if isinstance(source_task, str) and isinstance(source_attempt, int):
+            if (
+                isinstance(source_task, str)
+                and type(source_attempt) is int
+                and source_attempt > 0
+            ):
+                source_attempt = candidate_generation_attempt(
+                    tasks_root, source_task, source_attempt
+                )
                 exact_repairs.setdefault((source_task, source_attempt), []).append(task_dir.name)
 
     cases = []
@@ -300,9 +341,7 @@ def read_attempts(config: dict, root: Path, gallery: Path) -> dict:
         decisions: dict[int, list[dict]] = {}
         generations = []
         for attempt in attempts:
-            decision_from = attempt.get("decision_from_attempt")
-            if not isinstance(decision_from, int):
-                decision_from = attempt.get("accepted_from_attempt") or attempt.get("rejected_from_attempt")
+            decision_from = decision_generation_attempt(attempt)
             if attempt.get("counts_as_generation") is False or isinstance(decision_from, int):
                 if isinstance(decision_from, int):
                     decisions.setdefault(decision_from, []).append(attempt)

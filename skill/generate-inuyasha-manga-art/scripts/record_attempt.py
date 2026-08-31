@@ -431,15 +431,11 @@ def main() -> int:
     manifest = read_json(task_dir / "reference-manifest.json")
     output = args.output.expanduser().resolve() if args.output else None
     compiled_prompt = task_dir / "prompt.md"
-    if not compiled_prompt.is_file():
-        raise SystemExit(f"compiled prompt is missing: {compiled_prompt}")
     submitted_prompt = (
         args.submitted_prompt.expanduser().resolve()
         if args.submitted_prompt
         else compiled_prompt
     )
-    if not submitted_prompt.is_file():
-        raise SystemExit(f"submitted prompt is missing: {submitted_prompt}")
     if args.status != "error" and (output is None or not output.is_file()):
         raise SystemExit(
             "accepted/rejected/candidate attempts require an existing --output"
@@ -502,26 +498,6 @@ def main() -> int:
         comparison_sheet_path = Path(
             comparison_payload["sheet"]["path"]
         ).expanduser().resolve()
-    if args.status == "accepted":
-        strategy_failures = reference_strategy_failures(brief)
-        if strategy_failures:
-            raise SystemExit(
-                "acceptance blocked by reference strategy: "
-                + "; ".join(strategy_failures)
-            )
-        qa_path = task_dir / "qa.json"
-        qa = read_json(qa_path) if qa_path.is_file() else None
-        split_domain_task = is_split_domain_task(brief, qa)
-        if split_domain_task and qa is None:
-            raise SystemExit("split-domain acceptance requires qa.json")
-        if split_domain_task:
-            qa_failures = qa_acceptance_failures(qa or {})
-            if qa_failures:
-                raise SystemExit(
-                    "split-domain acceptance blocked by QA: "
-                    + "; ".join(qa_failures)
-                )
-
     attempts_root = task_dir / "attempts"
     existing = (
         sorted(
@@ -564,37 +540,162 @@ def main() -> int:
         ),
         None,
     )
-
-    references = manifest.get("references", [])
-    reference_item_ids = [entry.get("item_id") for entry in references]
-    blame_item_ids = sorted(set(args.reference_blame))
-    unknown_blame = sorted(set(blame_item_ids) - set(reference_item_ids))
-    if unknown_blame:
-        raise SystemExit(
-            "--reference-blame must name a manifest item ID: "
-            + ", ".join(unknown_blame)
+    if decision_source_attempt is not None:
+        source_output_value = decision_source_attempt.get("output")
+        source_output_path = (
+            Path(source_output_value).expanduser().resolve()
+            if isinstance(source_output_value, str) and source_output_value.strip()
+            else None
         )
-    if blame_item_ids and args.status != "rejected":
-        raise SystemExit("--reference-blame is valid only for rejected attempts")
+        if source_output_path is None or not source_output_path.is_file():
+            raise SystemExit("decision source candidate output is missing")
+        if file_hash(source_output_path) != decision_source_attempt.get("output_sha256"):
+            raise SystemExit(
+                "decision source candidate output hash does not match attempt.json"
+            )
     recorded_at = now_iso()
     response_window_path = task_dir / "response-window.json"
-    response_window = (
-        read_json(response_window_path) if response_window_path.is_file() else {}
-    )
+    decision_window_matches_source = False
+    if counts_as_generation:
+        response_window_record = (
+            read_json(response_window_path) if response_window_path.is_file() else {}
+        )
+    else:
+        try:
+            candidate_window = (
+                read_json(response_window_path)
+                if response_window_path.is_file()
+                else {}
+            )
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            candidate_window = {}
+        decision_window_matches_source = (
+            isinstance(candidate_window, dict)
+            and candidate_window.get("phase") == "recorded"
+            and candidate_window.get("last_attempt") == decision_from_attempt
+        )
+        response_window_record = (
+            candidate_window if decision_window_matches_source else {}
+        )
+    if counts_as_generation and not isinstance(response_window_record, dict):
+        raise SystemExit("response-window.json must be an object")
+    response_window = response_window_record if counts_as_generation else {}
     submission_path = task_dir / "generation-submission.json"
     current_submission = (
-        read_json(submission_path) if submission_path.is_file() else None
+        read_json(submission_path)
+        if counts_as_generation and submission_path.is_file()
+        else None
     )
     submission = current_submission
     submission_snapshot_path = submission_path if submission is not None else None
     compile_report_snapshot_path = task_dir / "prompt-compile.json"
     compile_report_prompt_path = compiled_prompt
     compile_report_brief = brief
+    snapshot_brief_path = task_dir / "brief.json"
+    snapshot_manifest_path = task_dir / "reference-manifest.json"
+    snapshot_prompt_path = compiled_prompt
+    snapshot_submitted_prompt_path = submitted_prompt
+    snapshot_evidence_path = task_dir / "evidence-log.md"
+    snapshot_qa_path = task_dir / "qa.json"
+    snapshot_manifest = manifest
+    submitted_prompt_source = (
+        "explicit" if args.submitted_prompt else "compiled-verbatim"
+    )
     if decision_source_attempt is not None:
         source_attempt_dir = attempts_root / f"{int(decision_source_attempt['attempt']):03d}"
+        snapshot_brief_path = source_attempt_dir / "brief.json"
+        snapshot_manifest_path = source_attempt_dir / "reference-manifest.json"
+        snapshot_prompt_path = source_attempt_dir / "prompt.md"
+        snapshot_submitted_prompt_path = source_attempt_dir / "submitted-prompt.md"
+        source_evidence_path = source_attempt_dir / "evidence-log.md"
+        required_source_artifacts = {
+            "brief snapshot": snapshot_brief_path,
+            "reference manifest snapshot": snapshot_manifest_path,
+            "compiled prompt snapshot": snapshot_prompt_path,
+        }
+        missing_source_artifacts = [
+            label
+            for label, path in required_source_artifacts.items()
+            if not path.is_file()
+        ]
+        if missing_source_artifacts:
+            raise SystemExit(
+                "decision source attempt is missing immutable artifacts: "
+                + ", ".join(missing_source_artifacts)
+            )
+        snapshot_manifest = read_json(snapshot_manifest_path)
+        compile_report_brief = read_json(snapshot_brief_path)
+        expected_evidence_hash = decision_source_attempt.get("evidence_log_sha256")
+        if expected_evidence_hash is not None and not source_evidence_path.is_file():
+            raise SystemExit(
+                "decision source attempt is missing its immutable evidence log"
+            )
+        if source_evidence_path.is_file():
+            snapshot_evidence_path = source_evidence_path
+        elif any(
+            current.is_file() and file_hash(current) != file_hash(snapshot)
+            for current, snapshot in (
+                (task_dir / "brief.json", snapshot_brief_path),
+                (task_dir / "reference-manifest.json", snapshot_manifest_path),
+                (task_dir / "prompt.md", snapshot_prompt_path),
+            )
+        ):
+            raise SystemExit(
+                "decision source candidate predates immutable evidence snapshots; "
+                "cannot safely accept it after current task artifacts changed"
+            )
+        recorded_submitted_prompt_source = decision_source_attempt.get(
+            "submitted_prompt_source"
+        )
+        submitted_prompt_source = (
+            recorded_submitted_prompt_source or "compiled-verbatim"
+        )
+        if not snapshot_submitted_prompt_path.is_file():
+            source_prompt_hash = file_hash(snapshot_prompt_path)
+            submitted_hash = decision_source_attempt.get("submitted_prompt_sha256")
+            compiled_hash = decision_source_attempt.get("compiled_prompt_sha256")
+            submitted_prompt_is_provable = (
+                recorded_submitted_prompt_source == "compiled-verbatim"
+                or submitted_hash == compiled_hash == source_prompt_hash
+            )
+            if not submitted_prompt_is_provable:
+                raise SystemExit(
+                    "decision source attempt is missing its immutable submitted prompt"
+                )
+            snapshot_submitted_prompt_path = snapshot_prompt_path
         source_submission_path = (
             source_attempt_dir / "generation-submission.json"
         )
+        expected_submission_hash = decision_source_attempt.get(
+            "generation_submission_sha256"
+        )
+        source_schema = compile_report_brief.get("schema_version")
+        source_requires_submission = (
+            decision_source_attempt.get("schema_version") == 3
+            and type(source_schema) is int
+            and source_schema >= 5
+        )
+        if source_requires_submission and not (
+            isinstance(expected_submission_hash, str)
+            and expected_submission_hash.strip()
+        ):
+            raise SystemExit(
+                "schema-5 decision source requires a hash-bound generation submission"
+            )
+        if (
+            expected_submission_hash is not None
+            and not source_submission_path.is_file()
+        ):
+            raise SystemExit(
+                "decision source attempt is missing its immutable generation submission"
+            )
+        if (
+            expected_submission_hash is not None
+            and expected_submission_hash != file_hash(source_submission_path)
+        ):
+            raise SystemExit(
+                "decision source attempt has a stale generation submission hash"
+            )
         submission = (
             read_json(source_submission_path)
             if source_submission_path.is_file()
@@ -603,9 +704,132 @@ def main() -> int:
         submission_snapshot_path = (
             source_submission_path if submission is not None else None
         )
+        if source_requires_submission and (
+            not isinstance(submission, dict) or submission.get("state") != "submitted"
+        ):
+            raise SystemExit(
+                "schema-5 decision source requires a submitted generation snapshot"
+            )
         compile_report_snapshot_path = source_attempt_dir / "prompt-compile.json"
-        compile_report_prompt_path = source_attempt_dir / "prompt.md"
-        compile_report_brief = read_json(source_attempt_dir / "brief.json")
+        compile_report_prompt_path = snapshot_prompt_path
+        expected_compile_report_hash = decision_source_attempt.get(
+            "prompt_compile_sha256"
+        )
+        if (
+            expected_compile_report_hash is not None
+            and not compile_report_snapshot_path.is_file()
+        ):
+            raise SystemExit(
+                "decision source attempt is missing its immutable prompt compile report"
+            )
+
+        source_hashes = {
+            "brief_sha256": snapshot_brief_path,
+            "reference_manifest_sha256": snapshot_manifest_path,
+            "compiled_prompt_sha256": snapshot_prompt_path,
+            "submitted_prompt_sha256": snapshot_submitted_prompt_path,
+        }
+        if source_evidence_path.is_file():
+            source_hashes["evidence_log_sha256"] = source_evidence_path
+        if compile_report_snapshot_path.is_file():
+            source_hashes["prompt_compile_sha256"] = compile_report_snapshot_path
+        stale_source_artifacts = [
+            field
+            for field, path in source_hashes.items()
+            if decision_source_attempt.get(field) is not None
+            and decision_source_attempt.get(field) != file_hash(path)
+        ]
+        if stale_source_artifacts:
+            raise SystemExit(
+                "decision source attempt has stale immutable artifact hashes: "
+                + ", ".join(stale_source_artifacts)
+            )
+        if submission is not None:
+            if not isinstance(submission, dict):
+                raise SystemExit(
+                    "decision source generation submission must be an object"
+                )
+            stale_submission_bindings = []
+            for field, path in (
+                ("brief_sha256", snapshot_brief_path),
+                ("reference_manifest_sha256", snapshot_manifest_path),
+                ("prompt_sha256", snapshot_submitted_prompt_path),
+            ):
+                if submission.get(field) != file_hash(path):
+                    stale_submission_bindings.append(field)
+            if (
+                submission.get("prompt_bytes") is not None
+                and submission.get("prompt_bytes")
+                != snapshot_submitted_prompt_path.stat().st_size
+            ):
+                stale_submission_bindings.append("prompt_bytes")
+            report_binding = submission.get("prompt_compile")
+            if (
+                prompt_compile_report_required(compile_report_brief)
+                and report_binding is None
+            ):
+                stale_submission_bindings.append("prompt_compile")
+            elif report_binding is not None:
+                if not isinstance(report_binding, dict):
+                    stale_submission_bindings.append("prompt_compile")
+                elif (
+                    not compile_report_snapshot_path.is_file()
+                    or report_binding.get("sha256")
+                    != file_hash(compile_report_snapshot_path)
+                    or report_binding.get("bytes")
+                    != compile_report_snapshot_path.stat().st_size
+                ):
+                    stale_submission_bindings.append("prompt_compile")
+            if stale_submission_bindings:
+                raise SystemExit(
+                    "decision source generation submission has stale bindings: "
+                    + ", ".join(stale_submission_bindings)
+                )
+    else:
+        if not compiled_prompt.is_file():
+            raise SystemExit(f"compiled prompt is missing: {compiled_prompt}")
+        if not submitted_prompt.is_file():
+            raise SystemExit(f"submitted prompt is missing: {submitted_prompt}")
+
+    references = snapshot_manifest.get("references", [])
+    reference_item_ids = [entry.get("item_id") for entry in references]
+    if (
+        decision_source_attempt is not None
+        and decision_source_attempt.get("reference_item_ids") is not None
+        and decision_source_attempt.get("reference_item_ids") != reference_item_ids
+    ):
+        raise SystemExit(
+            "decision source attempt reference IDs do not match its immutable manifest"
+        )
+    blame_item_ids = sorted(set(args.reference_blame))
+    unknown_blame = sorted(set(blame_item_ids) - set(reference_item_ids))
+    if unknown_blame:
+        raise SystemExit(
+            "--reference-blame must name a source manifest item ID: "
+            + ", ".join(unknown_blame)
+        )
+    if blame_item_ids and args.status != "rejected":
+        raise SystemExit("--reference-blame is valid only for rejected attempts")
+
+    if args.status == "accepted":
+        strategy_failures = reference_strategy_failures(compile_report_brief)
+        if strategy_failures:
+            raise SystemExit(
+                "acceptance blocked by reference strategy: "
+                + "; ".join(strategy_failures)
+            )
+        qa_path = task_dir / "qa.json"
+        qa = read_json(qa_path) if qa_path.is_file() else None
+        split_domain_task = is_split_domain_task(compile_report_brief, qa)
+        if split_domain_task and qa is None:
+            raise SystemExit("split-domain acceptance requires qa.json")
+        if split_domain_task:
+            qa_failures = qa_acceptance_failures(qa or {})
+            if qa_failures:
+                raise SystemExit(
+                    "split-domain acceptance blocked by QA: "
+                    + "; ".join(qa_failures)
+                )
 
     if (
         prompt_compile_report_required(compile_report_brief)
@@ -654,56 +878,80 @@ def main() -> int:
             or response_window.get("started_at")
         ):
             raise SystemExit("generation submission belongs to another response window")
-    response_started_at = (
-        args.response_started_at
-        or response_window.get("started_at")
-        or (brief.get("created_at") if number == 1 else None)
-    )
-    response_seconds = None
-    if response_started_at:
-        try:
-            parse_timestamp(response_started_at)
-            response_seconds = elapsed_seconds(response_started_at, recorded_at)
-        except ValueError as exc:
-            raise SystemExit(f"invalid response start timestamp: {exc}") from exc
-    budget = latency_budget(brief)
-    generation_started_at = response_window.get("generation_started_at")
-    pre_generation_seconds = response_window.get("pre_generation_seconds")
-    if pre_generation_seconds is None and response_started_at and generation_started_at:
-        try:
-            pre_generation_seconds = elapsed_seconds(
-                response_started_at, generation_started_at
-            )
-        except ValueError as exc:
-            raise SystemExit(f"invalid generation start timestamp: {exc}") from exc
-    generation_seconds = args.duration_seconds
-    post_generation_seconds = None
-    if (
-        response_seconds is not None
-        and isinstance(pre_generation_seconds, (int, float))
-        and generation_seconds is not None
-    ):
-        post_generation_seconds = round(
-            max(0.0, response_seconds - pre_generation_seconds - generation_seconds),
-            1,
+    if decision_source_attempt is not None:
+        response_started_at = decision_source_attempt.get("response_started_at")
+        response_seconds = decision_source_attempt.get("response_seconds")
+        generation_seconds = decision_source_attempt.get("generation_seconds")
+        pre_generation_seconds = decision_source_attempt.get(
+            "pre_generation_seconds"
         )
-    workflow_overhead_seconds = None
-    if isinstance(pre_generation_seconds, (int, float)):
-        workflow_overhead_seconds = float(pre_generation_seconds)
-        if post_generation_seconds is not None:
-            workflow_overhead_seconds = round(
-                workflow_overhead_seconds + post_generation_seconds, 1
+        post_generation_seconds = decision_source_attempt.get(
+            "post_generation_seconds"
+        )
+        workflow_overhead_seconds = decision_source_attempt.get(
+            "workflow_overhead_seconds"
+        )
+        pre_target = decision_source_attempt.get("pre_generation_target_seconds")
+        post_target = decision_source_attempt.get("post_generation_target_seconds")
+        legacy_slo = decision_source_attempt.get("response_slo_seconds")
+    else:
+        response_started_at = (
+            args.response_started_at
+            or response_window.get("started_at")
+            or (brief.get("created_at") if number == 1 else None)
+        )
+        response_seconds = None
+        if response_started_at:
+            try:
+                parse_timestamp(response_started_at)
+                response_seconds = elapsed_seconds(response_started_at, recorded_at)
+            except ValueError as exc:
+                raise SystemExit(f"invalid response start timestamp: {exc}") from exc
+        budget = latency_budget(brief)
+        generation_started_at = response_window.get("generation_started_at")
+        pre_generation_seconds = response_window.get("pre_generation_seconds")
+        if (
+            pre_generation_seconds is None
+            and response_started_at
+            and generation_started_at
+        ):
+            try:
+                pre_generation_seconds = elapsed_seconds(
+                    response_started_at, generation_started_at
+                )
+            except ValueError as exc:
+                raise SystemExit(f"invalid generation start timestamp: {exc}") from exc
+        generation_seconds = args.duration_seconds
+        post_generation_seconds = None
+        if (
+            response_seconds is not None
+            and isinstance(pre_generation_seconds, (int, float))
+            and generation_seconds is not None
+        ):
+            post_generation_seconds = round(
+                max(
+                    0.0,
+                    response_seconds - pre_generation_seconds - generation_seconds,
+                ),
+                1,
             )
-    pre_target = int(
-        response_window.get("pre_generation_target_seconds")
-        or budget["pre_generation_target_seconds"]
-    )
-    post_target = int(
-        response_window.get("post_generation_target_seconds")
-        or budget["post_generation_target_seconds"]
-    )
-    legacy_slo = response_window.get("response_slo_seconds")
-    if output is not None and args.persist_output:
+        workflow_overhead_seconds = None
+        if isinstance(pre_generation_seconds, (int, float)):
+            workflow_overhead_seconds = float(pre_generation_seconds)
+            if post_generation_seconds is not None:
+                workflow_overhead_seconds = round(
+                    workflow_overhead_seconds + post_generation_seconds, 1
+                )
+        pre_target = int(
+            response_window.get("pre_generation_target_seconds")
+            or budget["pre_generation_target_seconds"]
+        )
+        post_target = int(
+            response_window.get("post_generation_target_seconds")
+            or budget["post_generation_target_seconds"]
+        )
+        legacy_slo = response_window.get("response_slo_seconds")
+    if output is not None and args.persist_output and counts_as_generation:
         outputs_dir = task_dir / "outputs"
         outputs_dir.mkdir(exist_ok=True)
         suffix = output.suffix.lower() or ".png"
@@ -727,23 +975,35 @@ def main() -> int:
         "pre_generation_seconds": pre_generation_seconds,
         "pre_generation_target_seconds": pre_target,
         "pre_generation_target_met": (
-            pre_generation_seconds <= pre_target
-            if isinstance(pre_generation_seconds, (int, float))
-            else None
+            decision_source_attempt.get("pre_generation_target_met")
+            if decision_source_attempt is not None
+            else (
+                pre_generation_seconds <= pre_target
+                if isinstance(pre_generation_seconds, (int, float))
+                else None
+            )
         ),
         "post_generation_seconds": post_generation_seconds,
         "post_generation_target_seconds": post_target,
         "post_generation_target_met": (
-            post_generation_seconds <= post_target
-            if post_generation_seconds is not None
-            else None
+            decision_source_attempt.get("post_generation_target_met")
+            if decision_source_attempt is not None
+            else (
+                post_generation_seconds <= post_target
+                if post_generation_seconds is not None
+                else None
+            )
         ),
         "workflow_overhead_seconds": workflow_overhead_seconds,
         "response_slo_seconds": legacy_slo,
         "response_slo_met": (
-            response_seconds <= legacy_slo
-            if response_seconds is not None and legacy_slo is not None
-            else None
+            decision_source_attempt.get("response_slo_met")
+            if decision_source_attempt is not None
+            else (
+                response_seconds <= legacy_slo
+                if response_seconds is not None and legacy_slo is not None
+                else None
+            )
         ),
         "output": str(output) if output else None,
         "output_sha256": file_hash(output) if output else None,
@@ -751,22 +1011,24 @@ def main() -> int:
         "accepted_from_attempt": accepted_from_attempt,
         "rejected_from_attempt": rejected_from_attempt,
         "counts_as_generation": counts_as_generation,
-        "brief_sha256": file_hash(task_dir / "brief.json"),
-        "reference_manifest_sha256": file_hash(
-            task_dir / "reference-manifest.json"
+        "brief_sha256": file_hash(snapshot_brief_path),
+        "reference_manifest_sha256": file_hash(snapshot_manifest_path),
+        "compiled_prompt_sha256": file_hash(snapshot_prompt_path),
+        "evidence_log_sha256": (
+            file_hash(snapshot_evidence_path)
+            if snapshot_evidence_path.is_file()
+            else None
         ),
-        "compiled_prompt_sha256": file_hash(compiled_prompt),
+        "qa_sha256": file_hash(snapshot_qa_path) if snapshot_qa_path.is_file() else None,
         "prompt_compile_sha256": (
             file_hash(compile_report_snapshot_path)
             if compile_report_snapshot_path.is_file()
             else None
         ),
-        "submitted_prompt_sha256": file_hash(submitted_prompt),
-        "submitted_prompt_source": (
-            "explicit" if args.submitted_prompt else "compiled-verbatim"
-        ),
+        "submitted_prompt_sha256": file_hash(snapshot_submitted_prompt_path),
+        "submitted_prompt_source": submitted_prompt_source,
         "submitted_prompt_differs_from_compiled": (
-            file_hash(submitted_prompt) != file_hash(compiled_prompt)
+            file_hash(snapshot_submitted_prompt_path) != file_hash(snapshot_prompt_path)
         ),
         "reference_item_ids": reference_item_ids,
         "reference_blame_item_ids": blame_item_ids,
@@ -793,6 +1055,31 @@ def main() -> int:
             submission.get("images") if submission is not None else []
         ),
     }
+    if decision_source_attempt is not None:
+        for field in (
+            "generator",
+            "duration_seconds",
+            "generation_seconds",
+            "response_started_at",
+            "response_seconds",
+            "pre_generation_seconds",
+            "pre_generation_target_seconds",
+            "pre_generation_target_met",
+            "post_generation_seconds",
+            "post_generation_target_seconds",
+            "post_generation_target_met",
+            "workflow_overhead_seconds",
+            "response_slo_seconds",
+            "response_slo_met",
+            "output",
+            "output_sha256",
+            "generation_submission_sha256",
+            "generation_endpoint",
+            "generation_transport",
+            "actual_input_bytes",
+            "actual_input_images",
+        ):
+            attempt[field] = decision_source_attempt.get(field)
     attempt["network_failure"] = is_network_failure(attempt)
     attempt["transport_retry_exhausted"] = transport_retry_exhausted(attempt)
     if comparison_payload is not None and comparison_sheet_path is not None:
@@ -801,13 +1088,19 @@ def main() -> int:
             "sheet_sha256": file_hash(comparison_sheet_path),
         }
     atomic_write_json(attempt_dir / "attempt.json", attempt)
-    for name in ("brief.json", "prompt.md", "reference-manifest.json", "qa.json"):
-        source = task_dir / name
+    snapshot_sources = {
+        "brief.json": snapshot_brief_path,
+        "prompt.md": snapshot_prompt_path,
+        "reference-manifest.json": snapshot_manifest_path,
+        "evidence-log.md": snapshot_evidence_path,
+        "qa.json": snapshot_qa_path,
+    }
+    for name, source in snapshot_sources.items():
         if source.is_file():
             shutil.copy2(source, attempt_dir / name)
     if compile_report_snapshot_path.is_file():
         shutil.copy2(compile_report_snapshot_path, attempt_dir / "prompt-compile.json")
-    shutil.copy2(submitted_prompt, attempt_dir / "submitted-prompt.md")
+    shutil.copy2(snapshot_submitted_prompt_path, attempt_dir / "submitted-prompt.md")
     if submission_snapshot_path is not None:
         shutil.copy2(
             submission_snapshot_path, attempt_dir / "generation-submission.json"
@@ -829,8 +1122,10 @@ def main() -> int:
             attempt_dir / "manga-style-comparison.json",
         )
 
-    if response_window_path.is_file():
-        response_window.update(
+    if response_window_path.is_file() and (
+        counts_as_generation or decision_window_matches_source
+    ):
+        response_window_record.update(
             {
                 "phase": "recorded",
                 "recorded_at": recorded_at,
@@ -838,7 +1133,7 @@ def main() -> int:
                 "last_status": args.status,
             }
         )
-        atomic_write_json(response_window_path, response_window)
+        atomic_write_json(response_window_path, response_window_record)
 
     if args.feedback or args.preference_tag:
         event = {
@@ -870,8 +1165,8 @@ def main() -> int:
             "accepted_attempt": number,
             "revision_required": generation_attempts > 1,
             "output": accepted_generation.get("output") or str(output),
-            "medium": brief.get("medium"),
-            "intent": brief.get("intent"),
+            "medium": compile_report_brief.get("medium"),
+            "intent": compile_report_brief.get("intent"),
             "response_seconds": accepted_generation.get(
                 "response_seconds", response_seconds
             ),
@@ -926,7 +1221,7 @@ def main() -> int:
                     "attempt": number,
                     "status": args.status,
                     "attempt_path": str(attempt_dir / "attempt.json"),
-                    "output": str(output) if output else None,
+                    "output": attempt.get("output"),
                     "handoff_ready": (
                         args.status == "candidate"
                         and not preview_failures
