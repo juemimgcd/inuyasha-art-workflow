@@ -6,20 +6,19 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import shutil
+import re
 import sys
 from collections import Counter
-from datetime import datetime
 from pathlib import Path
 from statistics import median
 from typing import Any
 
+from build_identity_cards import validate_historical_cards
 from task_workflow import identity_requirements
 from workflow_common import (
-    atomic_write_json,
-    atomic_write_text,
     load_config,
     open_database,
+    resolve_recorded_path,
     retrieval_traits_for,
     workflow_paths,
     workflow_root,
@@ -29,10 +28,15 @@ SKILL_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_DATASET = SKILL_DIR / "references" / "generation-benchmark.json"
 SCORE_STATUSES = {"pending", "usable", "visual-fail", "technical-error"}
 CHECK_STATUSES = {"pending", "pass", "fail"}
-
-
-def now_iso() -> str:
-    return datetime.now().astimezone().isoformat(timespec="seconds")
+BENCHMARK_CHECK_IDS = (
+    "identity_form",
+    "identity_features",
+    "costume",
+    "anatomy_contact",
+    "composition",
+    "manga_medium",
+)
+PORTABLE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 
 
 def file_hash(path: Path) -> str:
@@ -64,15 +68,20 @@ def load_dataset(path: Path) -> dict[str, Any]:
     dataset = json.loads(path.expanduser().read_text(encoding="utf-8"))
     if dataset.get("schema_version") != 1:
         raise ValueError("generation benchmark schema_version must be 1")
-    if not str(dataset.get("id", "")).strip():
-        raise ValueError("generation benchmark requires id")
+    dataset_id = dataset.get("id")
+    if not isinstance(dataset_id, str) or PORTABLE_ID.fullmatch(dataset_id) is None:
+        raise ValueError("generation benchmark requires a portable id")
     cases = dataset.get("cases")
     if not isinstance(cases, list) or not cases:
         raise ValueError("generation benchmark requires cases")
     seen: set[str] = set()
     for case in cases:
-        case_id = str(case.get("id", "")).strip()
-        if not case_id or case_id in seen:
+        case_id = case.get("id")
+        if (
+            not isinstance(case_id, str)
+            or PORTABLE_ID.fullmatch(case_id) is None
+            or case_id in seen
+        ):
             raise ValueError(f"invalid or duplicate generation case id: {case_id}")
         seen.add(case_id)
         for field in (
@@ -86,14 +95,7 @@ def load_dataset(path: Path) -> dict[str, Any]:
             if not str(case.get(field, "")).strip():
                 raise ValueError(f"generation case {case_id} requires {field}")
         checks = case.get("checks")
-        required_checks = {
-            "identity_form",
-            "identity_features",
-            "costume",
-            "anatomy_contact",
-            "composition",
-            "manga_medium",
-        }
+        required_checks = set(BENCHMARK_CHECK_IDS)
         if not isinstance(checks, dict) or set(checks) != required_checks:
             raise ValueError(
                 f"generation case {case_id} checks must be {sorted(required_checks)}"
@@ -150,13 +152,14 @@ def validate_benchmark(
     cards_manifest = json.loads(cards_path.read_text(encoding="utf-8"))
     if cards_manifest.get("schema_version") != 1:
         failures.append("identity card manifest schema_version must be 1")
+    card_history = validate_historical_cards(
+        root / "identity-cards", workflow_paths(root)["database"]
+    )
+    failures.extend(
+        f"historical identity card: {failure}"
+        for failure in card_history["failures"]
+    )
     cards = {card.get("id"): card for card in cards_manifest.get("cards", [])}
-    for card_id, card in cards.items():
-        output = root / "identity-cards" / str(card.get("output_file", ""))
-        if not output.is_file():
-            failures.append(f"identity card output is missing: {card_id}")
-        elif file_hash(output) != card.get("output_sha256"):
-            failures.append(f"identity card output hash mismatch: {card_id}")
 
     form_counts: Counter[str] = Counter()
     shot_types: set[str] = set()
@@ -287,102 +290,6 @@ def score_template(case: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def prepare_run(
-    dataset: dict[str, Any],
-    dataset_path: Path,
-    root: Path,
-    cards: dict[str, Any],
-    connection,
-    backend: str,
-    run_id: str,
-) -> Path:
-    run_dir = root / "generation-benchmarks" / dataset["id"] / run_id
-    if run_dir.exists():
-        raise ValueError(f"benchmark run already exists: {run_dir}")
-    run_dir.mkdir(parents=True)
-    case_locks: dict[str, dict[str, str]] = {}
-    for case in dataset["cases"]:
-        case_dir = run_dir / "cases" / case["id"]
-        case_dir.mkdir(parents=True)
-        inputs_dir = case_dir / "inputs"
-        inputs_dir.mkdir()
-        style = catalog_item(connection, case["style_item_id"])
-        card = cards[case["identity_card_id"]]
-        inputs = [
-            {
-                "order": 1,
-                "role": "style",
-                "item_id": style["item_id"],
-                "source_path": style["path"],
-                "authority": "manga-rendering-only",
-            },
-            {
-                "order": 2,
-                "role": "identity",
-                "card_id": card["id"],
-                "source_path": str(root / "identity-cards" / card["output_file"]),
-                "authority": card["authority"],
-                "source_item_ids": list(
-                    dict.fromkeys(panel["item_id"] for panel in card.get("panels", []))
-                ),
-            },
-        ]
-        for index, identity in enumerate(case.get("additional_identity", []), 3):
-            row = catalog_item(connection, identity["item_id"])
-            inputs.append(
-                {
-                    "order": index,
-                    "role": "identity",
-                    "character": identity["character"],
-                    "item_id": row["item_id"],
-                    "source_path": row["path"],
-                    "authority": row["authority"],
-                }
-            )
-        for item in inputs:
-            source = Path(item.pop("source_path")).expanduser().resolve()
-            verify_image(source)
-            suffix = source.suffix.casefold() or ".img"
-            snapshot = inputs_dir / f"{item['order']:02d}-{item['role']}{suffix}"
-            shutil.copy2(source, snapshot)
-            item["path"] = str(snapshot.relative_to(case_dir))
-            item["sha256"] = file_hash(snapshot)
-            item["original_path"] = str(source)
-        prompt_path = case_dir / "prompt.md"
-        atomic_write_text(prompt_path, case_prompt(dataset, case))
-        inputs_path = case_dir / "inputs.json"
-        atomic_write_json(
-            inputs_path,
-            {
-                "schema_version": 2,
-                "case_id": case["id"],
-                "prompt_sha256": file_hash(prompt_path),
-                "input_order": inputs,
-            },
-        )
-        atomic_write_json(case_dir / "score.json", score_template(case))
-        case_locks[case["id"]] = {
-            "prompt_sha256": file_hash(prompt_path),
-            "inputs_sha256": file_hash(inputs_path),
-        }
-    atomic_write_json(
-        run_dir / "run.json",
-        {
-            "schema_version": 2,
-            "dataset_id": dataset["id"],
-            "dataset_path": str(dataset_path.resolve()),
-            "dataset_sha256": file_hash(dataset_path),
-            "dataset_content_sha256": json_hash(dataset),
-            "backend": backend,
-            "prepared_at": now_iso(),
-            "single_generation_per_case": True,
-            "case_ids": [case["id"] for case in dataset["cases"]],
-            "case_locks": case_locks,
-        },
-    )
-    return run_dir
-
-
 def percentile(values: list[float], fraction: float) -> float | None:
     if not values:
         return None
@@ -409,12 +316,22 @@ def resolve_locked_path(case_dir: Path, value: Any) -> Path:
     return resolved
 
 
+def exact_case_artifact(case_dir: Path, name: str) -> Path:
+    path = case_dir / name
+    if path.resolve() != path:
+        raise ValueError(f"benchmark case artifact must not be a symlink: {path}")
+    return path
+
+
 def validate_case_lock(
     case: dict[str, Any], case_dir: Path, lock: dict[str, Any]
 ) -> list[str]:
     failures: list[str] = []
-    prompt_path = case_dir / "prompt.md"
-    inputs_path = case_dir / "inputs.json"
+    try:
+        prompt_path = exact_case_artifact(case_dir, "prompt.md")
+        inputs_path = exact_case_artifact(case_dir, "inputs.json")
+    except ValueError as exc:
+        return [str(exc)]
     if not prompt_path.is_file() or file_hash(prompt_path) != lock.get("prompt_sha256"):
         failures.append(f"prompt lock mismatch: {case['id']}")
     if not inputs_path.is_file() or file_hash(inputs_path) != lock.get("inputs_sha256"):
@@ -443,57 +360,153 @@ def validate_case_lock(
     return failures
 
 
+def validate_legacy_case(case: dict[str, Any], case_dir: Path) -> list[str]:
+    """Read schema-1 records without claiming hashes they never captured."""
+    failures: list[str] = []
+    try:
+        prompt_path = exact_case_artifact(case_dir, "prompt.md")
+        inputs_path = exact_case_artifact(case_dir, "inputs.json")
+    except ValueError as exc:
+        return [str(exc)]
+    if not prompt_path.is_file():
+        failures.append(f"missing legacy prompt: {case['id']}")
+    if not inputs_path.is_file():
+        failures.append(f"missing legacy inputs manifest: {case['id']}")
+        return failures
+    inputs = json.loads(inputs_path.read_text(encoding="utf-8"))
+    if inputs.get("schema_version") != 1 or inputs.get("case_id") != case["id"]:
+        failures.append(f"invalid legacy inputs manifest: {case['id']}")
+        return failures
+    items = inputs.get("input_order")
+    if not isinstance(items, list) or not items:
+        failures.append(f"legacy benchmark inputs are missing: {case['id']}")
+        return failures
+    if [item.get("order") for item in items] != list(range(1, len(items) + 1)):
+        failures.append(f"legacy benchmark input order is invalid: {case['id']}")
+    for item in items:
+        path_value = item.get("path")
+        if not isinstance(path_value, str) or not path_value.strip():
+            failures.append(f"legacy benchmark input path is missing: {case['id']}")
+            continue
+        try:
+            recorded = Path(path_value).expanduser()
+            source = (
+                resolve_recorded_path(path_value)
+                if recorded.is_absolute()
+                else resolve_locked_path(case_dir, path_value)
+            )
+            if not source.is_file():
+                raise ValueError(f"input is missing: {source}")
+            verify_image(source)
+        except (OSError, TypeError, ValueError) as exc:
+            failures.append(f"invalid legacy input for {case['id']}: {exc}")
+    return failures
+
+
 def score_run(
     dataset: dict[str, Any], run_dir: Path, dataset_path: Path | None = None
 ) -> dict[str, Any]:
+    run_dir = run_dir.expanduser().resolve()
     run_path = run_dir / "run.json"
     if not run_path.is_file():
         raise ValueError(f"benchmark run manifest is missing: {run_path}")
+    if run_path.resolve() != run_path:
+        raise ValueError(f"benchmark run manifest must not be a symlink: {run_path}")
     run = json.loads(run_path.read_text(encoding="utf-8"))
-    if run.get("schema_version") != 2:
-        raise ValueError("benchmark run schema_version must be 2")
+    run_schema = run.get("schema_version")
+    if isinstance(run_schema, bool) or run_schema not in {1, 2}:
+        raise ValueError("benchmark run schema_version must be 1 or 2")
     if run.get("dataset_id") != dataset["id"]:
         raise ValueError("benchmark run dataset id does not match")
-    if run.get("dataset_content_sha256") != json_hash(dataset):
-        raise ValueError("benchmark run dataset content changed after preparation")
-    if dataset_path is not None and (
-        not dataset_path.is_file()
-        or run.get("dataset_sha256") != file_hash(dataset_path)
+    dataset_sha256_matches = (
+        run.get("dataset_sha256") == file_hash(dataset_path)
+        if dataset_path is not None and dataset_path.is_file()
+        else None
+    )
+    if run_schema == 2:
+        if run.get("dataset_content_sha256") != json_hash(dataset):
+            raise ValueError("benchmark run dataset content changed after preparation")
+        if dataset_path is not None and dataset_sha256_matches is not True:
+            raise ValueError("benchmark dataset file changed after preparation")
+    current_case_ids = [case["id"] for case in dataset["cases"]]
+    case_ids = run.get("case_ids")
+    if (
+        not isinstance(case_ids, list)
+        or not case_ids
+        or any(
+            not isinstance(case_id, str)
+            or PORTABLE_ID.fullmatch(case_id) is None
+            for case_id in case_ids
+        )
+        or len(set(case_ids)) != len(case_ids)
     ):
-        raise ValueError("benchmark dataset file changed after preparation")
-    case_ids = [case["id"] for case in dataset["cases"]]
-    if run.get("case_ids") != case_ids:
+        raise ValueError("benchmark run case_ids must be unique portable ids")
+    if run_schema == 2 and case_ids != current_case_ids:
         raise ValueError("benchmark run case list does not match dataset")
+    dataset_case_ids_match = case_ids == current_case_ids
+    cases = (
+        dataset["cases"]
+        if run_schema == 2
+        else [{"id": case_id} for case_id in case_ids]
+    )
+    current_cases = {case["id"]: case for case in dataset["cases"]}
     if run.get("single_generation_per_case") is not True:
         raise ValueError("benchmark run must enforce one generation per case")
     if not str(run.get("backend", "")).strip():
         raise ValueError("benchmark run backend is missing")
     case_locks = run.get("case_locks")
-    if not isinstance(case_locks, dict) or set(case_locks) != set(case_ids):
+    if run_schema == 2 and (
+        not isinstance(case_locks, dict) or set(case_locks) != set(case_ids)
+    ):
         raise ValueError("benchmark run case locks do not match dataset")
-    failures: list[str] = []
+    cases_root = run_dir / "cases"
+    if cases_root.exists() and cases_root.resolve() != cases_root:
+        raise ValueError(f"benchmark cases directory must not be a symlink: {cases_root}")
+    integrity_failures: list[str] = []
+    if (
+        run_schema == 1
+        and dataset_sha256_matches is True
+        and not dataset_case_ids_match
+    ):
+        integrity_failures.append(
+            "schema-1 case list differs despite matching current dataset bytes"
+        )
     durations: list[float] = []
     statuses: Counter[str] = Counter()
     check_passes: Counter[str] = Counter()
     check_totals: Counter[str] = Counter()
+    dataset_checks_match = True
     pending_cases: list[str] = []
-    for case in dataset["cases"]:
-        case_dir = run_dir / "cases" / case["id"]
-        failures.extend(validate_case_lock(case, case_dir, case_locks[case["id"]]))
-        score_path = case_dir / "score.json"
+    for case in cases:
+        case_dir = cases_root / case["id"]
+        if case_dir.exists() and case_dir.resolve() != case_dir:
+            raise ValueError(f"benchmark case directory must not be a symlink: {case_dir}")
+        if run_schema == 2:
+            integrity_failures.extend(
+                validate_case_lock(case, case_dir, case_locks[case["id"]])
+            )
+        else:
+            integrity_failures.extend(validate_legacy_case(case, case_dir))
+        try:
+            score_path = exact_case_artifact(case_dir, "score.json")
+        except ValueError as exc:
+            integrity_failures.append(str(exc))
+            continue
         if not score_path.is_file():
-            failures.append(f"missing score: {case['id']}")
+            integrity_failures.append(f"missing score: {case['id']}")
             continue
         score = json.loads(score_path.read_text(encoding="utf-8"))
-        if score.get("schema_version") != 2:
-            failures.append(f"score schema version mismatch: {case['id']}")
+        if score.get("schema_version") != run_schema:
+            integrity_failures.append(f"score schema version mismatch: {case['id']}")
             continue
         if score.get("case_id") != case["id"]:
-            failures.append(f"score case id mismatch: {case['id']}")
+            integrity_failures.append(f"score case id mismatch: {case['id']}")
             continue
         status = score.get("status")
         if status not in SCORE_STATUSES:
-            failures.append(f"invalid score status for {case['id']}: {status}")
+            integrity_failures.append(
+                f"invalid score status for {case['id']}: {status}"
+            )
             continue
         statuses[status] += 1
         if status == "pending":
@@ -501,38 +514,76 @@ def score_run(
             continue
         duration = score.get("duration_seconds")
         if not isinstance(duration, (int, float)) or duration < 0:
-            failures.append(f"completed score requires duration_seconds: {case['id']}")
+            integrity_failures.append(
+                f"completed score requires duration_seconds: {case['id']}"
+            )
         else:
             durations.append(float(duration))
         checks = score.get("checks")
-        if not isinstance(checks, dict) or set(checks) != set(case["checks"]):
-            failures.append(f"score checks mismatch: {case['id']}")
+        if (
+            not isinstance(checks, dict)
+            or not checks
+            or any(not isinstance(check_id, str) or not check_id for check_id in checks)
+        ):
+            integrity_failures.append(f"score checks mismatch: {case['id']}")
             continue
+        if run_schema == 2 and set(checks) != set(case["checks"]):
+            integrity_failures.append(f"score checks mismatch: {case['id']}")
+            continue
+        if (
+            run_schema == 1
+            and dataset_sha256_matches is True
+            and case["id"] in current_cases
+            and set(checks) != set(current_cases[case["id"]]["checks"])
+        ):
+            dataset_checks_match = False
+            integrity_failures.append(
+                f"schema-1 score checks differ despite matching dataset bytes: "
+                f"{case['id']}"
+            )
         if status == "technical-error":
             if score.get("output") is not None or score.get("output_sha256") is not None:
-                failures.append(f"technical error must not record output: {case['id']}")
+                integrity_failures.append(
+                    f"technical error must not record output: {case['id']}"
+                )
             if any(value != "pending" for value in checks.values()):
-                failures.append(f"technical error checks must stay pending: {case['id']}")
+                integrity_failures.append(
+                    f"technical error checks must stay pending: {case['id']}"
+                )
             continue
         output_value = score.get("output")
         if not isinstance(output_value, str) or not output_value.strip():
-            failures.append(f"visual score requires output: {case['id']}")
+            integrity_failures.append(f"visual score requires output: {case['id']}")
         else:
-            output = Path(output_value).expanduser()
-            if not output.is_absolute():
-                output = score_path.parent / output
-            if not output.is_file():
-                failures.append(f"benchmark output is missing: {output}")
-            else:
+            try:
+                recorded_output = Path(output_value).expanduser()
+                if run_schema == 2:
+                    output = resolve_locked_path(case_dir, output_value)
+                elif recorded_output.is_absolute():
+                    output = resolve_recorded_path(output_value)
+                else:
+                    output = resolve_locked_path(case_dir, output_value)
+                if not output.is_file():
+                    raise ValueError(f"benchmark output is missing: {output}")
                 try:
                     verify_image(output)
                 except ValueError as exc:
-                    failures.append(str(exc))
-                if score.get("output_sha256") != file_hash(output):
-                    failures.append(f"benchmark output hash mismatch: {case['id']}")
+                    integrity_failures.append(str(exc))
+                recorded_output_hash = score.get("output_sha256")
+                if run_schema == 2 and recorded_output_hash != file_hash(output):
+                    integrity_failures.append(
+                        f"benchmark output hash mismatch: {case['id']}"
+                    )
+                elif run_schema == 1 and recorded_output_hash is not None:
+                    if recorded_output_hash != file_hash(output):
+                        integrity_failures.append(
+                            f"legacy benchmark output hash mismatch: {case['id']}"
+                        )
+            except (OSError, TypeError, ValueError) as exc:
+                integrity_failures.append(str(exc))
         for check_id, verdict in checks.items():
             if verdict not in CHECK_STATUSES - {"pending"}:
-                failures.append(
+                integrity_failures.append(
                     f"visual score has invalid {check_id} verdict: {case['id']}"
                 )
                 continue
@@ -541,11 +592,15 @@ def score_run(
                 check_passes[check_id] += 1
         has_failure = any(verdict == "fail" for verdict in checks.values())
         if status == "usable" and has_failure:
-            failures.append(f"usable score contains failed checks: {case['id']}")
+            integrity_failures.append(
+                f"usable score contains failed checks: {case['id']}"
+            )
         if status == "visual-fail" and not has_failure:
-            failures.append(f"visual-fail score has no failed checks: {case['id']}")
+            integrity_failures.append(
+                f"visual-fail score has no failed checks: {case['id']}"
+            )
 
-    total = len(dataset["cases"])
+    total = len(cases)
     visual_total = statuses["usable"] + statuses["visual-fail"]
     metrics: dict[str, float | int | None] = {
         "case_count": total,
@@ -557,36 +612,64 @@ def score_run(
         if durations
         else None,
     }
-    for check_id in (
-        "identity_form",
-        "identity_features",
-        "costume",
-        "anatomy_contact",
-        "composition",
-        "manga_medium",
-    ):
+    metric_check_ids = (
+        BENCHMARK_CHECK_IDS if run_schema == 2 else tuple(sorted(check_totals))
+    )
+    for check_id in metric_check_ids:
         metrics[f"{check_id}_pass_rate"] = rate(
             check_passes[check_id], check_totals[check_id]
         )
     if pending_cases:
-        failures.append(f"benchmark run has pending cases: {pending_cases}")
+        integrity_failures.append(f"benchmark run has pending cases: {pending_cases}")
     thresholds = dataset.get("thresholds", {})
-    for name, minimum in thresholds.get("minimum", {}).items():
-        value = metrics.get(name)
-        if value is None or value < minimum:
-            failures.append(f"{name}={value} below minimum {minimum}")
-    for name, maximum in thresholds.get("maximum", {}).items():
-        value = metrics.get(name)
-        if value is None or value > maximum:
-            failures.append(f"{name}={value} above maximum {maximum}")
+    threshold_failures: list[str] = []
+    thresholds_applied = run_schema == 2 or (
+        dataset_sha256_matches is True
+        and dataset_case_ids_match
+        and dataset_checks_match
+    )
+    if thresholds_applied:
+        for name, minimum in thresholds.get("minimum", {}).items():
+            value = metrics.get(name)
+            if value is None or value < minimum:
+                threshold_failures.append(f"{name}={value} below minimum {minimum}")
+        for name, maximum in thresholds.get("maximum", {}).items():
+            value = metrics.get(name)
+            if value is None or value > maximum:
+                threshold_failures.append(f"{name}={value} above maximum {maximum}")
+    failures = [*integrity_failures, *threshold_failures]
+    integrity_limitations = []
+    if run_schema == 1:
+        integrity_limitations = [
+            "schema-1 did not capture prompt, input, or mandatory output byte locks",
+        ]
+        if dataset_sha256_matches is False:
+            integrity_limitations.append(
+                "current dataset bytes differ from the recorded schema-1 dataset hash"
+            )
+        if not thresholds_applied:
+            integrity_limitations.append(
+                "current thresholds were not applied to this schema-1 history"
+            )
     return {
         "ok": not failures,
+        "integrity_ok": not integrity_failures,
+        "thresholds_met": not threshold_failures if thresholds_applied else None,
+        "thresholds_applied": thresholds_applied,
+        "run_schema_version": run_schema,
+        "integrity_mode": "locked" if run_schema == 2 else "legacy_unlocked",
+        "dataset_sha256_matches": dataset_sha256_matches,
+        "dataset_case_ids_match": dataset_case_ids_match,
+        "dataset_checks_match": dataset_checks_match,
+        "integrity_limitations": integrity_limitations,
         "run_dir": str(run_dir.resolve()),
         "backend": run.get("backend"),
         "statuses": dict(statuses),
         "metrics": metrics,
         "thresholds": thresholds,
         "pending_cases": pending_cases,
+        "integrity_failures": integrity_failures,
+        "threshold_failures": threshold_failures,
         "failures": failures,
     }
 
@@ -606,49 +689,25 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    if args.prepare and args.results:
-        raise SystemExit("Use only one of --prepare or --results")
-    if args.prepare and (not args.backend or not args.run_id):
-        raise SystemExit("--prepare requires --backend and --run-id")
-    config = load_config()
-    root = workflow_root(config, args.workflow_root)
-    database = workflow_paths(root)["database"]
-    if not database.is_file():
-        raise SystemExit("Catalog missing; run build_reference_index.py first")
-    dataset_path = args.dataset.expanduser().resolve()
-    dataset = load_dataset(dataset_path)
     if args.prepare:
         raise SystemExit(
             "This benchmark dataset uses retired identity-card inputs and cannot "
-            "prepare new runs. Existing immutable runs may still be scored with "
-            "--results. Build a new official-setting-sheet benchmark before further "
-            "backend comparisons."
+            "prepare new runs. Existing historical runs may still be scored with "
+            "--results. Use the current visual A/B datasets for new comparisons."
         )
-    connection = open_database(database, read_only=True)
-    try:
-        cards, failures = validate_benchmark(dataset, root, connection)
-        if args.prepare and not failures:
-            run_dir = prepare_run(
-                dataset,
-                dataset_path,
-                root,
-                cards,
-                connection,
-                args.backend,
-                args.run_id,
-            )
-            result = {
-                "ok": True,
-                "dataset": str(dataset_path),
-                "case_count": len(dataset["cases"]),
-                "run_dir": str(run_dir.resolve()),
-                "failures": [],
-            }
-        elif args.results and not failures:
-            result = score_run(
-                dataset, args.results.expanduser().resolve(), dataset_path
-            )
-        else:
+    dataset_path = args.dataset.expanduser().resolve()
+    dataset = load_dataset(dataset_path)
+    if args.results:
+        result = score_run(dataset, args.results.expanduser().resolve(), dataset_path)
+    else:
+        config = load_config()
+        root = workflow_root(config, args.workflow_root)
+        database = workflow_paths(root)["database"]
+        if not database.is_file():
+            raise SystemExit("Catalog missing; run build_reference_index.py first")
+        connection = open_database(database, read_only=True)
+        try:
+            cards, failures = validate_benchmark(dataset, root, connection)
             result = {
                 "ok": not failures,
                 "dataset": str(dataset_path),
@@ -659,8 +718,8 @@ def main() -> int:
                 "thresholds": dataset.get("thresholds", {}),
                 "failures": failures,
             }
-    finally:
-        connection.close()
+        finally:
+            connection.close()
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:

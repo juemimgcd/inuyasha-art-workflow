@@ -55,11 +55,14 @@ cross-medium fallback, migration/archive, final acceptance, or a validation
 failure whose cause is unclear. For an ordinary `new`, `edit`, or `microfix`
 preview, do not load the full contract or `quality-gate.md` before generation.
 
-Use the bundled launcher. From a repository checkout on macOS/Linux:
+Resolve the installed or packaged skill root once, then use its bundled launcher
+and absolute script path. Do not depend on the caller's current directory or a
+machine-specific Python executable:
 
 ```bash
-skill/generate-inuyasha-manga-art/scripts/run-python \
-  skill/generate-inuyasha-manga-art/scripts/<script>.py <args>
+INUYASHA_SKILL_DIR=<path-to-generate-inuyasha-manga-art>
+"$INUYASHA_SKILL_DIR/scripts/run-python" \
+  "$INUYASHA_SKILL_DIR/scripts/<script>.py" <args>
 ```
 
 If the launcher reports that Pillow is unavailable, do not install into system,
@@ -306,9 +309,11 @@ does not prove generated-image quality.
 
 ## Route by intent
 
-- `new`: create a new composition. Start with one inspected, shot-matched official
-  setting sheet or focused official crop per focal character, plus one
-  selected-medium style image.
+- `new`: create a new composition. Run exact-form official retrieval for every
+  focal character and use official identity evidence when available. Only a
+  recorded official `MISS` or `INSUFFICIENT` permits the contract's narrow
+  same-medium `form` fallback. Add one eligible selected-medium character-style
+  anchor and normally one scene-style anchor.
 - `edit`: preserve a supplied target. Start target-only when it already provides
   the unchanged identity and medium; otherwise add only the single authority role
   required by the named change. Every `medium` or `tone` edit must declare
@@ -414,6 +419,11 @@ scripts/run-python scripts/plan_art_task.py \
   --prop-form 铁碎牙=transformed-form \
   --shot action
 ```
+
+`plan_art_task.py` writes bounded retrieval commands; it does not execute them.
+Carry the exact returned `task_dir`, read its `retrieval-plan.json`, and execute
+each `layers[*].primary_commands` entry exactly once in serial order. Record
+`HIT`, `MISS`, or `INSUFFICIENT` before advancing to the next layer.
 
 Before candidate-series collapse or Top-K truncation, audit every task-required
 official identity facet over the complete exact subject/form eligible set. Top-K
@@ -534,8 +544,7 @@ the full image or for `identity`/`form` roles.
 
 Place the target first. Use:
 
-- target only for composition, background, polish, or any change already resolved
-  by the target;
+- target only for composition, background, or polish;
 - target plus one official identity reference for identity, form, costume, or
   anatomy;
 - target plus the smallest focused official crop for construction/contact;
@@ -565,15 +574,19 @@ compilation, exact submission snapshot, and validation in one local command:
 
 ```bash
 scripts/run-python scripts/prepare_quick_edit.py \
-  --slug fix-right-hand \
-  --request "只修正右手，其他内容保持不变" \
-  --change-category anatomy \
+  --slug remove-duplicate-moon \
+  --request "只删除远景里误生成的第二轮月亮，其他内容保持不变" \
+  --change-category background \
   --target <target-image>
 ```
 
 It returns a JSON object with `ready_for_generation: true`, the exact prompt, and
 the tracked inputs. Add `--target-max-edge 960` only when a transport proxy is
 actually needed; original target bytes are the default.
+
+The quick helper accepts only `composition`, `background`, and `polish`. Use a
+normal tracked edit or an accepted continuation for identity, form, costume,
+anatomy, construction, medium, or tone so the required authority can be attached.
 
 For a first preview that needs only the supplied target, do not create or search
 for a historical task before generation. The target controls identity,
@@ -617,8 +630,13 @@ scripts/run-python scripts/continue_art_task.py \
   --from-task <accepted-task-directory> \
   --slug narrower-right-shoulder \
   --change-category anatomy \
-  --change "只收窄犬夜叉右肩，其他区域保持不变"
+  --change "只收窄犬夜叉右肩，其他区域保持不变" \
+  --edit-box X,Y,WIDTH,HEIGHT
 ```
+
+Every continuation must choose exactly one mode: `--edit-box` for a bounded
+crop-and-composite repair, or `--full-canvas` for an explicitly tracked child
+`edit`.
 
 For a style-bearing continuation, add `--change-scope character` or
 `--change-scope scene`. The continuation resolves the nearest matching style
@@ -650,12 +668,15 @@ scripts/run-python scripts/continue_art_task.py \
   --edit-box X,Y,WIDTH,HEIGHT
 ```
 
-`--from-attempt` requires a bounded edit box, verifies the immutable attempt
-output hash, records that candidate as the first `target`, and reuses the same
-crop-and-composite preservation gate. Prefer this route for hands, expressions,
-sleeves, garment overlaps, and other bounded follow-up feedback. Use a tracked
-full-canvas edit only when the requested change truly crosses the local boundary;
-in that case pass `--full-canvas` instead of `--edit-box`.
+`--from-attempt` accepts only recorded `candidate` or `rejected` attempts; an
+`accepted` attempt must continue through its validated accepted parent. It
+verifies the immutable attempt output hash, records that candidate as the first
+`target`, and reuses the same crop-and-composite preservation gate. Prefer this
+route for hands, expressions, sleeves, garment overlaps, and other bounded
+follow-up feedback. Use `--full-canvas` only when the requested change truly
+crosses the local boundary. An accepted-parent full-canvas continuation is a
+child `edit`, not a `microfix`, and keeps the original target bytes by default;
+add `--target-max-edge 960` only when transport size is a demonstrated risk.
 
 ## Attempts and acceptance
 

@@ -13,7 +13,10 @@ from task_workflow import (
     CHANGE_CATEGORIES,
     CHANGE_SCOPES,
     SCOPED_STYLE_CHANGE_CATEGORIES,
+    accepted_candidate_source_attempt,
+    exact_attempt_path,
     read_json,
+    recorded_attempt_paths,
     result_output,
     style_scope_for_entry,
     write_compiled_prompt,
@@ -23,6 +26,7 @@ from workflow_common import (
     atomic_write_text,
     load_config,
     open_database,
+    resolve_recorded_path,
     workflow_paths,
     workflow_root,
 )
@@ -64,6 +68,7 @@ def context_box_for(
 
 
 def continuation_intent(candidate_source: dict | None, full_canvas: bool) -> str:
+    """Use microfix only for a bounded continuation of an accepted result."""
     return "edit" if candidate_source or full_canvas else "microfix"
 
 
@@ -122,20 +127,23 @@ def scoped_style_from_ancestry(
 
 def recorded_attempt_source(parent: Path, selector: str) -> tuple[Path, dict]:
     """Resolve one immutable candidate output and verify its recorded hash."""
-    attempts_root = parent / "attempts"
-    attempt_paths = sorted(attempts_root.glob("*/attempt.json"))
+    try:
+        attempt_paths = recorded_attempt_paths(parent)
+        accepted_source = accepted_candidate_source_attempt(parent)
+    except (TypeError, ValueError) as exc:
+        raise SystemExit(str(exc)) from exc
     if not attempt_paths:
         raise SystemExit("Parent task has no recorded candidate attempts")
     if selector == "latest":
-        attempt_path = next(
-            (
-                path
-                for path in reversed(attempt_paths)
-                if read_json(path).get("status")
-                in {"accepted", "rejected", "candidate"}
-            ),
-            None,
-        )
+        attempt_path = None
+        for path in reversed(attempt_paths):
+            row = read_json(path)
+            if (
+                row.get("status") in {"rejected", "candidate"}
+                and accepted_source != row.get("attempt")
+            ):
+                attempt_path = path
+                break
         if attempt_path is None:
             raise SystemExit("Parent task has no recorded image candidate attempt")
     else:
@@ -147,19 +155,33 @@ def recorded_attempt_source(parent: Path, selector: str) -> tuple[Path, dict]:
             ) from exc
         if number < 1:
             raise SystemExit("--from-attempt must be a positive number or 'latest'")
-        attempt_path = attempts_root / f"{number:03d}" / "attempt.json"
+        try:
+            attempt_path = exact_attempt_path(parent, number)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
     if not attempt_path.is_file():
         raise SystemExit(f"Recorded attempt is missing: {attempt_path}")
 
     attempt = read_json(attempt_path)
-    if attempt.get("status") not in {"accepted", "rejected", "candidate"}:
+    selected_number = int(attempt_path.parent.name)
+    if type(attempt.get("attempt")) is not int or attempt["attempt"] != selected_number:
         raise SystemExit(
-            "Candidate local edits require an accepted, rejected, or pending candidate image attempt"
+            "Recorded candidate attempt number does not match its attempt directory"
+        )
+    if attempt.get("status") not in {"rejected", "candidate"}:
+        raise SystemExit(
+            "Candidate local edits require a rejected or pending candidate image attempt; "
+            "continue accepted outputs from --from-task instead"
+        )
+    if accepted_source == selected_number:
+        raise SystemExit(
+            "Selected candidate was accepted by the parent result; continue it from "
+            "--from-task instead"
         )
     output_text = attempt.get("output")
     if not output_text:
         raise SystemExit("Recorded candidate attempt has no output")
-    target = Path(output_text).expanduser().resolve()
+    target = resolve_recorded_path(output_text)
     if not target.is_file():
         raise SystemExit(f"Recorded candidate output is missing: {target}")
     output_hash = file_hash(target)
@@ -170,6 +192,47 @@ def recorded_attempt_source(parent: Path, selector: str) -> tuple[Path, dict]:
         "task_id": parent.name,
         "attempt": attempt.get("attempt"),
         "status": attempt.get("status"),
+        "output": str(target),
+        "output_sha256": output_hash,
+    }
+
+
+def accepted_result_source(parent: Path) -> tuple[Path, dict]:
+    """Resolve the exact output/hash bound to one accepted result decision."""
+    result_path = parent / "result.json"
+    if not result_path.is_file():
+        raise SystemExit("Accepted-parent continuation requires result.json")
+    result = read_json(result_path)
+    if result.get("status") != "accepted":
+        raise SystemExit("Accepted-parent continuation requires result.status=accepted")
+    attempt_number = result.get("accepted_attempt")
+    if type(attempt_number) is not int or attempt_number < 1:
+        raise SystemExit("Accepted result has no valid accepted_attempt")
+    try:
+        attempt_path = exact_attempt_path(parent, attempt_number)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    if not attempt_path.is_file():
+        raise SystemExit(f"Accepted attempt is missing: {attempt_path}")
+    attempt = read_json(attempt_path)
+    if (
+        type(attempt.get("attempt")) is not int
+        or attempt["attempt"] != attempt_number
+        or attempt.get("status") != "accepted"
+    ):
+        raise SystemExit("result.accepted_attempt does not resolve to an accepted attempt")
+    target = result_output(attempt)
+    if target is None or not target.is_file():
+        raise SystemExit("Accepted attempt output is missing")
+    output_hash = file_hash(target)
+    if attempt.get("output_sha256") != output_hash:
+        raise SystemExit("Accepted attempt output hash does not match attempt.json")
+    if result_output(result) != target:
+        raise SystemExit("Accepted result output does not match accepted attempt")
+    return target, {
+        "task_id": parent.name,
+        "attempt": attempt_number,
+        "status": "accepted",
         "output": str(target),
         "output_sha256": output_hash,
     }
@@ -190,7 +253,11 @@ def main() -> int:
             "hair, fabric, folds, and garment values; scene for environment only."
         ),
     )
-    parser.add_argument("--target", type=Path)
+    parser.add_argument(
+        "--target",
+        type=Path,
+        help="Deprecated; accepted parent outputs are fixed and overrides are rejected.",
+    )
     parser.add_argument(
         "--from-attempt",
         metavar="NUMBER|latest",
@@ -213,13 +280,12 @@ def main() -> int:
     parser.add_argument(
         "--target-max-edge",
         type=int,
-        default=960,
-        help="Transport proxy maximum edge for a full-canvas target (default: 960).",
+        help="Explicit transport proxy maximum edge for a full-canvas target.",
     )
     parser.add_argument(
         "--use-original-target",
         action="store_true",
-        help="Use the original full-canvas target instead of a transport proxy.",
+        help="Compatibility flag; original target bytes are now the default.",
     )
     parser.add_argument(
         "--edit-box",
@@ -227,7 +293,7 @@ def main() -> int:
         metavar="X,Y,WIDTH,HEIGHT",
         help=(
             "Use crop-and-composite mode for this exact target-image region. "
-            "Coordinates are pixels in the accepted parent output."
+            "Coordinates are pixels in the source target output."
         ),
     )
     parser.add_argument(
@@ -244,14 +310,25 @@ def main() -> int:
         )
     if args.from_attempt and args.target:
         raise SystemExit("--from-attempt cannot be combined with --target")
+    if args.target:
+        raise SystemExit(
+            "--target cannot override an accepted parent output; use the output bound "
+            "to result.accepted_attempt"
+        )
     if args.edit_box and args.full_canvas:
         raise SystemExit("--edit-box and --full-canvas are mutually exclusive")
-    if args.from_attempt and not (args.edit_box or args.full_canvas):
-        raise SystemExit("--from-attempt requires --edit-box or --full-canvas")
+    if not args.edit_box and not args.full_canvas:
+        raise SystemExit("continuations require exactly one of --edit-box or --full-canvas")
+    if args.target_max_edge is not None and not args.full_canvas:
+        raise SystemExit("--target-max-edge requires --full-canvas")
     if args.context_padding < 0:
         raise SystemExit("--context-padding must be zero or greater")
-    if args.target_max_edge < 256:
+    if args.target_max_edge is not None and args.target_max_edge < 256:
         raise SystemExit("--target-max-edge must be at least 256")
+    if args.use_original_target and args.target_max_edge is not None:
+        raise SystemExit(
+            "--use-original-target cannot be combined with --target-max-edge"
+        )
 
     config = load_config()
     root = workflow_root(config, args.workflow_root)
@@ -265,16 +342,25 @@ def main() -> int:
     brief = read_json(parent / "brief.json")
     manifest = read_json(parent / "reference-manifest.json")
     candidate_source = None
-    result = None
+    accepted_source = None
     if args.from_attempt:
         target, candidate_source = recorded_attempt_source(parent, args.from_attempt)
     else:
-        result = read_json(parent / "result.json")
-        target = (
-            args.target.expanduser().resolve() if args.target else result_output(result)
+        run(
+            [
+                sys.executable,
+                str(SCRIPTS / "validate_art_task.py"),
+                "--workflow-root",
+                str(root),
+                "--task-dir",
+                str(parent),
+                "--stage",
+                "final",
+            ]
         )
+        target, accepted_source = accepted_result_source(parent)
     if target is None or not target.is_file():
-        raise SystemExit("Parent accepted output or --target is missing")
+        raise SystemExit("Continuation source output is missing")
 
     intent = continuation_intent(candidate_source, args.full_canvas)
     scoped_style = None
@@ -355,6 +441,8 @@ def main() -> int:
         )
     if candidate_source:
         child_brief["candidate_source"] = candidate_source
+    else:
+        child_brief["accepted_parent_source"] = accepted_source
     if args.full_canvas:
         child_brief["edit_scope"] = "full-canvas"
         child_brief["prompt_invariants"].append(
@@ -424,20 +512,23 @@ def main() -> int:
                 args.change,
             ]
         )
-    elif not args.use_original_target:
+    elif args.target_max_edge is not None:
         prepare_command.extend(
             ["--external-target-max-edge", str(args.target_max_edge)]
         )
     for entry in selected_entries:
         prepare_command.extend(inherited_reference_arguments(entry))
     run(prepare_command)
-    if candidate_source:
+    if candidate_source or accepted_source:
         child_manifest_path = task_dir / "reference-manifest.json"
         child_manifest = read_json(child_manifest_path)
         target_entry = (child_manifest.get("references") or [None])[0]
         if not target_entry or target_entry.get("role") != "target":
-            raise SystemExit("Candidate edit manifest did not place target first")
-        target_entry["source_attempt"] = candidate_source
+            raise SystemExit("Continuation manifest did not place target first")
+        if candidate_source:
+            target_entry["source_attempt"] = candidate_source
+        else:
+            target_entry["source_accepted_attempt"] = accepted_source
         atomic_write_json(child_manifest_path, child_manifest)
     write_compiled_prompt(task_dir)
 

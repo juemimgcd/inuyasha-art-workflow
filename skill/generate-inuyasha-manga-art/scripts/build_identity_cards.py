@@ -38,6 +38,30 @@ def file_hash(path: Path) -> str:
     return digest.hexdigest()
 
 
+def resolve_configured_source(
+    config: dict[str, Any], source_id: str, relative_path: str
+) -> Path:
+    """Resolve one catalog path inside its configured source root."""
+    source_config = next(
+        (
+            source
+            for source in config.get("sources", [])
+            if source.get("id") == source_id
+        ),
+        None,
+    )
+    relative = Path(str(relative_path).replace("\\", "/"))
+    if source_config is None or relative.is_absolute() or ".." in relative.parts:
+        raise ValueError(f"identity card source path is unsafe: {relative_path}")
+    source_root = Path(source_config["path"]).expanduser().resolve()
+    source = source_root.joinpath(*relative.parts).resolve()
+    if not source.is_relative_to(source_root):
+        raise ValueError(
+            f"identity card source escapes its configured root: {relative_path}"
+        )
+    return source
+
+
 def bytes_hash(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
@@ -128,27 +152,9 @@ def resolve_panel(connection, panel: dict[str, Any], card: dict[str, Any]) -> di
             f"{card['character']}={card['form']}"
         )
     config = load_config()
-    source_config = next(
-        (
-            source
-            for source in config.get("sources", [])
-            if source.get("id") == row["source_id"]
-        ),
-        None,
+    source = resolve_configured_source(
+        config, row["source_id"], row["relative_path"]
     )
-    if source_config is None:
-        raise ValueError(f"identity card source is unconfigured: {row['source_id']}")
-    relative = Path(str(row["relative_path"]).replace("\\", "/"))
-    if relative.is_absolute() or ".." in relative.parts:
-        raise ValueError(
-            f"identity card source path is unsafe: {row['relative_path']}"
-        )
-    source_root = Path(source_config["path"]).resolve()
-    source = source_root.joinpath(*relative.parts).resolve()
-    if not source.is_relative_to(source_root):
-        raise ValueError(
-            f"identity card source escapes its configured root: {row['relative_path']}"
-        )
     if not source.is_file():
         raise ValueError(f"identity card source is missing: {source}")
     actual_hash = file_hash(source)
@@ -245,6 +251,140 @@ def unmanaged_card_outputs(output_dir: Path, expected_files: set[str]) -> list[P
     )
 
 
+def validate_historical_cards(
+    output_dir: Path, database: Path, recipes_path: Path = DEFAULT_RECIPES
+) -> dict[str, Any]:
+    """Validate retired cards against their recorded manifest, not current recipes."""
+    failures: list[str] = []
+    output_root = output_dir.resolve()
+    manifest_path = output_root / "manifest.json"
+    if not manifest_path.is_file():
+        return {
+            "ok": False,
+            "check": True,
+            "recipes": str(recipes_path.resolve()),
+            "output_dir": str(output_dir.resolve()),
+            "manifest": str(manifest_path.resolve()),
+            "card_count": 0,
+            "cards": [],
+            "integrity_mode": "manifest-locked",
+            "recipe_sha256_matches": None,
+            "failures": [f"identity card manifest is missing: {manifest_path}"],
+        }
+    if manifest_path.resolve() != manifest_path:
+        return {
+            "ok": False,
+            "check": True,
+            "recipes": str(recipes_path.resolve()),
+            "output_dir": str(output_root),
+            "manifest": str(manifest_path),
+            "card_count": 0,
+            "cards": [],
+            "integrity_mode": "manifest-locked",
+            "recipe_sha256_matches": None,
+            "failures": [
+                f"identity card manifest must not be a symlink: {manifest_path}"
+            ],
+        }
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("schema_version") != 1:
+        failures.append("identity card manifest schema_version must be 1")
+    cards = manifest.get("cards")
+    if not isinstance(cards, list) or not cards:
+        failures.append("identity card manifest requires cards")
+        cards = []
+    config = load_config()
+    connection = open_database(database, read_only=True)
+    expected_files: set[str] = set()
+    seen_ids: set[str] = set()
+    summaries: list[dict[str, Any]] = []
+    try:
+        for card in cards:
+            card_id = str(card.get("id", "")).strip()
+            if not card_id or card_id in seen_ids:
+                failures.append(f"invalid or duplicate identity card id: {card_id}")
+                continue
+            seen_ids.add(card_id)
+            output_file = str(card.get("output_file", "")).strip()
+            relative_output = Path(output_file)
+            if (
+                not output_file
+                or relative_output.is_absolute()
+                or ".." in relative_output.parts
+            ):
+                failures.append(f"identity card output path is unsafe: {card_id}")
+                continue
+            expected_files.add(output_file)
+            output = (output_root / relative_output).resolve()
+            if not output.is_relative_to(output_root):
+                failures.append(f"identity card output path escapes output directory: {card_id}")
+            elif not output.is_file():
+                failures.append(f"identity card is missing: {output}")
+            elif file_hash(output) != card.get("output_sha256"):
+                failures.append(f"identity card output hash is stale: {card_id}")
+            panels = card.get("panels")
+            if not isinstance(panels, list) or not panels:
+                failures.append(f"identity card provenance is incomplete: {card_id}")
+                panels = []
+            for panel in panels:
+                item_id = str(panel.get("item_id", "")).strip()
+                source_hash = str(panel.get("source_sha256", "")).strip()
+                if not item_id or not source_hash:
+                    failures.append(
+                        f"identity card source record is incomplete: {card_id}"
+                    )
+                    continue
+                row = connection.execute(
+                    """
+                    SELECT content_hash, source_id, relative_path FROM items
+                    WHERE item_id = ? OR item_id = (
+                        SELECT item_id FROM item_aliases WHERE alias_id = ?
+                    )
+                    """,
+                    (item_id, item_id),
+                ).fetchone()
+                if row is None or row["content_hash"] != source_hash:
+                    failures.append(f"identity card source hash is stale: {item_id}")
+                    continue
+                try:
+                    source = resolve_configured_source(
+                        config, row["source_id"], row["relative_path"]
+                    )
+                except ValueError:
+                    failures.append(f"identity card source path is unsafe: {item_id}")
+                    continue
+                if not source.is_file() or file_hash(source) != source_hash:
+                    failures.append(f"identity card source file is stale: {item_id}")
+            summaries.append(
+                {
+                    "id": card_id,
+                    "form": card.get("form"),
+                    "output": str(output),
+                    "sha256": card.get("output_sha256"),
+                }
+            )
+    finally:
+        connection.close()
+    for stale in unmanaged_card_outputs(output_dir, expected_files):
+        failures.append(f"unmanaged identity card output: {stale}")
+    recipe_sha256_matches = (
+        recipes_path.is_file()
+        and manifest.get("recipe_sha256") == file_hash(recipes_path)
+    )
+    return {
+        "ok": not failures,
+        "check": True,
+        "recipes": str(recipes_path.resolve()),
+        "output_dir": str(output_dir.resolve()),
+        "manifest": str(manifest_path.resolve()),
+        "card_count": len(cards),
+        "cards": summaries,
+        "integrity_mode": "manifest-locked",
+        "recipe_sha256_matches": recipe_sha256_matches,
+        "failures": failures,
+    }
+
+
 def build_cards(
     recipes_path: Path,
     output_dir: Path,
@@ -252,10 +392,11 @@ def build_cards(
     *,
     check: bool,
 ) -> dict[str, Any]:
+    if check:
+        return validate_historical_cards(output_dir, database, recipes_path)
     recipes = load_recipes(recipes_path)
     recipe_sha256 = file_hash(recipes_path)
     connection = open_database(database, read_only=True)
-    failures: list[str] = []
     cards: list[dict[str, Any]] = []
     try:
         for card in recipes["cards"]:
@@ -265,13 +406,7 @@ def build_cards(
             rendered = render_card(card, panels)
             output = output_dir / card["output_file"]
             rendered_sha256 = bytes_hash(rendered)
-            if check:
-                if not output.is_file():
-                    failures.append(f"identity card is missing: {output}")
-                elif file_hash(output) != rendered_sha256:
-                    failures.append(f"identity card is stale: {output}")
-            else:
-                atomic_write_bytes(output, rendered)
+            atomic_write_bytes(output, rendered)
             authority, canonical_only, source_authorities = card_authority(panels)
             cards.append(
                 {
@@ -308,51 +443,10 @@ def build_cards(
         "recipe_sha256": recipe_sha256,
         "cards": cards,
     }
-    if check:
-        expected_files = {str(card["output_file"]) for card in cards}
-        for stale in unmanaged_card_outputs(output_dir, expected_files):
-            failures.append(f"unmanaged identity card output: {stale}")
-        if not manifest_path.is_file():
-            failures.append(f"identity card manifest is missing: {manifest_path}")
-        else:
-            existing = json.loads(manifest_path.read_text(encoding="utf-8"))
-            if existing.get("recipe_sha256") != recipe_sha256:
-                failures.append("identity card manifest recipe hash is stale")
-            existing_cards = {
-                card.get("id"): card for card in existing.get("cards", [])
-            }
-            for card in cards:
-                existing_card = existing_cards.get(card["id"], {})
-                if existing_card.get("output_sha256") != card["output_sha256"]:
-                    failures.append(
-                        f"identity card manifest output hash is stale: {card['id']}"
-                    )
-                for field in (
-                    "authority",
-                    "canonical_sources_only",
-                    "source_authorities",
-                    "subject_kind",
-                ):
-                    if existing_card.get(field) != card[field]:
-                        failures.append(
-                            f"identity card manifest {field} is stale: {card['id']}"
-                        )
-                existing_source_hashes = [
-                    panel.get("source_sha256")
-                    for panel in existing_card.get("panels", [])
-                ]
-                current_source_hashes = [
-                    panel.get("source_sha256") for panel in card["panels"]
-                ]
-                if existing_source_hashes != current_source_hashes:
-                    failures.append(
-                        f"identity card manifest sources are stale: {card['id']}"
-                    )
-    else:
-        atomic_write_json(manifest_path, manifest)
+    atomic_write_json(manifest_path, manifest)
     return {
-        "ok": not failures,
-        "check": check,
+        "ok": True,
+        "check": False,
         "recipes": str(recipes_path.resolve()),
         "output_dir": str(output_dir.resolve()),
         "manifest": str(manifest_path.resolve()),
@@ -366,7 +460,7 @@ def build_cards(
             }
             for card in cards
         ],
-        "failures": failures,
+        "failures": [],
     }
 
 
@@ -382,6 +476,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if not args.check:
+        raise SystemExit(
+            "Identity-card generation is retired; only --check is available for "
+            "historical provenance. Use official setting-sheet inputs instead."
+        )
     config = load_config()
     root = workflow_root(config, args.workflow_root)
     output_dir = (

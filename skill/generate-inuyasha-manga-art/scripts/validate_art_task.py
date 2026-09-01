@@ -26,14 +26,17 @@ from task_workflow import (
     BRIEF_SCHEMA_VERSION,
     CHANGE_CATEGORIES,
     CHANGE_SCOPE_SCHEMA_VERSION,
+    CONTINUATION_SOURCE_SCHEMA_VERSION,
     DEFAULT_EDIT_PRE_GENERATION_TARGET_SECONDS,
     DEFAULT_MAX_TECHNICAL_RETRIES,
     DEFAULT_POST_GENERATION_TARGET_SECONDS,
     INTENT_VALUES,
     PROMPT_COMPILE_SCHEMA_VERSION,
     RESULT_SCHEMA_VERSION,
+    accepted_candidate_source_attempt,
     character_style_coverage_failures,
     elapsed_seconds,
+    exact_attempt_path,
     is_split_domain_task,
     latency_budget,
     parse_timestamp,
@@ -41,8 +44,10 @@ from task_workflow import (
     prompt_compile_report_required,
     prompt_limit,
     qa_acceptance_failures,
+    recorded_attempt_paths,
     reference_strategy_failures,
     rendering_map_failures,
+    result_output,
     scoped_style_failures,
     task_intent,
 )
@@ -391,7 +396,11 @@ def accepted_attempt_snapshot_failures(
     failures = []
     if attempt_path is None or not attempt_path.is_file():
         return ["result.accepted_attempt must resolve to attempt.json"]
-    if attempt.get("attempt") != result.get("accepted_attempt"):
+    if (
+        type(attempt.get("attempt")) is not int
+        or type(result.get("accepted_attempt")) is not int
+        or attempt["attempt"] != result["accepted_attempt"]
+    ):
         failures.append(
             "accepted attempt number does not match result.accepted_attempt"
         )
@@ -473,20 +482,28 @@ def accepted_attempt_snapshot_failures(
                 "accepted attempt decision_from_attempt must be a positive integer"
             )
             return failures
-        if attempt.get("accepted_from_attempt") != decision_from_attempt:
+        if (
+            type(attempt.get("accepted_from_attempt")) is not int
+            or attempt["accepted_from_attempt"] != decision_from_attempt
+        ):
             failures.append(
                 "accepted attempt accepted_from_attempt does not match its decision source"
             )
         if attempt.get("counts_as_generation") is not False:
             failures.append("accepted decision marker must not count as a generation")
-        source_path = (
-            task_dir / "attempts" / f"{decision_from_attempt:03d}" / "attempt.json"
-        )
+        try:
+            source_path = exact_attempt_path(task_dir, decision_from_attempt)
+        except ValueError as exc:
+            failures.append(str(exc))
+            return failures
         if not source_path.is_file():
             failures.append("accepted decision source attempt is missing")
             return failures
         source = load_json(source_path, failures)
-        if source.get("attempt") != decision_from_attempt:
+        if (
+            type(source.get("attempt")) is not int
+            or source["attempt"] != decision_from_attempt
+        ):
             failures.append(
                 "accepted decision source number does not match decision_from_attempt"
             )
@@ -521,36 +538,77 @@ def candidate_source_failures(
     source = brief.get("candidate_source")
     if not source:
         return []
+    if not isinstance(source, dict):
+        return ["brief.candidate_source must be an object"]
     failures = []
     if brief.get("intent") != "edit":
         failures.append("candidate_source is valid only for edit tasks")
     task_id = source.get("task_id")
     attempt_number = source.get("attempt")
-    if not task_id or brief.get("parent_task_id") != task_id:
+    if (
+        not isinstance(task_id, str)
+        or not task_id.strip()
+        or brief.get("parent_task_id") != task_id
+    ):
         failures.append("candidate_source.task_id must match brief.parent_task_id")
         return failures
-    if not isinstance(attempt_number, int) or attempt_number < 1:
+    if type(attempt_number) is not int or attempt_number < 1:
         failures.append("candidate_source.attempt must be a positive integer")
         return failures
-    parent = task_dir.parent / task_id
-    attempt_path = parent / "attempts" / f"{attempt_number:03d}" / "attempt.json"
+    parent = (task_dir.parent / task_id).resolve()
+    if parent.parent != task_dir.parent.resolve() or parent.name != task_id:
+        failures.append(
+            "candidate source task must be a direct workflow task directory"
+        )
+        return failures
+    try:
+        attempt_path = exact_attempt_path(parent, attempt_number)
+    except ValueError as exc:
+        failures.append(str(exc))
+        return failures
     if not attempt_path.is_file():
         failures.append(f"candidate source attempt is missing: {attempt_path}")
         return failures
     attempt = load_json(attempt_path, failures)
-    if attempt.get("status") not in {"accepted", "rejected", "candidate"}:
+    versioned = (
+        brief.get("continuation_source_schema_version")
+        == CONTINUATION_SOURCE_SCHEMA_VERSION
+    )
+    allowed_statuses = (
+        {"rejected", "candidate"}
+        if versioned
+        else {"accepted", "rejected", "candidate"}
+    )
+    if attempt.get("status") not in allowed_statuses:
         failures.append("candidate source attempt must contain an image output")
+    if versioned:
+        try:
+            accepted_source = accepted_candidate_source_attempt(parent)
+        except (TypeError, ValueError) as exc:
+            failures.append(str(exc))
+        else:
+            if accepted_source == attempt_number:
+                failures.append(
+                    "candidate source was accepted by the parent result; use the "
+                    "accepted parent source instead"
+                )
     output_text = attempt.get("output")
     output = resolve_recorded_path(output_text) if output_text else None
     if output is None or not output.is_file():
         failures.append("candidate source output is missing")
         return failures
     output_hash = file_hash(output)
-    if attempt.get("attempt") != attempt_number:
+    if (
+        type(attempt.get("attempt")) is not int
+        or attempt["attempt"] != attempt_number
+    ):
         failures.append("candidate source attempt number does not match its directory")
     if source.get("status") != attempt.get("status"):
         failures.append("brief.candidate_source status does not match attempt.json")
-    if resolve_recorded_path(source.get("output", "")) != output:
+    source_output = source.get("output")
+    if not isinstance(source_output, str) or (
+        resolve_recorded_path(source_output) != output
+    ):
         failures.append("brief.candidate_source output does not match attempt.json")
     if attempt.get("output_sha256") != output_hash:
         failures.append("candidate source output hash changed after attempt recording")
@@ -574,7 +632,10 @@ def candidate_source_failures(
                 "candidate edit target is missing exact source_attempt provenance"
             )
     local_edit = brief.get("local_edit") or {}
-    if brief.get("edit_scope") == "full-canvas":
+    edit_scope = brief.get("edit_scope")
+    if edit_scope not in {None, "full-canvas"}:
+        failures.append("candidate edit_scope must be full-canvas or omitted")
+    if edit_scope == "full-canvas":
         if local_edit:
             failures.append("full-canvas candidate edit cannot include local_edit metadata")
     elif local_edit.get("mode") != "crop-composite":
@@ -584,14 +645,149 @@ def candidate_source_failures(
     return failures
 
 
-def unchanged_consecutive_errors(task_dir: Path) -> int:
+def accepted_parent_source_failures(
+    task_dir: Path, brief: dict, references: list[dict]
+) -> list[str]:
+    """Bind an accepted continuation target to its parent's accepted attempt."""
+    source = brief.get("accepted_parent_source")
+    intent = task_intent(brief)
+    if not source:
+        return (
+            ["versioned microfix tasks require brief.accepted_parent_source"]
+            if intent == "microfix"
+            and brief.get("continuation_source_schema_version")
+            == CONTINUATION_SOURCE_SCHEMA_VERSION
+            else []
+        )
+    if not isinstance(source, dict):
+        return ["brief.accepted_parent_source must be an object"]
+
+    failures = []
+    if intent not in {"edit", "microfix"}:
+        failures.append("accepted_parent_source is valid only for edit or microfix tasks")
+    task_id = source.get("task_id")
+    attempt_number = source.get("attempt")
+    if (
+        not isinstance(task_id, str)
+        or not task_id.strip()
+        or brief.get("parent_task_id") != task_id
+    ):
+        failures.append(
+            "accepted_parent_source.task_id must match brief.parent_task_id"
+        )
+        return failures
+    if (
+        not isinstance(attempt_number, int)
+        or isinstance(attempt_number, bool)
+        or attempt_number < 1
+    ):
+        failures.append("accepted_parent_source.attempt must be a positive integer")
+        return failures
+
+    parent = (task_dir.parent / task_id).resolve()
+    if parent.parent != task_dir.parent.resolve() or parent.name != task_id:
+        failures.append("accepted parent must be a direct workflow task directory")
+        return failures
+    result_path = parent / "result.json"
+    try:
+        attempt_path = exact_attempt_path(parent, attempt_number)
+    except ValueError as exc:
+        failures.append(str(exc))
+        return failures
+    if not result_path.is_file() or not attempt_path.is_file():
+        failures.append("accepted parent result or attempt is missing")
+        return failures
+
+    result = load_json(result_path, failures)
+    attempt = load_json(attempt_path, failures)
+    if result.get("status") != "accepted":
+        failures.append("accepted parent result status is not accepted")
+    if (
+        type(result.get("accepted_attempt")) is not int
+        or result["accepted_attempt"] != attempt_number
+    ):
+        failures.append("accepted parent result does not bind the recorded attempt")
+    if (
+        type(attempt.get("attempt")) is not int
+        or attempt["attempt"] != attempt_number
+        or attempt.get("status") != "accepted"
+    ):
+        failures.append("accepted parent attempt is not an accepted decision")
+    output = result_output(attempt)
+    if output is None or not output.is_file():
+        failures.append("accepted parent output is missing")
+        return failures
+    output_hash = file_hash(output)
+    if result_output(result) != output:
+        failures.append("accepted parent result output does not match its attempt")
+    if attempt.get("output_sha256") != output_hash:
+        failures.append("accepted parent output hash changed after acceptance")
+    expected_source = {
+        "task_id": task_id,
+        "attempt": attempt_number,
+        "status": "accepted",
+        "output": str(output),
+        "output_sha256": output_hash,
+    }
+    normalized_source = dict(source)
+    source_output = source.get("output")
+    if isinstance(source_output, str) and source_output.strip():
+        normalized_source["output"] = str(resolve_recorded_path(source_output))
+    if normalized_source != expected_source:
+        failures.append("brief.accepted_parent_source is not the exact accepted source")
+
+    target = references[0] if references else {}
+    if target.get("role") != "target":
+        failures.append("accepted continuation must place its parent output first")
+    else:
+        if resolve_recorded_path(target.get("original_path", "")) != output:
+            failures.append("accepted continuation target is not the parent output")
+        if target.get("content_hash") != output_hash:
+            failures.append("accepted continuation target hash is incorrect")
+        if target.get("source_accepted_attempt") != source:
+            failures.append(
+                "accepted continuation target is missing accepted-attempt provenance"
+            )
+    if (
+        brief.get("continuation_source_schema_version")
+        == CONTINUATION_SOURCE_SCHEMA_VERSION
+    ):
+        local_edit = brief.get("local_edit") or {}
+        if intent == "microfix":
+            if brief.get("edit_scope") is not None:
+                failures.append("versioned microfix tasks cannot declare edit_scope")
+            if local_edit.get("mode") != "crop-composite":
+                failures.append("versioned microfix tasks require crop-composite mode")
+            else:
+                local_target = local_edit.get("target")
+                if not isinstance(local_target, str) or (
+                    resolve_recorded_path(local_target) != output
+                ):
+                    failures.append(
+                        "accepted microfix local-edit target is not the parent output"
+                    )
+        elif intent == "edit":
+            if brief.get("edit_scope") != "full-canvas":
+                failures.append(
+                    "versioned accepted child edits require full-canvas scope"
+                )
+            if local_edit:
+                failures.append(
+                    "versioned accepted full-canvas edits cannot include local_edit metadata"
+                )
+    return failures
+
+
+def unchanged_consecutive_errors(
+    task_dir: Path, attempt_paths: list[Path] | None = None
+) -> int:
+    if attempt_paths is None:
+        attempt_paths = recorded_attempt_paths(task_dir)
     current_files = [task_dir / "prompt.md", task_dir / "reference-manifest.json"]
     if not all(path.is_file() for path in current_files):
         return 0
     count = 0
-    for attempt_path in sorted(
-        (task_dir / "attempts").glob("*/attempt.json"), reverse=True
-    ):
+    for attempt_path in reversed(attempt_paths):
         attempt = json.loads(attempt_path.read_text(encoding="utf-8"))
         if attempt.get("status") != "error":
             break
@@ -609,7 +805,9 @@ def unchanged_consecutive_errors(task_dir: Path) -> int:
 
 
 def consecutive_technical_errors(
-    task_dir: Path, response_started_at: str | None = None
+    task_dir: Path,
+    response_started_at: str | None = None,
+    attempt_paths: list[Path] | None = None,
 ) -> int:
     """Count the latest uninterrupted run of recorded technical failures.
 
@@ -617,10 +815,10 @@ def consecutive_technical_errors(
     The workflow contract allows one meaningful retry, then requires a handoff
     instead of spending more image-generation calls in the same task.
     """
+    if attempt_paths is None:
+        attempt_paths = recorded_attempt_paths(task_dir)
     count = 0
-    for attempt_path in sorted(
-        (task_dir / "attempts").glob("*/attempt.json"), reverse=True
-    ):
+    for attempt_path in reversed(attempt_paths):
         attempt = json.loads(attempt_path.read_text(encoding="utf-8"))
         if (
             response_started_at is not None
@@ -820,6 +1018,18 @@ def main() -> int:
         )
         return 2
 
+    try:
+        attempt_paths = recorded_attempt_paths(task_dir)
+    except ValueError as exc:
+        print(
+            json.dumps(
+                {"ok": False, "stage": args.stage, "failures": [str(exc)]},
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 2
+
     final_result: dict = {}
     accepted_attempt: dict = {}
     accepted_attempt_path: Path | None = None
@@ -828,13 +1038,13 @@ def main() -> int:
         final_result = load_json(task_dir / "result.json", failures)
         accepted_attempt_number = final_result.get("accepted_attempt")
         if type(accepted_attempt_number) is int and accepted_attempt_number > 0:
-            accepted_attempt_path = (
-                task_dir
-                / "attempts"
-                / f"{accepted_attempt_number:03d}"
-                / "attempt.json"
-            )
-            if accepted_attempt_path.is_file():
+            try:
+                accepted_attempt_path = exact_attempt_path(
+                    task_dir, accepted_attempt_number
+                )
+            except ValueError as exc:
+                failures.append(str(exc))
+            if accepted_attempt_path is not None and accepted_attempt_path.is_file():
                 accepted_attempt = load_json(accepted_attempt_path, failures)
                 snapshot_dir = accepted_attempt_path.parent
                 if accepted_attempt.get("status") == "accepted" and all(
@@ -896,6 +1106,27 @@ def main() -> int:
         )
     if brief_schema >= BRIEF_SCHEMA_VERSION and raw_intent not in INTENT_VALUES:
         failures.append(f"brief.intent must be one of: {', '.join(INTENT_VALUES)}")
+    continuation_schema = brief.get("continuation_source_schema_version")
+    if continuation_schema is not None and (
+        type(continuation_schema) is not int
+        or continuation_schema != CONTINUATION_SOURCE_SCHEMA_VERSION
+    ):
+        failures.append(
+            "brief.continuation_source_schema_version must be the JSON integer "
+            f"{CONTINUATION_SOURCE_SCHEMA_VERSION}"
+        )
+    elif continuation_schema == CONTINUATION_SOURCE_SCHEMA_VERSION:
+        candidate_source = bool(brief.get("candidate_source"))
+        accepted_source = bool(brief.get("accepted_parent_source"))
+        if candidate_source == accepted_source:
+            failures.append(
+                "versioned continuations require exactly one candidate_source or "
+                "accepted_parent_source"
+            )
+        if intent == "microfix" and not accepted_source:
+            failures.append(
+                "versioned microfix tasks require brief.accepted_parent_source"
+            )
     if intent == "microfix":
         if not brief.get("parent_task_id"):
             failures.append("microfix tasks require brief.parent_task_id")
@@ -1033,7 +1264,7 @@ def main() -> int:
                 )
 
         technical_error_streak = consecutive_technical_errors(
-            task_dir, response_started_at
+            task_dir, response_started_at, attempt_paths
         )
         if technical_retry_limit_reached(
             technical_error_streak, budget["max_technical_retries"]
@@ -1044,7 +1275,8 @@ def main() -> int:
             )
         elif (
             response_started_at is None
-            and unchanged_consecutive_errors(task_dir) > budget["max_technical_retries"]
+            and unchanged_consecutive_errors(task_dir, attempt_paths)
+            > budget["max_technical_retries"]
         ):
             failures.append(
                 "retry stop: two consecutive errors used the unchanged prompt and "
@@ -1053,6 +1285,7 @@ def main() -> int:
 
     references = manifest.get("references") or []
     failures.extend(candidate_source_failures(task_dir, brief, references))
+    failures.extend(accepted_parent_source_failures(task_dir, brief, references))
     if not references:
         failures.append("reference manifest is empty")
     reference_limit = 5 if intent == "microfix" else 6

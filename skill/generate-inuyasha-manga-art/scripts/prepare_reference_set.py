@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from image_sheet import build_contact_sheet
+from build_identity_cards import resolve_configured_source
 from task_workflow import is_split_domain_task
 from workflow_common import (
     OFFICIAL_IDENTITY_FACETS,
@@ -39,9 +40,6 @@ ALLOWED_ROLES = {
     "continuity",
     "content",
 }
-IDENTITY_CARD_RECIPES = (
-    Path(__file__).resolve().parent.parent / "references" / "identity-card-recipes.json"
-)
 ROLE_ORDER = {
     "target": 0,
     "style": 1,
@@ -315,19 +313,18 @@ def file_hash(path: Path) -> str:
 def resolve_identity_card(
     root: Path, character: str, form: str
 ) -> tuple[dict[str, Any], Path]:
-    manifest_path = root / "identity-cards" / "manifest.json"
+    workflow_root = root.resolve()
+    identity_root = (workflow_root / "identity-cards").resolve()
+    if not identity_root.is_relative_to(workflow_root):
+        raise ValueError("historical identity card directory escapes workflow root")
+    manifest_path = identity_root / "manifest.json"
     if not manifest_path.is_file():
-        raise ValueError(
-            "identity card manifest is missing; run build_identity_cards.py first"
-        )
+        raise ValueError("historical identity card manifest is missing")
+    if manifest_path.resolve() != manifest_path:
+        raise ValueError("historical identity card manifest must not be a symlink")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if (
-        not IDENTITY_CARD_RECIPES.is_file()
-        or manifest.get("recipe_sha256") != file_hash(IDENTITY_CARD_RECIPES)
-    ):
-        raise ValueError(
-            "identity card recipes changed; run build_identity_cards.py first"
-        )
+    if manifest.get("schema_version") != 1:
+        raise ValueError("historical identity card manifest schema must be 1")
     matches = [
         card
         for card in manifest.get("cards", [])
@@ -338,7 +335,17 @@ def resolve_identity_card(
             f"expected one identity card for {character}={form}; found {len(matches)}"
         )
     card = matches[0]
-    output = root / "identity-cards" / str(card.get("output_file", ""))
+    output_file = str(card.get("output_file", "")).strip()
+    relative_output = Path(output_file)
+    if (
+        not output_file
+        or relative_output.is_absolute()
+        or ".." in relative_output.parts
+    ):
+        raise ValueError(f"historical identity card path is unsafe: {character}={form}")
+    output = (identity_root / relative_output).resolve()
+    if not output.is_relative_to(identity_root):
+        raise ValueError(f"historical identity card path escapes its directory: {character}={form}")
     if not output.is_file() or file_hash(output) != card.get("output_sha256"):
         raise ValueError(f"identity card is missing or stale: {character}={form}")
     if not card.get("panels") or not all(
@@ -347,16 +354,34 @@ def resolve_identity_card(
     ):
         raise ValueError(f"identity card provenance is incomplete: {character}={form}")
     database = workflow_paths(root)["database"]
+    config = load_config()
     connection = open_database(database, read_only=True)
     try:
         for panel in card["panels"]:
             row = connection.execute(
-                "SELECT content_hash FROM items WHERE item_id = ?",
-                (panel["item_id"],),
+                """
+                SELECT content_hash, source_id, relative_path FROM items
+                WHERE item_id = ? OR item_id = (
+                    SELECT item_id FROM item_aliases WHERE alias_id = ?
+                )
+                """,
+                (panel["item_id"], panel["item_id"]),
             ).fetchone()
             if row is None or row["content_hash"] != panel["source_sha256"]:
                 raise ValueError(
                     f"identity card source is missing or stale: {panel['item_id']}"
+                )
+            try:
+                source = resolve_configured_source(
+                    config, row["source_id"], row["relative_path"]
+                )
+            except ValueError:
+                raise ValueError(
+                    f"identity card source path is unsafe: {panel['item_id']}"
+                )
+            if not source.is_file() or file_hash(source) != panel["source_sha256"]:
+                raise ValueError(
+                    f"identity card source file is missing or stale: {panel['item_id']}"
                 )
     finally:
         connection.close()
