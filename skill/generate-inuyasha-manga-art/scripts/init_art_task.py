@@ -12,6 +12,7 @@ from task_workflow import (
     CHANGE_CATEGORIES,
     CHANGE_SCOPE_SCHEMA_VERSION,
     CHANGE_SCOPES,
+    CONTINUATION_SOURCE_SCHEMA_VERSION,
     DEFAULT_EDIT_PRE_GENERATION_TARGET_SECONDS,
     DEFAULT_MAX_TECHNICAL_RETRIES,
     DEFAULT_NEW_PRE_GENERATION_TARGET_SECONDS,
@@ -464,6 +465,11 @@ def main() -> int:
         "request": args.request,
         "intent": intent,
         "parent_task_id": parent_task_id,
+        "continuation_source_schema_version": (
+            CONTINUATION_SOURCE_SCHEMA_VERSION
+            if parent_brief is not None and intent in {"edit", "microfix"}
+            else None
+        ),
         "change_category": args.change_category,
         "change_scope_schema_version": (
             CHANGE_SCOPE_SCHEMA_VERSION

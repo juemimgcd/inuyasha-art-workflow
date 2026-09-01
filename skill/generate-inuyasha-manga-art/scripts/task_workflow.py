@@ -335,6 +335,7 @@ CHANGE_CATEGORIES = (
 )
 CHANGE_SCOPES = ("character", "scene")
 CHANGE_SCOPE_SCHEMA_VERSION = 1
+CONTINUATION_SOURCE_SCHEMA_VERSION = 1
 SCOPED_STYLE_CHANGE_CATEGORIES = {"medium", "tone"}
 IDENTITY_LEDGERS_PATH = (
     Path(__file__).resolve().parent.parent / "references" / "identity-ledgers.json"
@@ -404,6 +405,117 @@ def read_json(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise TypeError(f"Expected a JSON object: {path}")
     return value
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def exact_attempt_path(task_dir: Path, attempt_number: int) -> Path:
+    """Return a canonical in-task attempt record without following symlinks."""
+    if type(attempt_number) is not int or attempt_number < 1:
+        raise ValueError("attempt number must be a positive integer")
+    task_dir = task_dir.resolve()
+    expected = (
+        task_dir / "attempts" / f"{attempt_number:03d}" / "attempt.json"
+    )
+    try:
+        resolved = expected.resolve()
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(f"attempt path cannot be resolved safely: {expected}") from exc
+    if resolved != expected:
+        raise ValueError(f"attempt path must not contain symlinks: {expected}")
+    return expected
+
+
+def recorded_attempt_paths(task_dir: Path) -> list[Path]:
+    """List canonical attempt records, rejecting paths that can escape their task."""
+    task_dir = task_dir.resolve()
+    attempts_dir = task_dir / "attempts"
+    if attempts_dir.exists() and attempts_dir.resolve() != attempts_dir:
+        raise ValueError(f"attempts directory must not be a symlink: {attempts_dir}")
+    if not attempts_dir.is_dir():
+        return []
+    paths = []
+    for path in sorted(attempts_dir.glob("*/attempt.json")):
+        directory_name = path.parent.name
+        if not directory_name.isdigit():
+            raise ValueError(f"attempt directory is not numeric: {path.parent}")
+        attempt_number = int(directory_name)
+        expected = exact_attempt_path(task_dir, attempt_number)
+        if directory_name != f"{attempt_number:03d}" or path != expected:
+            raise ValueError(f"attempt path is not canonical: {path}")
+        paths.append(expected)
+    return paths
+
+
+def accepted_candidate_source_attempt(task_dir: Path) -> int | None:
+    """Return the candidate attempt accepted by the task's canonical result marker."""
+    task_dir = task_dir.resolve()
+    result_path = task_dir / "result.json"
+    if not result_path.is_file():
+        return None
+    if result_path.resolve() != result_path:
+        raise ValueError(f"result path must not be a symlink: {result_path}")
+    result = read_json(result_path)
+    if result.get("status") != "accepted":
+        return None
+    accepted_attempt = result.get("accepted_attempt")
+    if type(accepted_attempt) is not int or accepted_attempt < 1:
+        raise ValueError("accepted result has no valid accepted_attempt")
+    marker_path = exact_attempt_path(task_dir, accepted_attempt)
+    if not marker_path.is_file():
+        raise ValueError(f"accepted attempt is missing: {marker_path}")
+    marker = read_json(marker_path)
+    if (
+        type(marker.get("attempt")) is not int
+        or marker["attempt"] != accepted_attempt
+        or marker.get("status") != "accepted"
+    ):
+        raise ValueError("result.accepted_attempt is not an accepted attempt")
+    decision_from = marker.get("decision_from_attempt")
+    if decision_from is None:
+        if marker.get("accepted_from_attempt") is not None:
+            raise ValueError("direct accepted attempt has unexpected source provenance")
+        return None
+    if (
+        type(decision_from) is not int
+        or decision_from < 1
+        or type(marker.get("accepted_from_attempt")) is not int
+        or marker["accepted_from_attempt"] != decision_from
+    ):
+        raise ValueError("accepted decision marker has invalid source provenance")
+    source_path = exact_attempt_path(task_dir, decision_from)
+    if not source_path.is_file():
+        raise ValueError(f"accepted decision source is missing: {source_path}")
+    source = read_json(source_path)
+    if (
+        type(source.get("attempt")) is not int
+        or source["attempt"] != decision_from
+        or source.get("status") != "candidate"
+    ):
+        raise ValueError("accepted decision source is not the recorded candidate")
+    marker_output = result_output(marker)
+    source_output = result_output(source)
+    if (
+        marker_output is None
+        or source_output is None
+        or marker_output != source_output
+        or not source_output.is_file()
+        or result_output(result) != source_output
+    ):
+        raise ValueError("accepted decision output does not match its source candidate")
+    output_sha256 = file_sha256(source_output)
+    if (
+        marker.get("output_sha256") != output_sha256
+        or source.get("output_sha256") != output_sha256
+    ):
+        raise ValueError("accepted decision output hash does not match its source")
+    return decision_from
 
 
 def result_output(result: dict[str, Any]) -> Path | None:
@@ -1224,8 +1336,7 @@ def _render_current_prompt(brief: dict[str, Any], manifest: dict[str, Any]) -> s
     medium = brief.get("medium", "manga")
     request = brief.get("request", "").strip()
     change = (brief.get("change_request") or request).strip()
-    prompt_invariants = brief.get("prompt_invariants") or brief.get("invariants", [])
-    invariants = [value for value in prompt_invariants if value]
+    invariants = [value for value in _effective_invariants(brief) if value]
     if invariants:
         invariant_lines = [f"- {value}" for value in invariants]
     elif (
@@ -1502,28 +1613,55 @@ def normalize_prompt_units(text: str) -> list[dict[str, Any]]:
     ]
 
 
-def _deduplicate_invariants(brief: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, str]]]:
+def _effective_invariants(brief: dict[str, Any]) -> list[Any]:
+    """Keep literal parent gates for versioned continuations."""
+    if (
+        brief.get("continuation_source_schema_version")
+        == CONTINUATION_SOURCE_SCHEMA_VERSION
+    ):
+        return [
+            *(brief.get("invariants") or []),
+            *(brief.get("prompt_invariants") or []),
+        ]
+    return brief.get("prompt_invariants") or brief.get("invariants") or []
+
+
+def _deduplicate_invariants(
+    brief: dict[str, Any],
+) -> tuple[dict[str, Any], list[dict[str, str]]]:
     normalized = copy.deepcopy(brief)
-    field = "prompt_invariants" if brief.get("prompt_invariants") else "invariants"
-    values = normalized.get(field) or []
+    versioned = (
+        brief.get("continuation_source_schema_version")
+        == CONTINUATION_SOURCE_SCHEMA_VERSION
+    )
+    fields = (
+        ("invariants", "prompt_invariants")
+        if versioned
+        else ("prompt_invariants" if brief.get("prompt_invariants") else "invariants",)
+    )
     seen: dict[str, int] = {}
     kept = []
     merged = []
-    for index, value in enumerate(values):
-        text = str(value).strip()
-        key = " ".join(text.split()).casefold()
-        if key in seen:
-            merged.append(
-                {
-                    "id": f"request.invariant.{seen[key]}",
-                    "reason": f"duplicate-of:request.invariant.{seen[key]}",
-                    "source": f"{field}[{index}]",
-                }
-            )
-            continue
-        seen[key] = index
-        kept.append(value)
-    normalized[field] = kept
+    for field in fields:
+        for index, value in enumerate(brief.get(field) or []):
+            text = str(value).strip()
+            key = " ".join(text.split()).casefold()
+            if key in seen:
+                merged.append(
+                    {
+                        "id": f"request.invariant.{seen[key]}",
+                        "reason": f"duplicate-of:request.invariant.{seen[key]}",
+                        "source": f"{field}[{index}]",
+                    }
+                )
+                continue
+            seen[key] = len(kept)
+            kept.append(value)
+    if versioned:
+        normalized["invariants"] = kept
+        normalized.pop("prompt_invariants", None)
+    else:
+        normalized[fields[0]] = kept
     return normalized, merged
 
 
@@ -1560,7 +1698,7 @@ def _structured_prompt_conflicts(brief: dict[str, Any]) -> list[dict[str, str]]:
         for value in (
             brief.get("request"),
             brief.get("scene"),
-            *(brief.get("prompt_invariants") or brief.get("invariants") or []),
+            *_effective_invariants(brief),
         )
         if value
     ).casefold()
@@ -1896,7 +2034,7 @@ def _new_manga_prompt_units(
     )
     invariants = [
         f"- {value}"
-        for value in brief.get("prompt_invariants") or brief.get("invariants") or []
+        for value in _effective_invariants(brief)
         if str(value).strip()
     ]
     hard_lines = [
@@ -2266,14 +2404,23 @@ def compile_prompt_artifacts(
     included_ids = {unit["id"] for unit in units} - {row["id"] for row in omitted}
     characters = normalized_brief.get("characters") or []
     props = normalized_brief.get("props") or []
+    target_preserves_existing = (
+        intent != "new" and "target.preservation" in included_ids
+    )
     coverage = {
         "request": "request.scene" in included_ids or "request.change" in included_ids,
         "focal_hierarchy": "composition.format" in included_ids
         or "composition.focal-hierarchy" in included_ids
         or intent != "new",
-        "identity": not characters or "identity.forms" in included_ids,
-        "form": not characters or "identity.forms" in included_ids,
-        "prop_topology": not props or "prop.forms" in included_ids,
+        "identity": not characters
+        or "identity.forms" in included_ids
+        or target_preserves_existing,
+        "form": not characters
+        or "identity.forms" in included_ids
+        or target_preserves_existing,
+        "prop_topology": not props
+        or "prop.forms" in included_ids
+        or target_preserves_existing,
         "negative_constraints": "request.invariants" in included_ids
         or "target.preservation" in included_ids,
         "edit_boundary": intent == "new" or "target.preservation" in included_ids,

@@ -12,12 +12,12 @@ from pathlib import Path
 from task_workflow import (
     CHANGE_CATEGORIES,
     CHANGE_SCOPES,
-    SCOPED_STYLE_CHANGE_CATEGORIES,
     read_json,
 )
 from workflow_common import SHOT_VALUES, atomic_write_json, atomic_write_text
 
 SCRIPTS = Path(__file__).resolve().parent
+QUICK_EDIT_CHANGE_CATEGORIES = {"composition", "background", "polish"}
 
 
 def run(command: list[str]) -> str:
@@ -42,11 +42,13 @@ def main() -> int:
         help="Create a manifest-tracked JPEG transport proxy with this maximum edge.",
     )
     args = parser.parse_args()
-    if args.change_category in SCOPED_STYLE_CHANGE_CATEGORIES:
+    if args.change_category not in QUICK_EDIT_CHANGE_CATEGORIES:
         raise SystemExit(
-            "prepare_quick_edit is target-only; medium/tone changes require a "
-            "selected style reference and --change-scope character|scene. Use "
-            "continue_art_task.py or a normal tracked edit instead."
+            "prepare_quick_edit supports only target-only composition, background, "
+            "or polish changes. Identity, form, costume, anatomy, and construction "
+            "require a normal tracked edit with official evidence; medium and tone "
+            "require a scoped style reference. Use the normal tracked edit path or "
+            "continue_art_task.py for an existing task or candidate."
         )
     if args.change_scope:
         raise SystemExit(

@@ -1,5 +1,9 @@
 # Local reference workflow contract
 
+Commands below are script basenames. Resolve the installed skill root once and
+invoke every Python script through `scripts/run-python`; do not depend on the
+caller's current directory or a machine-specific Python path.
+
 Store generated catalogs, task records, attempts, prompts, and outputs under
 `${INUYASHA_WORKFLOW_HOME}/workflow/reference-workflow` by default. The source
 configuration uses `${REPO_ROOT}` tokens and resolves them at runtime. A caller
@@ -46,6 +50,10 @@ not catalog sources and not valid inputs for a new generation. Preserve their
 recipes, manifests, hashes, images, task manifests, attempts, and completed
 benchmark runs so historical provenance remains readable; never copy them into
 an official source directory or present them as publisher originals.
+Historical reads validate the manifest-recorded rendered output hash and every
+source item ID/content hash. A changed recipe-file byte hash may be disclosed as
+legacy metadata drift, but it must not invalidate otherwise matching historical
+artifacts or require rebuilding retired cards.
 
 `plan_art_task.py` must always issue an official identity search for every focal
 character-form. Shot and view are soft official ranking preferences, not SQL
@@ -119,16 +127,16 @@ benchmark must exercise the real search CLI and report Recall@1, Recall@3, MRR,
 per-case ranks, and latency. Relevant item IDs must resolve in the current
 catalog; do not lower thresholds merely to hide a regression.
 
-Maintain `references/generation-benchmark.json` separately as a fixed-input,
-single-generation first-preview benchmark. It measures transport success,
-generation duration, form and identity features, costume, anatomy/contact,
-composition, and selected-medium rendering. Preparing a run writes prompts,
-ordered inputs, and pending score sheets; it does not call a generator. Every
-prompt and reference image is snapshotted inside the run with a SHA-256 lock, and
-completed visual scores must record a decodable output plus its SHA-256. Scoring
-must reject a changed dataset, prompt, input, output, backend, or case list. Never
-auto-retry a benchmark case or replace a failed output, because that would hide
-first-pass yield and latency.
+`references/generation-benchmark.json` and its completed runs are historical
+fixed-input benchmark evidence. The dataset uses retired identity-card inputs,
+so `benchmark_image_generation.py --prepare` must reject new runs; `--results`
+must continue to score existing schema-1 and schema-2 runs. Schema-2 runs retain
+their strict artifact locks. Schema-1 results must be labelled `legacy_unlocked`
+because their prompt/input hashes cannot prove immutability; they are descriptive
+history, not promotion evidence. Disclose whether the current dataset file still
+matches the recorded schema-1 hash; a mismatch does not erase the history, but it
+limits comparisons against current thresholds. Use the active visual A/B datasets
+below for current workflow-quality claims.
 
 The active `new` workflow-quality gate is the smaller immutable dataset at
 `references/visual-eval-v2.json`. Target-only and scoped edit changes use the
@@ -260,8 +268,9 @@ task whose target is a recorded but not-yet-accepted candidate. Record the
 source task ID, attempt number, attempt status, output path, and immutable output
 hash in `brief.candidate_source` and in the target manifest entry's
 `source_attempt`. The source attempt remains rejected or otherwise unaccepted;
-creating the edit does not create or imply an accepted result. Candidate-local
-edits require a declared `edit_box` and exact pixel preservation outside it.
+creating the edit does not create or imply an accepted result. Bounded
+candidate-local edits require a declared `edit_box` and exact pixel preservation
+outside it.
 
 ## Task schemas
 
@@ -275,6 +284,12 @@ New tasks use:
   `reference_strategy` schema 1 with `mode: split-domain`, required character and
   scene style scopes, and coverage-gated canonical scene style. New tasks persist the planner's explicit `--shot`;
   legacy briefs without it remain valid.
+  Newly created parented edit/microfix briefs carry
+  `continuation_source_schema_version: 1` and exactly one source binding;
+  historical unversioned briefs remain readable. Candidate child edits bind
+  `candidate_source`; accepted continuations bind `accepted_parent_source`. The
+  first target manifest row repeats the same source under `source_attempt` or
+  `source_accepted_attempt`, respectively.
   `shot` stores camera distance or panel function; `view_angle` separately stores
   character direction such as `front`, `three-quarter-front`, or `profile`, or
   camera elevation as `high-angle`/`low-angle`. Camera elevation is not an
@@ -373,15 +388,20 @@ exclude archived tasks while preserving every original file and result.
 - For a manga-medium correction, use the target plus one dynamically selected,
   scope-matched manga style screenshot. The bundled corpus-derived guide defines
   the QA band but does not replace visual evidence.
-- For a target-only first preview, inspect the supplied target and generate before
-  locating a historical task or completing durable task bookkeeping. Create or
-  update the task record after a usable preview exists. Require pre-generation
-  task preparation only when a proxy, crop, continuity inheritance, or additional
-  authority reference is actually needed.
+- For a target-only `composition`, `background`, or `polish` first preview, do
+  not search for a historical parent. Use `prepare_quick_edit.py` to create the
+  smallest tracked task, target-first manifest, exact prompt, submission snapshot,
+  and pre-generation validation before the image call. The helper must reject
+  identity, form, costume, anatomy, construction, medium, and tone because those
+  categories need evidence it cannot attach. Persist the usable output or
+  technical error as the first attempt in that same task; never generate outside
+  the audit trail.
 - For bounded follow-up feedback on a recorded candidate, create a child `edit`
   with that attempt output as the first target and use crop-and-composite. Verify
   the recorded output hash before preparation. Do not require or fabricate an
   accepted parent result, and do not continue under the original `new` manifest.
+- `--from-attempt` accepts only unaccepted `candidate` or `rejected` attempts.
+  Continue an `accepted` attempt through its validated accepted parent instead.
 - When a candidate follow-up crosses a safe crop boundary, create the child with
   `continue_art_task.py --from-attempt ... --full-canvas`. It must still record
   that candidate as the first target; never attach it invisibly to the original
@@ -389,8 +409,15 @@ exclude archived tasks while preserving every original file and result.
 
 ### Microfix
 
-- Require a validated parent task and exactly one target.
-- Inherit the parent's medium, forms, scene, aspect ratio, invariants, and evidence.
+- Every continuation must choose exactly one of `--edit-box` or `--full-canvas`.
+  The bounded mode is a crop-and-composite `microfix`; the full-canvas mode is
+  an explicit child `edit`, never an implicit whole-image microfix.
+- Require a parent whose final validation passes and whose schema-3 result binds
+  one accepted attempt and its unchanged output hash. Exactly that accepted output
+  is the target; a caller may not replace it with an arbitrary path.
+- Inherit the parent's medium, forms, scene, aspect ratio, literal invariants, and
+  evidence. Prompt compaction may deduplicate exact invariants but must not replace
+  them with a generic preservation sentence.
 - Re-open only the changed category.
 - Permit at most one style screenshot and prohibit a redundant continuity image.
 - Use target-only for composition, background, and polish unless new evidence is explicitly needed.
@@ -402,7 +429,7 @@ exclude archived tasks while preserving every original file and result.
   first style row without checking its scope. If both domains are named, split
   the work into two bounded continuations.
 - Include the matching domain-preservation row in microfix QA as well as edit QA.
-- Hard-limit the prompt to 1,800 characters and the reference set to five images.
+- Hard-limit the prompt to 2,000 characters and the reference set to five images.
 
 ## Serial retrieval contract
 
@@ -770,6 +797,9 @@ hash, maximum edge, and JPEG quality. The proxy is transport-only and does not
 replace the original target's authority. Validation must reject changed source or
 proxy bytes and inconsistent dimensions. A crop-and-composite target may not also
 use a full-canvas transport proxy.
+The original full-canvas target is the default. A continuation creates a proxy
+only after the caller explicitly supplies a maximum edge; `--full-canvas` alone
+must never downscale or recompress the target.
 
 ## Validation contract
 

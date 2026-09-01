@@ -6,10 +6,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import tempfile
 from pathlib import Path
 
 from task_workflow import read_json
-from workflow_common import atomic_write_json
+from workflow_common import atomic_write_json, resolve_recorded_path
 
 
 def file_hash(path: Path) -> str:
@@ -69,6 +71,18 @@ def composite_local_edit(
     edit_box: tuple[int, int, int, int],
     feather: int,
 ) -> dict[str, object]:
+    target = target.expanduser().resolve()
+    candidate = candidate.expanduser().resolve()
+    output = output.expanduser().resolve()
+    if output in {target, candidate} or (
+        output.exists()
+        and (
+            (target.exists() and output.samefile(target))
+            or (candidate.exists() and output.samefile(candidate))
+        )
+    ):
+        raise ValueError("output must not overwrite the target or candidate image")
+
     from PIL import Image
 
     context_x, context_y, context_width, context_height = context_box
@@ -84,20 +98,36 @@ def composite_local_edit(
     if relative_box[2] > context_width or relative_box[3] > context_height:
         raise ValueError("edit box ends outside the context box")
 
-    with Image.open(target) as target_image, Image.open(candidate) as candidate_image:
-        source = target_image.convert("RGBA")
-        generated = candidate_image.convert("RGBA")
-        resized = generated.size != (context_width, context_height)
-        if resized:
-            generated = generated.resize(
-                (context_width, context_height), Image.Resampling.LANCZOS
-            )
-        replacement = generated.crop(relative_box)
-        mask = inner_feather_mask((edit_width, edit_height), feather)
-        result = source.copy()
-        result.paste(replacement, (edit_x, edit_y), mask)
-        output.parent.mkdir(parents=True, exist_ok=True)
-        result.save(output, format="PNG")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{output.name}.", suffix=".tmp", dir=output.parent
+    )
+    os.close(descriptor)
+    temporary = Path(temporary_name)
+    try:
+        with (
+            Image.open(target) as target_image,
+            Image.open(candidate) as candidate_image,
+        ):
+            source = target_image.convert("RGBA")
+            generated = candidate_image.convert("RGBA")
+            resized = generated.size != (context_width, context_height)
+            if resized:
+                generated = generated.resize(
+                    (context_width, context_height), Image.Resampling.LANCZOS
+                )
+            replacement = generated.crop(relative_box)
+            mask = inner_feather_mask((edit_width, edit_height), feather)
+            result = source.copy()
+            result.paste(replacement, (edit_x, edit_y), mask)
+            result.save(temporary, format="PNG")
+
+        preserved = outside_edit_box_equal(target, temporary, edit_box)
+        if not preserved:
+            raise RuntimeError("local composite changed pixels outside the edit box")
+        os.replace(temporary, output)
+    finally:
+        temporary.unlink(missing_ok=True)
 
     return {
         "target": str(target),
@@ -110,7 +140,7 @@ def composite_local_edit(
         "edit_box": list(edit_box),
         "feather_pixels": feather,
         "candidate_resized_to_context": resized,
-        "outside_edit_box_preserved": outside_edit_box_equal(target, output, edit_box),
+        "outside_edit_box_preserved": True,
     }
 
 
@@ -127,7 +157,7 @@ def main() -> int:
     local_edit = brief.get("local_edit") or {}
     if local_edit.get("mode") != "crop-composite":
         raise SystemExit("task is not configured for crop-composite local editing")
-    target = Path(local_edit["target"]).expanduser().resolve()
+    target = resolve_recorded_path(local_edit["target"])
     candidate = args.candidate.expanduser().resolve()
     if not target.is_file():
         raise SystemExit(f"target image is missing: {target}")
@@ -138,6 +168,13 @@ def main() -> int:
         if args.output
         else task_dir / "outputs" / f"{candidate.stem}-composited.png"
     )
+    report_path = output.with_suffix(".local-edit.json")
+    protected_paths = (target, candidate, output)
+    if report_path in protected_paths or (
+        report_path.exists()
+        and any(path.exists() and report_path.samefile(path) for path in protected_paths)
+    ):
+        raise SystemExit("local-edit report must not overwrite an image input or output")
     feather = (
         args.feather_pixels
         if args.feather_pixels is not None
@@ -154,7 +191,6 @@ def main() -> int:
         tuple(local_edit["edit_box"]),
         feather,
     )
-    report_path = output.with_suffix(".local-edit.json")
     atomic_write_json(report_path, report)
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0

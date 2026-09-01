@@ -8,6 +8,9 @@ import json
 import sqlite3
 from pathlib import Path
 
+from benchmark_image_generation import load_dataset as load_generation_dataset
+from benchmark_image_generation import score_run as score_generation_run
+from build_identity_cards import validate_historical_cards
 from build_reference_index import SCHEMA_VERSION, freshness
 from visual_ab_eval import effective_results
 from visual_ab_eval import load_dataset as load_visual_eval_dataset
@@ -37,6 +40,8 @@ REQUIRED_FILES = (
     "references/identity-ledgers.json",
     "references/visual-traits.md",
     "references/retrieval-benchmark.json",
+    "references/generation-benchmark.json",
+    "references/identity-card-recipes.json",
     "references/visual-eval-v2.json",
     "references/visual-edit-eval-v1.json",
     "references/visual-manga-style-eval-v1.json",
@@ -55,6 +60,8 @@ REQUIRED_FILES = (
     "scripts/coverage_report.py",
     "scripts/reference_feedback_report.py",
     "scripts/benchmark_reference_retrieval.py",
+    "scripts/benchmark_image_generation.py",
+    "scripts/build_identity_cards.py",
     "scripts/visual_ab_eval.py",
     "scripts/image_sheet.py",
     "scripts/preference_profile.py",
@@ -630,9 +637,117 @@ def main() -> int:
     curated_counts = {}
     location_count = 0
     alias_count = 0
+    identity_card_history = {
+        "checked": False,
+        "ok": None,
+        "recipe_sha256_matches": None,
+    }
+    generation_benchmark_history: list[dict] = []
     if not database.is_file():
         failures.append(f"catalog missing: {database}")
     else:
+        identity_card_root = root / "identity-cards"
+        if (
+            identity_card_root.exists()
+            and identity_card_root.resolve() != identity_card_root
+        ):
+            failures.append(
+                f"historical identity-card root must not be a symlink: "
+                f"{identity_card_root}"
+            )
+        elif identity_card_root.exists():
+            try:
+                card_result = validate_historical_cards(
+                    identity_card_root,
+                    database,
+                    SKILL_DIR / "references/identity-card-recipes.json",
+                )
+                identity_card_history = {
+                    "checked": True,
+                    "ok": card_result["ok"],
+                    "card_count": card_result["card_count"],
+                    "integrity_mode": card_result["integrity_mode"],
+                    "recipe_sha256_matches": card_result["recipe_sha256_matches"],
+                }
+                failures.extend(
+                    f"historical identity-card validation: {failure}"
+                    for failure in card_result["failures"]
+                )
+            except (OSError, TypeError, ValueError) as exc:
+                failures.append(f"historical identity-card validation failed: {exc}")
+        try:
+            generation_dataset_path = (
+                SKILL_DIR / "references/generation-benchmark.json"
+            )
+            generation_dataset = load_generation_dataset(generation_dataset_path)
+            generation_root = (
+                root / "generation-benchmarks" / generation_dataset["id"]
+            )
+            run_dirs = []
+            if (
+                generation_root.exists()
+                and generation_root.resolve() != generation_root
+            ):
+                failures.append(
+                    f"historical generation benchmark root must not be a symlink: "
+                    f"{generation_root}"
+                )
+            else:
+                for run_path in sorted(generation_root.glob("*/run.json")):
+                    run_dir = run_path.parent
+                    if run_path.resolve() != run_path or run_dir.resolve() != run_dir:
+                        failures.append(
+                            "historical generation benchmark run path must not contain "
+                            f"symlinks: {run_dir}"
+                        )
+                        continue
+                    run_dirs.append(run_dir)
+            if (
+                generation_root.exists()
+                and generation_root.resolve() == generation_root
+                and not run_dirs
+            ):
+                failures.append(
+                    f"historical generation benchmark runs are missing: {generation_root}"
+                )
+            for run_dir in run_dirs:
+                history = score_generation_run(
+                    generation_dataset, run_dir, generation_dataset_path
+                )
+                generation_benchmark_history.append(
+                    {
+                        "run_dir": history["run_dir"],
+                        "integrity_ok": history["integrity_ok"],
+                        "thresholds_met": history["thresholds_met"],
+                        "thresholds_applied": history["thresholds_applied"],
+                        "integrity_mode": history["integrity_mode"],
+                        "dataset_sha256_matches": history[
+                            "dataset_sha256_matches"
+                        ],
+                        "integrity_limitations": history["integrity_limitations"],
+                    }
+                )
+                failures.extend(
+                    f"historical generation benchmark {run_dir.name}: {failure}"
+                    for failure in history["integrity_failures"]
+                )
+                if history["thresholds_met"] is False:
+                    warnings.append(
+                        f"historical generation benchmark {run_dir.name} does not "
+                        "meet current thresholds"
+                    )
+                elif history["thresholds_met"] is None:
+                    warnings.append(
+                        f"historical generation benchmark {run_dir.name} did not "
+                        "apply current thresholds"
+                    )
+                if history["dataset_sha256_matches"] is False:
+                    warnings.append(
+                        f"historical generation benchmark {run_dir.name} uses a "
+                        "different current dataset revision"
+                    )
+        except (OSError, TypeError, ValueError) as exc:
+            failures.append(f"historical generation benchmark validation failed: {exc}")
         fresh, reason = freshness(
             database, config, library_signature(config), paths["annotations"]
         )
@@ -914,6 +1029,8 @@ def main() -> int:
         "visual_edit_eval_cases": visual_edit_eval_case_count,
         "visual_manga_style_eval_cases": visual_manga_style_eval_case_count,
         "visual_manga_style_edit_eval_cases": visual_manga_style_edit_eval_case_count,
+        "identity_card_history": identity_card_history,
+        "generation_benchmark_history": generation_benchmark_history,
         "validation_scope": (
             "structural-and-visual-promotion"
             if args.require_visual_promotion
