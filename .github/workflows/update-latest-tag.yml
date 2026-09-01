@@ -1,4 +1,4 @@
-name: Update latest tag
+name: Publish release
 
 on:
   pull_request_target:
@@ -6,19 +6,55 @@ on:
     types: [closed]
 
 jobs:
-  update-latest-tag:
+  release:
     if: github.event.pull_request.merged == true
     permissions:
       contents: write
     concurrency:
-      group: update-latest-tag
+      group: publish-release
       cancel-in-progress: false
+      queue: max
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
           ref: main
-      - name: Move latest tag
+          fetch-depth: 0
+      - name: Tag and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
-          git tag --force latest
+          set -euo pipefail
+
+          version="$(
+            git tag --points-at "$MERGE_SHA" --list 'v*' |
+              sed -nE '/^v[0-9]+\.[0-9]+\.[0-9]+$/p' |
+              sort -V |
+              tail -n 1
+          )"
+
+          if [[ -z "$version" ]]; then
+            previous="$(
+              git tag --list 'v*' |
+                sed -nE '/^v[0-9]+\.[0-9]+\.[0-9]+$/p' |
+                sort -V |
+                tail -n 1
+            )"
+            if [[ -z "$previous" ]]; then
+              version=v0.1.0
+            else
+              IFS=. read -r major minor patch <<< "${previous#v}"
+              version="v${major}.${minor}.$((patch + 1))"
+            fi
+            git tag "$version" "$MERGE_SHA"
+            git push origin "refs/tags/$version"
+          fi
+
+          git fetch origin main
+          git tag --force latest origin/main
           git push --force origin refs/tags/latest
+
+          if ! gh release view "$version" >/dev/null 2>&1; then
+            gh release create "$version" --verify-tag --generate-notes --latest
+          fi
