@@ -55,12 +55,26 @@ def outside_edit_box_equal(
         output = output_image.convert("RGBA")
         if source.size != output.size:
             return False
+        if not valid_box(edit_box, source.size):
+            return False
         difference = ImageChops.difference(source, output)
         x, y, width, height = edit_box
         ImageDraw.Draw(difference).rectangle(
             (x, y, x + width - 1, y + height - 1), fill=(0, 0, 0, 0)
         )
-        return difference.getbbox() is None
+        # RGBA getbbox defaults to alpha-only; equal alpha must not hide RGB drift.
+        return all(channel.getbbox() is None for channel in difference.split())
+
+
+def valid_box(box: tuple[int, int, int, int], size: tuple[int, int]) -> bool:
+    """Reject clipped, empty, and non-integral regions before masking or pasting."""
+    if len(box) != 4 or any(type(value) is not int for value in box):
+        return False
+    x, y, width, height = box
+    return (
+        x >= 0 and y >= 0 and width > 0 and height > 0
+        and x + width <= size[0] and y + height <= size[1]
+    )
 
 
 def composite_local_edit(
@@ -84,6 +98,14 @@ def composite_local_edit(
         raise ValueError("output must not overwrite the target or candidate image")
 
     from PIL import Image
+
+    if type(feather) is not int or feather < 0:
+        raise ValueError("feather must be a non-negative integer")
+    with Image.open(target) as target_image:
+        if not valid_box(context_box, target_image.size):
+            raise ValueError("context box must be a non-empty integer region inside target")
+        if not valid_box(edit_box, target_image.size):
+            raise ValueError("edit box must be a non-empty integer region inside target")
 
     context_x, context_y, context_width, context_height = context_box
     edit_x, edit_y, edit_width, edit_height = edit_box

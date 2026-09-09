@@ -12,6 +12,7 @@ from pathlib import Path
 
 from build_reference_index import freshness
 from composite_local_microfix import outside_edit_box_equal
+from structure_review import review_failures
 from prepare_reference_set import (
     exact_form_authority_subjects,
     image_pixel_hash,
@@ -2033,6 +2034,12 @@ def main() -> int:
         output = output_path(result)
         if output is None or not output.is_file():
             failures.append(f"accepted output is missing: {output or '[not recorded]'}")
+        if accepted_attempt.get("structure_review_sha256"):
+            review_path = artifact_dir / "structure-review.json"
+            if not review_path.is_file() or file_hash(review_path) != accepted_attempt["structure_review_sha256"]:
+                failures.append("accepted structure review is missing or changed")
+            else:
+                failures.extend(review_failures(artifact_dir, output, review_path))
         local_edit = brief.get("local_edit") or {}
         if (
             output is not None

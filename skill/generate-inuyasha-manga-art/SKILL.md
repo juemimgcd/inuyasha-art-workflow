@@ -700,6 +700,13 @@ and `accepted` only after explicit approval. Rejections require a structured
 failure; errors require `technical`; blame a reference only when it visibly caused
 the defect:
 
+For new character images and identity/form/costume/anatomy/construction edits,
+complete the shot-specific `structure-review.json` before candidate handoff.
+Read [construction inspection and runtime tools](references/inspection-and-runtime.md)
+for source/output region checks, reusable inspected detail records, full-canvas
+protected regions, and runtime provenance. Keep these as inspection evidence;
+the existing generator prompt and reference-selection path remains in force.
+
 For every manga candidate with a selected style input, first build and inspect
 the reference-candidate sheet. It places the candidate beside each scoped style
 authority and writes a hash-locked JSON sidecar; judge only the declared scope,
@@ -772,6 +779,14 @@ attempt pointing back to the candidate hash. It must set
 generation count, first-preview yield, or latency.
 
 ## Maintenance and deeper resources
+
+Run `runtime_provenance.py status` before maintenance to identify the actual
+installation and unrecorded drift. After reviewed changes and validation, record
+the new inventory against an explicit package revision; a mixed installation
+must retain its difference list rather than claim exact commit correspondence.
+Use `reference_observations.py search` when diagnosing missing fine-detail or
+multi-character coverage; it searches inspected regions without changing primary
+retrieval ranking. See the [tool contract](references/inspection-and-runtime.md).
 
 Treat this installed skill as the live runtime. The checkout at
 `/Users/jquery/Documents/inuyasha-art-workflow` is a packaging snapshot, not a

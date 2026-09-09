@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from preference_profile import write_profile
+from structure_review import review_failures
 from task_workflow import (
     ATTEMPT_SCHEMA_VERSION,
     RESULT_SCHEMA_VERSION,
@@ -354,6 +355,10 @@ def main() -> int:
         required=True,
     )
     parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--structure-review", type=Path,
+        help="Shot-specific construction review; defaults to task structure-review.json when present.",
+    )
     parser.add_argument(
         "--submitted-prompt",
         type=Path,
@@ -951,6 +956,26 @@ def main() -> int:
             or budget["post_generation_target_seconds"]
         )
         legacy_slo = response_window.get("response_slo_seconds")
+    structure_review_path = (
+        args.structure_review.expanduser().resolve()
+        if args.structure_review else task_dir / "structure-review.json"
+    )
+    if decision_source_attempt is not None:
+        if decision_source_attempt.get("structure_review_sha256"):
+            structure_review_path = snapshot_brief_path.parent / "structure-review.json"
+            if not structure_review_path.is_file() or file_hash(structure_review_path) != decision_source_attempt["structure_review_sha256"]:
+                raise SystemExit("decision source structure review is missing or changed")
+        else:
+            structure_review_path = None
+    if structure_review_path is not None:
+        if not structure_review_path.is_file():
+            if args.structure_review:
+                raise SystemExit("--structure-review file is missing")
+            structure_review_path = None
+        elif args.status in {"candidate", "accepted"}:
+            failures = review_failures(snapshot_brief_path.parent, output, structure_review_path)
+            if failures:
+                raise SystemExit("structure review blocked handoff: " + "; ".join(failures))
     if output is not None and args.persist_output and counts_as_generation:
         outputs_dir = task_dir / "outputs"
         outputs_dir.mkdir(exist_ok=True)
@@ -1035,6 +1060,9 @@ def main() -> int:
         "failures": args.failure,
         "preview_checks": args.preview_check,
         "medium_component_checks": args.medium_component_check,
+        "structure_review_sha256": (
+            file_hash(structure_review_path) if structure_review_path is not None else None
+        ),
         "user_feedback": args.feedback,
         "preference_tags": sorted(set(args.preference_tag)),
         "generation_submission_sha256": (
@@ -1095,6 +1123,8 @@ def main() -> int:
         "evidence-log.md": snapshot_evidence_path,
         "qa.json": snapshot_qa_path,
     }
+    if structure_review_path is not None:
+        snapshot_sources["structure-review.json"] = structure_review_path
     for name, source in snapshot_sources.items():
         if source.is_file():
             shutil.copy2(source, attempt_dir / name)
