@@ -205,6 +205,13 @@ as raw generated-image quality or visual promotion. Any accompanying change to
 generator-facing inputs, the prompt, or the rendering map restores the applicable
 visual-gate requirement for activation or a visual-improvement claim.
 
+The shot-specific construction review, inspected-region evidence store, protected
+region checks, and runtime inventory follow
+[`inspection-and-runtime.md`](inspection-and-runtime.md). These are audit tools:
+their records are not automatically compiled into prompts, selected as inputs,
+or used to rerank the primary retrieval. Any later activation that changes those
+generator-facing behaviors must independently satisfy the visual gate above.
+
 An explicit later user rejection may supersede the effective promotion without
 changing the immutable blind artifacts. Append a result-hash-bound event to
 `human-feedback.jsonl`, name the affected case, variant, and critical category,

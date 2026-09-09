@@ -10,6 +10,7 @@ from typing import Any
 
 from PIL import Image
 from record_attempt import file_hash
+from runtime_provenance import runtime_record
 from task_workflow import (
     prompt_compile_report_failures,
     prompt_compile_report_required,
@@ -81,6 +82,19 @@ def validate_generation_submission(
         return ["generation submission images must be a list of objects"]
     report_path = task_dir / "prompt-compile.json"
     report_record = submission.get("prompt_compile")
+
+    if "runtime" in submission:
+        runtime = submission["runtime"]
+        if not isinstance(runtime, dict) or type(runtime.get("schema_version")) is not int or runtime["schema_version"] != 1:
+            failures.append("generation submission runtime record is malformed")
+        elif require_prepared:
+            try:
+                current_runtime = runtime_record()
+                for field in ("fingerprint", "source_library_sha256"):
+                    if runtime.get(field) != current_runtime[field]:
+                        failures.append(f"generation submission runtime {field} is stale; prepare a new submission")
+            except (OSError, ValueError, TypeError, KeyError) as exc:
+                failures.append(f"installed runtime inventory is unreadable: {exc}")
 
     if (
         type(submission.get("schema_version")) is not int
@@ -300,6 +314,7 @@ def main() -> int:
         ),
         "images": images,
         "input_bytes": sum(int(image["bytes"]) for image in images),
+        "runtime": runtime_record(),
     }
     failures = validate_generation_submission(task_dir, submission)
     if failures:
