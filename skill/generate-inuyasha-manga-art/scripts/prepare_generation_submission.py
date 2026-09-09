@@ -60,27 +60,44 @@ def image_record(order: int, role: str, path: Path) -> dict[str, Any]:
 
 
 def validate_generation_submission(
-    task_dir: Path, submission: dict, *, require_prepared: bool = True
+    task_dir: Path, submission: Any, *, require_prepared: bool = True
 ) -> list[str]:
+    if not isinstance(submission, dict):
+        return ["generation submission must be an object"]
     failures: list[str] = []
-    brief = read_json(task_dir / "brief.json")
-    manifest = read_json(task_dir / "reference-manifest.json")
+    try:
+        brief = read_json(task_dir / "brief.json")
+        manifest = read_json(task_dir / "reference-manifest.json")
+        window_path = task_dir / "response-window.json"
+        window = read_json(window_path) if window_path.is_file() else {}
+    except (OSError, ValueError, TypeError) as exc:
+        return [f"generation submission context is unreadable: {exc}"]
     prompt_path = Path(str(submission.get("prompt", ""))).expanduser().resolve()
-    window_path = task_dir / "response-window.json"
-    window = read_json(window_path) if window_path.is_file() else {}
     expected_inputs = manifest_inputs(manifest)
-    actual_inputs = submission.get("images") or []
+    actual_inputs = submission.get("images", [])
+    if not isinstance(actual_inputs, list) or any(
+        not isinstance(item, dict) for item in actual_inputs
+    ):
+        return ["generation submission images must be a list of objects"]
     report_path = task_dir / "prompt-compile.json"
     report_record = submission.get("prompt_compile")
 
-    if submission.get("schema_version") != SUBMISSION_SCHEMA_VERSION:
+    if (
+        type(submission.get("schema_version")) is not int
+        or submission.get("schema_version") != SUBMISSION_SCHEMA_VERSION
+    ):
         failures.append("generation submission schema is not supported")
     if require_prepared and submission.get("state") != "prepared":
         failures.append("generation submission is not in prepared state")
-    if submission.get("response_started_at") != (
-        window.get("pre_generation_started_at") or window.get("started_at")
-    ):
+    started_at = window.get("pre_generation_started_at") or window.get("started_at")
+    if not started_at or submission.get("response_started_at") != started_at:
         failures.append("generation submission belongs to a different response window")
+    for field, expected in (
+        ("task_id", brief.get("task_id") or task_dir.name),
+        ("intent", task_intent(brief)),
+    ):
+        if field in submission and submission[field] != expected:
+            failures.append(f"generation submission {field} differs from brief")
     if submission.get("brief_sha256") != file_hash(task_dir / "brief.json"):
         failures.append("generation submission brief hash is stale")
     if submission.get("reference_manifest_sha256") != file_hash(
@@ -89,8 +106,14 @@ def validate_generation_submission(
         failures.append("generation submission manifest hash is stale")
     if not prompt_path.is_file():
         failures.append("generation submission prompt is missing")
-    elif submission.get("prompt_sha256") != file_hash(prompt_path):
-        failures.append("generation submission prompt hash is stale")
+    else:
+        if submission.get("prompt_sha256") != file_hash(prompt_path):
+            failures.append("generation submission prompt hash is stale")
+        if "prompt_bytes" in submission and (
+            type(submission["prompt_bytes"]) is not int
+            or submission["prompt_bytes"] != prompt_path.stat().st_size
+        ):
+            failures.append("generation submission prompt byte count is stale")
     if prompt_compile_report_required(brief) and not isinstance(report_record, dict):
         failures.append("generation submission is missing prompt-compile.json binding")
     if report_record is not None:
@@ -109,11 +132,17 @@ def validate_generation_submission(
             elif report_record.get("bytes") != report_path.stat().st_size:
                 failures.append("generation submission prompt compile byte count is stale")
             else:
-                report = read_json(report_path)
+                try:
+                    report = read_json(report_path)
+                except (OSError, ValueError, TypeError) as exc:
+                    failures.append(
+                        f"generation submission prompt compile is unreadable: {exc}"
+                    )
+                    report = None
                 compiled_prompt_path = task_dir / "prompt.md"
                 if not compiled_prompt_path.is_file():
                     failures.append("compiled prompt for prompt-compile.json is missing")
-                else:
+                elif report is not None:
                     failures.extend(
                         prompt_compile_report_failures(
                             brief,
@@ -122,6 +151,8 @@ def validate_generation_submission(
                             report,
                         )
                     )
+    verified_input_bytes = 0
+    verified_input_count = 0
     if len(actual_inputs) != len(expected_inputs):
         failures.append("generation submission input count differs from manifest")
     else:
@@ -129,14 +160,47 @@ def validate_generation_submission(
             zip(expected_inputs, actual_inputs, strict=True), start=1
         ):
             actual_path = Path(str(actual.get("path", ""))).expanduser().resolve()
-            if actual.get("order") != index or actual.get("role") != expected_role:
+            if (
+                type(actual.get("order")) is not int
+                or actual.get("order") != index
+                or actual.get("role") != expected_role
+            ):
                 failures.append(f"generation submission input {index} role/order changed")
             if actual_path != expected_path:
                 failures.append(f"generation submission input {index} path is untracked")
             elif not actual_path.is_file():
                 failures.append(f"generation submission input {index} is missing")
-            elif actual.get("sha256") != file_hash(actual_path):
-                failures.append(f"generation submission input {index} hash is stale")
+            else:
+                try:
+                    current = image_record(index, expected_role, actual_path)
+                except (OSError, ValueError) as exc:
+                    failures.append(
+                        f"generation submission input {index} is unreadable: {exc}"
+                    )
+                    continue
+                verified_input_count += 1
+                verified_input_bytes += current["bytes"]
+                if actual.get("sha256") != current["sha256"]:
+                    failures.append(f"generation submission input {index} hash is stale")
+                # Older schema-1 snapshots may omit metadata. Validate every
+                # field they do record against the file, not against other claims.
+                for field in ("bytes", "width", "height"):
+                    if field in actual and (
+                        type(actual[field]) is not int
+                        or actual[field] != current[field]
+                    ):
+                        failures.append(
+                            f"generation submission input {index} {field} is stale"
+                        )
+                if "format" in actual and actual["format"] != current["format"]:
+                    failures.append(f"generation submission input {index} format is stale")
+
+    if "input_bytes" in submission and verified_input_count == len(expected_inputs):
+        if (
+            type(submission["input_bytes"]) is not int
+            or submission["input_bytes"] != verified_input_bytes
+        ):
+            failures.append("generation submission total input byte count is stale")
 
     roles = [str(item.get("role", "")) for item in actual_inputs]
     intent = task_intent(brief)
@@ -194,8 +258,8 @@ def main() -> int:
     )
     if not prompt.is_file():
         raise SystemExit(f"submitted prompt is missing: {prompt}")
-    inputs = args.input or manifest_inputs(manifest)
     expected = manifest_inputs(manifest)
+    inputs = args.input or expected
     if inputs != expected:
         raise SystemExit(
             "explicit generation inputs must exactly match manifest role, order, and path"

@@ -27,11 +27,14 @@ def main() -> int:
     task_dir = args.task_dir.expanduser().resolve()
     if not (task_dir / "brief.json").is_file():
         raise SystemExit("--task-dir must contain brief.json")
-    if args.explain:
-        _, report = compile_prompt_artifacts(*read_prompt_compile_inputs(task_dir))
-        print(json.dumps(report, ensure_ascii=False, indent=2))
-        return 0
-    output = write_compiled_prompt(task_dir)
+    try:
+        if args.explain:
+            _, report = compile_prompt_artifacts(*read_prompt_compile_inputs(task_dir))
+            print(json.dumps(report, ensure_ascii=False, indent=2))
+            return 0
+        output = write_compiled_prompt(task_dir)
+    except ValueError as exc:
+        parser.exit(2, f"Prompt compilation failed: {exc}\n")
     if args.json:
         print(
             json.dumps(
