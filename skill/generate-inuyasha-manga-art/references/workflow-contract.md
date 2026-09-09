@@ -319,6 +319,14 @@ New tasks use:
   transport, ordered image paths, roles, hashes, dimensions, and byte counts.
   Every recorded attempt snapshots the submitted version immutably.
 
+Submission validation recomputes recorded image dimensions, format, individual
+and total byte counts, and prompt byte count from the actual files, alongside
+the existing hashes and ordered manifest binding. Recorded task ID and intent
+must match the brief. Older schema-1 snapshots may omit these metadata fields;
+any field that is present must match, and schema/order integers may not be
+booleans. Invalid submission containers and unreadable context files return
+validation failures before generation instead of unstructured attribute errors.
+
 Do not overwrite rejected attempts. Snapshot the brief, prompt, manifest, and QA
 with every attempt. Store explicit user preference feedback in
 `preference-events.jsonl`; never infer approval merely because a file exists.
@@ -568,6 +576,61 @@ entry must carry a non-empty exact focus.
 
 Every form-sensitive task must declare an identity form. Reject a reference depicting a requested character in another or unclassified form, even when the sheet was selected for a weapon or costume detail. The only exception is a selected-medium `content` crop with a non-empty exact focus when human inspection confirms that the prepared crop excludes the form-conflicting character and shows only the requested object or spatial fact. Preserve the source item, crop coordinates, source-pixel hash, rendered hash, and focus. This exception never applies to full images or to `identity`/`form` roles.
 
+## Generation backend and model selection
+
+Official documentation checked on 2026-09-09 lists two GPT Image 2.5 models:
+
+| Model ID | Current documented snapshot | Workflow preference when selection is available |
+| --- | --- | --- |
+| `gpt-image-2.5-sunburst` | `gpt-image-2.5-sunburst-2026-09-08` | Default for fidelity-focused new art, precise edits, and microfix generation |
+| `gpt-image-2.5-flare` | `gpt-image-2.5-flare-2026-09-08` | Use when the user prioritizes fast previews |
+
+Sources: [Sunburst](https://developers.openai.com/api/docs/models/gpt-image-2.5-sunburst),
+[Flare](https://developers.openai.com/api/docs/models/gpt-image-2.5-flare), and the
+[image generation guide](https://developers.openai.com/api/docs/guides/image-generation).
+The preference above is a local workflow choice based on the documented roles,
+not measured evidence of better Inuyasha character fidelity. Recheck these sources
+for a later upgrade; retain an explicitly requested model or snapshot.
+
+The live workflow prepares inputs and records results; it does not itself send
+an Image API request. `prepare_generation_submission.py --endpoint` records
+provenance and `record_attempt.py --generator` labels the actual generator.
+Neither argument selects a model or changes the callable tool's backend.
+
+For the built-in `image_gen` tool, inspect the current tool schema. On 2026-09-09
+it accepts `prompt`, `referenced_image_paths`, and `num_last_images_to_include`,
+but exposes neither `model` nor `quality`. Continue through that tool with its
+supported arguments. Do not insert model names into the art prompt, invent a
+selector, or change the recorded endpoint to imply an API migration. If the user
+requires a guaranteed exact model and the tool cannot select or identify it,
+explain that capability gap before generating.
+
+If an explicitly authorized Image API integration is available, the documented
+selector is the request's `model`. In the Responses API it is the image
+generation tool's `model`, separate from the top-level conversational model.
+Both 2.5 models document `low`, `medium`, `high`, `xhigh`, `max`, and `auto`
+quality settings; pass them only through an interface that supports them and
+preserve the task's existing quality choice. Do not automatically increase
+quality, output size, or image count for a version update. Switching to a
+separately billed API is a separate integration task, not an implicit fallback.
+
+Keep generator provenance honest using the existing `--generator` field:
+
+- When the built-in tool exposes no model information, retain
+  `built-in image_gen`; this denotes the backend with an unknown model version.
+- If an API request explicitly selected a model, label it as requested, for
+  example `Image API; requested_model=gpt-image-2.5-sunburst`. Add a resolved
+  model or snapshot only when actual tool/response metadata reports it.
+- Preserve historical attempts and evaluation backend locks. Never relabel old
+  results as 2.5 from a release date, model preference, or visual appearance.
+
+This model-selection documentation does not change the current tool backend,
+compiled prompts, reference selection, or visual gates. Model availability and
+structural validation do not establish visual promotion. Preserve the existing
+immutable A/B contract for generator-facing workflow revisions and do not compare
+different models inside a run that requires one locked backend. Keep the
+single-preview rule and candidate/accepted distinction for either model.
+
 ## Prompt contract
 
 Generate prompts from the current brief and manifest with `compile_prompt.py`.
@@ -600,6 +663,10 @@ either artifact. A marked `new` manga generation requires this report:
 immutable attempt copies the exact report and records its hash. Validation
 recompiles from the bound brief and manifest and rejects any prompt or report
 whose semantic-unit plan differs, even when its self-reported hashes agree.
+Active new-manga compilation runs the semantic renderer directly without first
+rendering and discarding a legacy prompt. This optimization preserves generated
+prompt text and report semantics. The compile CLI reports constraint or length
+errors with a concise nonzero exit; it does not truncate inherited constraints.
 Learned preference traits participate only when explicitly snapshotted in the
 brief; compilation never reads the mutable workflow-level preference profile.
 

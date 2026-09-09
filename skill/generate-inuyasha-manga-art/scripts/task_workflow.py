@@ -1529,7 +1529,9 @@ No unrequested lettering, speech balloons, panel borders, signature, logo, or wa
     limit = prompt_limit(intent)
     if len(text) > limit:
         raise ValueError(
-            f"Compiled {intent} prompt is {len(text)} characters; limit is {limit}"
+            f"Compiled {intent} prompt is {len(text)} characters; limit is {limit}. "
+            "Shorten redundant wording in the brief or narrow the edit scope; "
+            "inherited literal constraints cannot be replaced by a summary."
         )
     return text
 
@@ -2373,14 +2375,15 @@ def compile_prompt_artifacts(
 ) -> tuple[str, dict[str, Any]]:
     """Compile prompt text and its deterministic omission/conflict report."""
     normalized_brief, invariant_merges = _deduplicate_invariants(brief)
-    raw_text = _render_current_prompt(normalized_brief, manifest)
     intent = task_intent(normalized_brief)
     active = prompt_compile_report_required(normalized_brief)
-    normalized_units, projected_omissions = (
-        _new_manga_prompt_units(normalized_brief, manifest)
-        if active
-        else (normalize_prompt_units(raw_text), [])
-    )
+    if active:
+        normalized_units, projected_omissions = _new_manga_prompt_units(
+            normalized_brief, manifest
+        )
+    else:
+        raw_text = _render_current_prompt(normalized_brief, manifest)
+        normalized_units, projected_omissions = normalize_prompt_units(raw_text), []
     units, unit_merges, conflicts = _merge_prompt_units(normalized_units)
     conflicts.extend(_structured_prompt_conflicts(normalized_brief))
     unresolved = [row for row in conflicts if row.get("result") == "unresolved"]
@@ -2399,7 +2402,9 @@ def compile_prompt_artifacts(
         rendered_units = {unit["id"]: unit["text"] for unit in units}
         if len(text) > limit:
             raise ValueError(
-                f"Compiled {intent} prompt is {len(text)} characters; limit is {limit}"
+                f"Compiled {intent} prompt is {len(text)} characters; limit is {limit}. "
+                "Shorten redundant wording in the brief or narrow the edit scope; "
+                "inherited literal constraints cannot be replaced by a summary."
             )
     included_ids = {unit["id"] for unit in units} - {row["id"] for row in omitted}
     characters = normalized_brief.get("characters") or []

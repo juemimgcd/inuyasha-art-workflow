@@ -324,6 +324,17 @@ does not prove generated-image quality.
 
 Default ambiguous medium requests to `manga`. Use `tv` only when explicitly asked.
 
+## Image generation model selection
+
+For a callable backend that exposes model selection, prefer
+`gpt-image-2.5-sunburst` for this fidelity-focused workflow; use
+`gpt-image-2.5-flare` when the user prioritizes speed. Honor an explicit model
+choice. Before selecting a model or reporting its version, read
+[Generation backend and model selection](references/workflow-contract.md#generation-backend-and-model-selection).
+The built-in `image_gen` interface inspected on 2026-09-09 exposes no model or
+quality selector: use its supported arguments and keep the actual model unknown
+unless the tool reports it. A preferred model is not proof of the model used.
+
 ## Compile prompts through semantic units
 
 `compile_prompt.py` writes both `prompt.md` and `prompt-compile.json`. The report
